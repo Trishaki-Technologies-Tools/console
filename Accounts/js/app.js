@@ -64,15 +64,16 @@ function filterIncomes() {
     const url = filter === 'all' ? 'api/incomes.php' : `api/filter_incomes.php?filter=${filter}`;
 
     fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                console.log('Filtered income data:', data); // Debug log
+                displayIncomes(data);
+            } catch (e) {
+                console.error('Filter Incomes Error:', text);
+                alert('Error filtering incomes. Database connection issue.');
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Filtered income data:', data); // Debug log
-            displayIncomes(data);
         })
         .catch(error => {
             console.error('Error filtering incomes:', error);
@@ -88,15 +89,16 @@ function filterExpenses() {
     const url = filter === 'all' ? 'api/expenses.php' : `api/filter_expenses.php?filter=${filter}`;
 
     fetch(url)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                console.log('Filtered expense data:', data); // Debug log
+                displayExpenses(data);
+            } catch (e) {
+                console.error('Filter Expenses Error:', text);
+                alert('Error filtering expenses. Database connection issue.');
             }
-            return response.json();
-        })
-        .then(data => {
-            console.log('Filtered expense data:', data); // Debug log
-            displayExpenses(data);
         })
         .catch(error => {
             console.error('Error filtering expenses:', error);
@@ -107,18 +109,32 @@ function filterExpenses() {
 // Load dashboard statistics
 function loadDashboardData() {
     fetch('api/dashboard.php')
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('total-income').textContent = '₹' + data.total_income;
-            document.getElementById('total-expenses').textContent = '₹' + data.total_expenses;
-            document.getElementById('balance').textContent = '₹' + data.balance;
-            document.getElementById('hdfc-balance').textContent = '₹' + data.hdfc_balance;
-            document.getElementById('cash-balance').textContent = '₹' + data.cash_balance;
-            document.getElementById('this-month-expense').textContent = '₹' + data.this_month_expense;
-            document.getElementById('this-month-profit').textContent = '₹' + data.this_month_profit;
-            document.getElementById('overall-profit').textContent = '₹' + data.balance;
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                document.getElementById('total-income').textContent = '₹' + data.total_income;
+                document.getElementById('total-expenses').textContent = '₹' + data.total_expenses;
+                document.getElementById('balance').textContent = '₹' + data.balance;
+                document.getElementById('hdfc-balance').textContent = '₹' + data.hdfc_balance;
+                document.getElementById('cash-balance').textContent = '₹' + data.cash_balance;
+                document.getElementById('this-month-expense').textContent = '₹' + data.this_month_expense;
+                document.getElementById('this-month-profit').textContent = '₹' + data.this_month_profit;
+                document.getElementById('overall-profit').textContent = '₹' + data.balance;
+            } catch (e) {
+                console.error('Dashboard Error:', text);
+                // Set default values on error
+                document.getElementById('total-income').textContent = '₹0';
+                document.getElementById('total-expenses').textContent = '₹0';
+                document.getElementById('balance').textContent = '₹0';
+                document.getElementById('hdfc-balance').textContent = '₹0';
+                document.getElementById('cash-balance').textContent = '₹0';
+                document.getElementById('this-month-expense').textContent = '₹0';
+                document.getElementById('this-month-profit').textContent = '₹0';
+                document.getElementById('overall-profit').textContent = '₹0';
+            }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => console.error('Network Error:', error));
 }
 
 // Load incomes
@@ -127,11 +143,20 @@ function loadIncomes() {
     const url = filter && filter !== 'all' ? `api/filter_incomes.php?filter=${filter}` : 'api/incomes.php';
 
     fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            displayIncomes(data);
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                displayIncomes(data);
+            } catch (e) {
+                console.error('Incomes Error:', text);
+                displayIncomes([]);
+            }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Network Error:', error);
+            displayIncomes([]);
+        });
 }
 
 // Display incomes in table
@@ -217,11 +242,20 @@ function loadExpenses() {
     const url = filter && filter !== 'all' ? `api/filter_expenses.php?filter=${filter}` : 'api/expenses.php';
 
     fetch(url)
-        .then(response => response.json())
-        .then(data => {
-            displayExpenses(data);
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                displayExpenses(data);
+            } catch (e) {
+                console.error('Expenses Error:', text);
+                displayExpenses([]);
+            }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Network Error:', error);
+            displayExpenses([]);
+        });
 }
 
 // Display expenses in table
@@ -700,13 +734,16 @@ function changeReportView() {
     container.innerHTML = '<p style="text-align:center; padding: 20px; color: #64748b;">Loading reports...</p>';
 
     fetch(`api/reports.php?type=${reportType}&t=${new Date().getTime()}`)
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(data => {
-            if (data.error) throw new Error(data.error);
-            displayReports(data);
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.error) throw new Error(data.error);
+                displayReports(data);
+            } catch (e) {
+                console.error('Reports Error:', text);
+                container.innerHTML = `<p style="text-align:center; color: #ef4444; padding: 20px;">Error loading reports: Database connection issue</p>`;
+            }
         })
         .catch(error => {
             console.error('Error:', error);
@@ -790,21 +827,41 @@ function displayReports(reports) {
 
 // Function to aggressively remove badge elements
 function removeBadgeElements() {
+    // Remove by class names
     const badgeElements = document.querySelectorAll('.report-badges, .badge-green, .badge-red, .badge');
     badgeElements.forEach(element => {
-        element.style.display = 'none';
+        element.style.display = 'none !important';
         element.remove();
     });
     
-    // Also remove any elements containing the tick and cross symbols
+    // Remove by content - check all elements for tick and cross symbols
     const allElements = document.querySelectorAll('*');
     allElements.forEach(element => {
-        if (element.textContent === '✓' || element.textContent === '✕') {
-            element.style.display = 'none';
+        if (element.textContent === '✓' || element.textContent === '✕' || 
+            element.innerHTML === '✓' || element.innerHTML === '✕' ||
+            element.textContent.includes('✓') || element.textContent.includes('✕')) {
+            element.style.display = 'none !important';
             element.remove();
         }
     });
-}
+    
+    // Remove any span elements with these specific symbols
+    const spans = document.querySelectorAll('span');
+    spans.forEach(span => {
+        if (span.textContent.trim() === '✓' || span.textContent.trim() === '✕') {
+            span.style.display = 'none !important';
+            span.remove();
+        }
+    });
+    
+    // Remove any div elements containing report-badges
+    const divs = document.querySelectorAll('div');
+    divs.forEach(div => {
+        if (div.className && div.className.includes('report-badges')) {
+            div.style.display = 'none !important';
+            div.remove();
+        }
+    });
 }
 
 // Remove the generateReport function as it's no longer needed
@@ -844,12 +901,23 @@ window.onclick = function (event) {
 // Load categories
 function loadCategories() {
     fetch('api/income_categories.php')
-        .then(response => response.json())
-        .then(categories => {
-            displayCategories(categories);
-            updateCategoryDropdown(categories);
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const categories = JSON.parse(text);
+                displayCategories(categories);
+                updateCategoryDropdown(categories);
+            } catch (e) {
+                console.error('Income Categories Error:', text);
+                displayCategories([]);
+                updateCategoryDropdown([]);
+            }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Network Error:', error);
+            displayCategories([]);
+            updateCategoryDropdown([]);
+        });
 }
 
 // Display categories in modal
@@ -1297,22 +1365,26 @@ function submitEditSalary(event) {
 // --- Loans Functionality ---
 function loadLoans() {
     fetch('api/loans.php')
-        .then(response => response.json())
-        .then(data => {
-            if (Array.isArray(data)) {
-                displayLoans(data);
-                updateLoanStats(data);
-            } else {
-                console.error('Failed to load loans:', data);
-                // If table missing, data might be object with error, or just empty.
-                // Display empty state if error matches specific "table not found" or just generic error logic.
-                // For now, treat as empty list but log error
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (Array.isArray(data)) {
+                    displayLoans(data);
+                    updateLoanStats(data);
+                } else {
+                    console.error('Failed to load loans:', data);
+                    displayLoans([]);
+                    updateLoanStats([]);
+                }
+            } catch (e) {
+                console.error('Loans Error:', text);
                 displayLoans([]);
                 updateLoanStats([]);
             }
         })
         .catch(error => {
-            console.error('Error:', error);
+            console.error('Network Error:', error);
             displayLoans([]);
         });
 }
@@ -1701,12 +1773,23 @@ function closeEmployeeModal() {
 
 function loadEmployees() {
     fetch('api/get_employees.php')
-        .then(response => response.json())
-        .then(employees => {
-            displayEmployees(employees);
-            updateSalaryEmployeeDropdown(employees);
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const employees = JSON.parse(text);
+                displayEmployees(employees);
+                updateSalaryEmployeeDropdown(employees);
+            } catch (e) {
+                console.error('Employees Error:', text);
+                displayEmployees([]);
+                updateSalaryEmployeeDropdown([]);
+            }
         })
-        .catch(error => console.error('Error:', error));
+        .catch(error => {
+            console.error('Network Error:', error);
+            displayEmployees([]);
+            updateSalaryEmployeeDropdown([]);
+        });
 }
 
 function displayEmployees(employees) {
