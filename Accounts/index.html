@@ -1,0 +1,1013 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>TriShaKi Technologies - Finance Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>TriShaKi Technologies</h2>
+                <p class="company-subtitle">Private Limited</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-page="reports">
+                    <span class="icon">�</span>
+                    <span>Reports</span>
+                </a>
+                <a href="#" class="nav-item" data-page="incomes">
+                    <span class="icon">💰</span>
+                    <span>Incomes</span>
+                </a>
+                <a href="#" class="nav-item" data-page="expenses">
+                    <span class="icon">💸</span>
+                    <span>Expenses</span>
+                </a>
+
+                <a href="#" class="nav-item" data-page="salary-logs">
+                    <span class="icon">📋</span>
+                    <span>Salary Logs</span>
+                </a>
+                <a href="#" class="nav-item" data-page="loans">
+                    <span class="icon">🤝</span>
+                    <span>Loans</span>
+                </a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="header">
+                <div>
+                    <h1 id="page-title">Dashboard</h1>
+                    <p class="welcome-text">Overview of your financial records</p>
+                </div>
+                <div class="user-info">
+                    <div class="user-avatar">T</div>
+                    <span style="color: #64748b;">👤</span>
+                </div>
+            </header>
+
+            <div class="content" id="content-area">
+                <!-- Dashboard Content -->
+                <div class="page-content" id="dashboard-page">
+                    <div class="stats-row">
+                        <div class="stat-card-large">
+                            <div class="stat-icon-large icon-blue">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="2" y="5" width="20" height="14" rx="2" />
+                                    <line x1="2" y1="10" x2="22" y2="10" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-large">
+                                <div class="stat-value-large" id="total-income">₹0</div>
+                                <div class="stat-label-large">Total Income</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card-large">
+                            <div class="stat-icon-large icon-green">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="10" />
+                                    <path d="M12 6v6l4 2" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-large">
+                                <div class="stat-value-large" id="total-expenses">₹0</div>
+                                <div class="stat-label-large">Total Expenses</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="stats-row-small">
+                        <!-- HDFC Bank Balance -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <span style="font-size: 24px; font-weight: bold;">🏦</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="hdfc-balance">₹0</div>
+                                <div class="stat-label-small">HDFC Bank Balance</div>
+                            </div>
+                        </div>
+
+                        <!-- Cash Balance -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">
+                                <span style="font-size: 24px; font-weight: bold;">💵</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="cash-balance">₹0</div>
+                                <div class="stat-label-small">Cash Balance</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="balance">₹0</div>
+                                <div class="stat-label-small">Total Balance</div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-cyan">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                                    <path d="M9 3v18" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="this-month-expense">₹0</div>
+                                <div class="stat-label-small">This Month Expense</div>
+                            </div>
+                        </div>
+
+
+
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-cyan">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <line x1="12" y1="1" x2="12" y2="23" />
+                                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="this-month-profit">₹0</div>
+                                <div class="stat-label-small">This Month Profit/Loss</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                </svg>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="overall-profit">₹0</div>
+                                <div class="stat-label-small">Overall Profit/Loss</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Content -->
+                <div class="page-content hidden" id="reports-page">
+                    <div class="section-header">
+                        <div>
+                            <h2>Monthly Reports</h2>
+                            <p class="company-subtitle" id="report-view-subtitle">Month Wise Breakdown</p>
+                        </div>
+                        <div class="report-filter">
+                            <label for="report-type">View:</label>
+                            <select id="report-type" class="report-dropdown" onchange="changeReportView()">
+                                <option value="monthly">Month Wise</option>
+                                <option value="quarterly">Quarter Wise</option>
+                                <option value="yearly">Year Wise</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div id="reports-container" class="reports-grid"></div>
+                </div>
+
+                <!-- Incomes Content -->
+                <div class="page-content hidden" id="incomes-page">
+                    <div class="section-header">
+                        <h2>Incomes</h2>
+                    </div>
+                    <p class="page-subtitle">Manage your income records</p>
+
+                    <!-- Income Stats -->
+                    <!-- Income Stats -->
+                    <div class="income-stats-row">
+                        <!-- Total Income -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <span style="font-size: 24px; font-weight: bold;">₹</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="inc-total-amount">₹0</div>
+                                <div class="stat-label-small">Total Income</div>
+                            </div>
+                        </div>
+
+                        <!-- Total Transactions -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-purple">
+                                <span style="font-size: 24px; font-weight: bold;">🔢</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="inc-total-count">0</div>
+                                <div class="stat-label-small">Total Transactions</div>
+                            </div>
+                        </div>
+
+                        <!-- This Month Income -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">
+                                <span style="font-size: 24px; font-weight: bold;">📅</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="inc-month-amount">₹0</div>
+                                <div class="stat-label-small">This Month Income</div>
+                            </div>
+                        </div>
+
+                        <!-- This Month Transactions -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-orange">
+                                <span style="font-size: 24px; font-weight: bold;">📝</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="inc-month-count">0</div>
+                                <div class="stat-label-small">This Month Transactions</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Income Records Section -->
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Income Records</h3>
+                            <div class="records-actions">
+                                <select class="filter-dropdown" id="income-filter" onchange="filterIncomes()">
+                                    <option value="all">Select Report</option>
+                                    <option value="this-month">This Month</option>
+                                    <option value="last-month">Last Month</option>
+                                    <option value="this-year">This Year</option>
+                                </select>
+                                <select class="filter-dropdown" id="income-category">
+                                    <option value="all">All Categories</option>
+                                    <option value="salary">Salary</option>
+                                    <option value="freelance">Freelance</option>
+                                    <option value="business">Business</option>
+                                    <option value="investment">Investment</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button class="btn-secondary" onclick="openCategoryModal()">📊 Manage
+                                    Categories</button>
+                                <button class="btn-primary" onclick="showAddIncomeForm()">+ Add Income</button>
+                            </div>
+                        </div>
+
+                        <div class="table-container" id="income-list"></div>
+                    </div>
+                </div>
+
+
+
+                <!-- Salary Logs Content -->
+                <div class="page-content hidden" id="salary-logs-page">
+                    <div class="section-header">
+                        <h2>Salary Logs</h2>
+                        <div class="records-actions">
+                            <button class="btn-primary" onclick="openEmployeeModal()">👥 Manage Employees</button>
+                            <button class="btn-primary" onclick="showAddSalaryModal()">+ Add Salary</button>
+                        </div>
+                    </div>
+                    <p class="page-subtitle">Manage employee salary records</p>
+
+                    <!-- Salary Stats -->
+                    <div class="income-stats-row">
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <span style="font-size: 24px; font-weight: bold;">₹</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="total-salary-paid">0</div>
+                                <div class="stat-label-small">Total Salary Paid</div>
+                            </div>
+                        </div>
+
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-purple">
+                                <span style="font-size: 24px; font-weight: bold;">👥</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="total-employees-paid">0</div>
+                                <div class="stat-label-small">Employees Paid</div>
+                            </div>
+                        </div>
+
+                        <!-- Salary Paid This Month -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">
+                                <span style="font-size: 24px; font-weight: bold;">📅</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="salary-paid-this-month">₹0</div>
+                                <div class="stat-label-small">Paid This Month</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Salary Records Section -->
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Salary History</h3>
+                        </div>
+
+                        <div class="table-container" id="salary-list"></div>
+                    </div>
+                </div>
+
+                <div class="page-content hidden" id="loans-page">
+                    <div class="section-header">
+                        <h2>Loans Management</h2>
+                        <div class="records-actions">
+                            <button class="btn-primary" onclick="showAddLoanModal()">+ Add Loan</button>
+                        </div>
+                    </div>
+                    <p class="page-subtitle">Track your loans and debts</p>
+
+                    <div class="income-stats-row"
+                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px;">
+                        <!-- Card 1: Total Loan Taken -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <span style="font-size: 24px; font-weight: bold;">💰</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="total-loan-taken-amount">0</div>
+                                <div class="stat-label-small">Total Loan Taken (<span
+                                        id="total-loan-taken-count">0</span>)
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Card 2: Active Loans -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-red">
+                                <span style="font-size: 24px; font-weight: bold;">⚠️</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="active-loan-amount">0</div>
+                                <div class="stat-label-small">Active Loans (<span id="active-loan-count">0</span>)</div>
+                            </div>
+                        </div>
+
+                        <!-- Card 3: Total Interest Paid -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">
+                                <span style="font-size: 24px; font-weight: bold;">💸</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="total-interest-paid">0</div>
+                                <div class="stat-label-small">Total Interest Paid</div>
+                            </div>
+                        </div>
+
+                        <!-- Card 4: Monthly Liability -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-purple">
+                                <span style="font-size: 24px; font-weight: bold;">📅</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="monthly-interest-liability">0</div>
+                                <div class="stat-label-small">Monthly Interest Liability</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Active Loans</h3>
+                        </div>
+                        <div class="table-container" id="loan-list"></div>
+                    </div>
+                </div>
+
+                <div class="page-content hidden" id="expenses-page">
+                    <div class="section-header">
+                        <h2>Expenses</h2>
+                    </div>
+                    <p class="page-subtitle">Manage your expense records</p>
+
+                    <!-- Expense Stats -->
+                    <div class="income-stats-row">
+                        <!-- Total Expense -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-red">
+                                <span style="font-size: 24px; font-weight: bold;">₹</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="exp-total-amount">₹0</div>
+                                <div class="stat-label-small">Total Expense</div>
+                            </div>
+                        </div>
+
+                        <!-- Total Transactions -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-purple">
+                                <span style="font-size: 24px; font-weight: bold;">🔢</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="exp-total-count">0</div>
+                                <div class="stat-label-small">Total Transactions</div>
+                            </div>
+                        </div>
+
+                        <!-- This Month Expense -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-orange">
+                                <span style="font-size: 24px; font-weight: bold;">📅</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="exp-month-amount">₹0</div>
+                                <div class="stat-label-small">This Month Expense</div>
+                            </div>
+                        </div>
+
+                        <!-- This Month Transactions -->
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">
+                                <span style="font-size: 24px; font-weight: bold;">📝</span>
+                            </div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="exp-month-count">0</div>
+                                <div class="stat-label-small">This Month Transactions</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Expense Records Section -->
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Expense Records</h3>
+                            <div class="records-actions">
+                                <select class="filter-dropdown" id="expense-filter" onchange="filterExpenses()">
+                                    <option value="all">Select Report</option>
+                                    <option value="this-month">This Month</option>
+                                    <option value="last-month">Last Month</option>
+                                    <option value="this-year">This Year</option>
+                                </select>
+                                <select class="filter-dropdown" id="expense-category">
+                                    <option value="all">All Categories</option>
+                                    <option value="rent">Rent</option>
+                                    <option value="food">Food</option>
+                                    <option value="transport">Transport</option>
+                                    <option value="utilities">Utilities</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <button class="btn-secondary" onclick="openExpenseCategoryModal()">📊 Manage
+                                    Categories</button>
+                                <button class="btn-primary" onclick="showAddExpenseForm()">+ Add Expense</button>
+                            </div>
+                        </div>
+
+                        <div class="table-container" id="expense-list"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Category Management Modal -->
+    <div id="categoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Income Categories</h3>
+                <button class="modal-close" onclick="closeCategoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="category-form-section">
+                    <label class="category-form-label">Add New Category</label>
+                    <div class="category-form">
+                        <input type="text" id="newCategoryInput" class="category-input" placeholder="Category Name">
+                        <button class="btn-add-category" onclick="addCategory()">+ Add</button>
+                    </div>
+                </div>
+                <div class="category-list" id="categoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expense Category Management Modal -->
+    <div id="expenseCategoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Expense Categories</h3>
+                <button class="modal-close" onclick="closeExpenseCategoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="category-form-section">
+                    <label class="category-form-label">Add New Category</label>
+                    <div class="category-form">
+                        <input type="text" id="newExpenseCategoryInput" class="category-input"
+                            placeholder="Category Name">
+                        <button class="btn-add-category" onclick="addExpenseCategory()">+ Add</button>
+                    </div>
+                </div>
+                <div class="category-list" id="expenseCategoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Employee Management Modal -->
+    <div id="employeeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Manage Employees</h3>
+                <button class="modal-close" onclick="closeEmployeeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="category-form-section">
+                    <label class="category-form-label">Add New Employee</label>
+                    <div class="category-form" style="display: flex; flex-direction: column; gap: 10px;">
+                        <input type="text" id="newEmployeeNameInput" class="category-input" placeholder="Employee Name"
+                            style="width: 100%;">
+                        <input type="text" id="newEmployeeRoleInput" class="category-input"
+                            placeholder="Role / Designation" style="width: 100%;">
+                        <button class="btn-add-category" onclick="addEmployee()" style="width: 100%;">+ Add
+                            Employee</button>
+                    </div>
+                </div>
+                <div class="category-list" id="employeeList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Expense Modal -->
+    <div id="addExpenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Expense</h3>
+                <button class="modal-close" onclick="closeAddExpenseModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="expenseForm" onsubmit="submitExpense(event)">
+                    <div class="form-group">
+                        <label class="form-label">Select Report <span class="required">*</span></label>
+                        <select id="expenseReportSelect" class="form-select" required
+                            onchange="updateExpenseDateRange()">
+                            <option value="">Please select a report first</option>
+                        </select>
+                        <small class="form-hint">Select the month for which you want to add this expense</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Date <span class="required">*</span></label>
+                        <input type="date" id="expenseDate" class="form-input" required disabled>
+                        <small class="form-hint" id="expenseDateHint">Please select a report first</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <input type="text" id="expenseDescription" class="form-input" placeholder="Enter description"
+                            required disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category Type <span class="required">*</span></label>
+                        <select id="expenseCategorySelect" class="form-select" required disabled>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode <span class="required">*</span></label>
+                        <select id="expensePaymentMode" class="form-select" required disabled>
+                            <option value="">Select Payment Mode</option>
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="expenseAmount" class="form-input" placeholder="0.00" step="0.01"
+                            min="0" required disabled>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeAddExpenseModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Income Modal -->
+    <div id="addIncomeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Income</h3>
+                <button class="modal-close" onclick="closeAddIncomeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="incomeForm" onsubmit="submitIncome(event)">
+                    <div class="form-group">
+                        <label class="form-label">Select Report <span class="required">*</span></label>
+                        <select id="incomeReportSelect" class="form-select" required onchange="updateIncomeDateRange()">
+                            <option value="">Please select a report first</option>
+                        </select>
+                        <small class="form-hint">Select the month for which you want to add this income</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Date <span class="required">*</span></label>
+                        <input type="date" id="incomeDate" class="form-input" required disabled>
+                        <small class="form-hint" id="incomeDateHint">Please select a report first</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <input type="text" id="incomeDescription" class="form-input" placeholder="Enter description"
+                            required disabled>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category Type <span class="required">*</span></label>
+                        <select id="incomeCategorySelect" class="form-select" required disabled>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode <span class="required">*</span></label>
+                        <select id="incomePaymentMode" class="form-select" required disabled>
+                            <option value="">Select Payment Mode</option>
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="incomeAmount" class="form-input" placeholder="0.00" step="0.01" min="0"
+                            required disabled>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeAddIncomeModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Salary Modal -->
+    <div id="addSalaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add Salary Log</h3>
+                <button class="modal-close" onclick="closeAddSalaryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="salaryForm" onsubmit="submitSalary(event)">
+                    <div class="form-group">
+                        <label class="form-label">Employee Name <span class="required">*</span></label>
+                        <select id="salaryEmployeeSelect" class="form-select" required
+                            onchange="onSalaryEmployeeSelect()">
+                            <option value="">Select Employee</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Role/Designation</label>
+                        <input type="text" id="salaryRole" class="form-input" placeholder="e.g. Developer">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Month <span class="required">*</span></label>
+                        <input type="month" id="salaryMonth" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Date <span class="required">*</span></label>
+                        <input type="date" id="salaryPaymentDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="salaryAmount" class="form-input" placeholder="0.00" step="0.01" min="0"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode</label>
+                        <select id="salaryPaymentMode" class="form-select">
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="UPI">UPI</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="salaryStatus" class="form-select">
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeAddSalaryModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Salary Modal -->
+    <div id="editSalaryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Salary Log</h3>
+                <button class="modal-close" onclick="closeEditSalaryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editSalaryForm" onsubmit="submitEditSalary(event)">
+                    <input type="hidden" id="editSalaryId">
+                    <div class="form-group">
+                        <label class="form-label">Employee Name <span class="required">*</span></label>
+                        <input type="text" id="editSalaryEmployeeName" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Role/Designation</label>
+                        <input type="text" id="editSalaryRole" class="form-input">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Month <span class="required">*</span></label>
+                        <input type="month" id="editSalaryMonth" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Date <span class="required">*</span></label>
+                        <input type="date" id="editSalaryPaymentDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="editSalaryAmount" class="form-input" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode</label>
+                        <select id="editSalaryPaymentMode" class="form-select">
+                            <option value="Bank Transfer">Bank Transfer</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                            <option value="UPI">UPI</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="editSalaryStatus" class="form-select">
+                            <option value="Paid">Paid</option>
+                            <option value="Pending">Pending</option>
+                        </select>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeEditSalaryModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Update Record</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Loan Modal -->
+    <div id="addLoanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Loan</h3>
+                <button class="modal-close" onclick="closeAddLoanModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="loanForm" onsubmit="submitLoan(event)">
+                    <div class="form-group">
+                        <label class="form-label">Creditor Name <span class="required">*</span></label>
+                        <input type="text" id="loanCreditor" class="form-input" placeholder="Bank or Person Name"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Principal Amount <span class="required">*</span></label>
+                        <input type="number" id="loanAmount" class="form-input" placeholder="0.00" step="0.01" min="0"
+                            required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interest Rate (%)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="number" id="loanInterest" class="form-input" placeholder="0.00" step="0.01"
+                                min="0" style="flex: 1;">
+                            <div style="display: flex; gap: 5px;">
+                                <label><input type="radio" name="interestType" value="Monthly" checked> Monthly</label>
+                                <label><input type="radio" name="interestType" value="Annual"> Annual</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Start Date <span class="required">*</span></label>
+                        <input type="date" id="loanStartDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="loanDescription" class="form-input" rows="3"
+                            placeholder="Additional details"></textarea>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeAddLoanModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Save Loan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+
+    <!-- Edit Loan Modal -->
+    <div id="editLoanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Loan</h3>
+                <button class="modal-close" onclick="closeEditLoanModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editLoanForm" onsubmit="submitEditLoan(event)">
+                    <input type="hidden" id="editLoanId">
+                    <div class="form-group">
+                        <label class="form-label">Creditor Name <span class="required">*</span></label>
+                        <input type="text" id="editLoanCreditor" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Principal Amount <span class="required">*</span></label>
+                        <input type="number" id="editLoanAmount" class="form-input" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interest Rate (%)</label>
+                        <div style="display: flex; gap: 10px; align-items: center;">
+                            <input type="number" id="editLoanInterest" class="form-input" step="0.01" min="0"
+                                style="flex: 1;">
+                            <div style="display: flex; gap: 5px;">
+                                <label><input type="radio" name="editInterestType" value="Monthly"> Monthly</label>
+                                <label><input type="radio" name="editInterestType" value="Annual"> Annual</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Start Date <span class="required">*</span></label>
+                        <input type="date" id="editLoanStartDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select id="editLoanStatus" class="form-select">
+                            <option value="Active">Active</option>
+                            <option value="Closed">Closed</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description</label>
+                        <textarea id="editLoanDescription" class="form-input" rows="3"></textarea>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeEditLoanModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Update Loan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pay Interest Modal -->
+    <div id="payInterestModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Pay Interest</h3>
+                <button class="modal-close" onclick="closePayInterestModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="payInterestForm" onsubmit="submitInterestPayment(event)">
+                    <input type="hidden" id="payInterestLoanId">
+                    <p id="payInterestText" style="margin-bottom: 20px; color: #64748b;">Record interest payment for
+                        this month.</p>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Date <span class="required">*</span></label>
+                        <input type="date" id="payInterestDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Interest Amount (Editable)</label>
+                        <input type="number" id="payInterestAmountDisplay" class="form-input" step="0.01" min="0"
+                            required style="font-weight: bold; color: #0f172a;">
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closePayInterestModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Confirm Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Repay Loan Modal -->
+    <div id="repayLoanModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Repay Principal</h3>
+                <button class="modal-close" onclick="closeRepayModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="repayLoanForm" onsubmit="submitRepayment(event)">
+                    <input type="hidden" id="repayLoanId">
+                    <p style="margin-bottom: 15px; color: #64748b;">
+                        Outstanding Principal: <strong id="repayOutstandingDisplay">₹0.00</strong>
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label">Repayment Amount <span class="required">*</span></label>
+                        <input type="number" id="repayAmount" class="form-input" step="0.01" min="0.01" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Date <span class="required">*</span></label>
+                        <input type="date" id="repayDate" class="form-input" required>
+                    </div>
+
+                    <div class="alert-box"
+                        style="margin-top: 15px; font-size: 13px; color: #1e293b; background: #f1f5f9; padding: 10px; border-radius: 4px;">
+                        Note: Full payment will automatically close the loan.
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeRepayModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Confirm Payment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- History Modal -->
+    <div id="loanHistoryModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Loan Payment History</h3>
+                <button class="modal-close" onclick="closeHistoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-container">
+                    <table class="table" id="loanHistoryTable">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Description</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
