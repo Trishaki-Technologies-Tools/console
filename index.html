@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,7 +30,7 @@
             padding: 50px 40px;
             width: 100%;
             max-width: 400px;
-            box-shadow: 
+            box-shadow:
                 0 8px 32px rgba(255, 255, 255, 0.05),
                 0 0 0 1px rgba(255, 255, 255, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.1);
@@ -49,8 +50,13 @@
         }
 
         @keyframes shimmer {
-            0% { left: -100%; }
-            100% { left: 100%; }
+            0% {
+                left: -100%;
+            }
+
+            100% {
+                left: 100%;
+            }
         }
 
         .logo {
@@ -73,8 +79,13 @@
         }
 
         @keyframes glow {
-            from { box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4), 0 0 20px rgba(102, 126, 234, 0.2); }
-            to { box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6), 0 0 30px rgba(102, 126, 234, 0.3); }
+            from {
+                box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4), 0 0 20px rgba(102, 126, 234, 0.2);
+            }
+
+            to {
+                box-shadow: 0 12px 35px rgba(102, 126, 234, 0.6), 0 0 30px rgba(102, 126, 234, 0.3);
+            }
         }
 
         .logo h1 {
@@ -115,7 +126,7 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
         }
-        
+
         #password {
             padding-right: 45px;
         }
@@ -123,7 +134,8 @@
         .password-toggle {
             position: absolute;
             right: 15px;
-            top: 42px; /* Adjust based on label height + margin */
+            top: 42px;
+            /* Adjust based on label height + margin */
             background: none;
             border: none;
             cursor: pointer;
@@ -205,13 +217,14 @@
                 padding: 40px 30px;
                 margin: 20px;
             }
-            
+
             .logo h1 {
                 font-size: 1.8rem;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="login-container">
         <div class="logo">
@@ -233,15 +246,22 @@
             <div class="form-group">
                 <label for="password">Password</label>
                 <input type="password" id="password" name="password" placeholder="Enter your password" required>
-                <button type="button" id="togglePassword" class="password-toggle" aria-label="Toggle password visibility">
+                <button type="button" id="togglePassword" class="password-toggle"
+                    aria-label="Toggle password visibility">
                     <!-- Eye Icon (Visible) -->
-                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg id="eyeIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
                         <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
                         <circle cx="12" cy="12" r="3"></circle>
                     </svg>
                     <!-- Eye Off Icon (Hidden initially) -->
-                    <svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;">
-                        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                    <svg id="eyeOffIcon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round" style="display: none;">
+                        <path
+                            d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24">
+                        </path>
                         <line x1="1" y1="1" x2="23" y2="23"></line>
                     </svg>
                 </button>
@@ -250,85 +270,191 @@
             <button type="submit" class="login-btn">Sign In</button>
         </form>
 
+        <!-- 2FA Section (Hidden by default) -->
+        <div id="2fa-section" style="display: none; text-align: center;">
+            <div id="2fa-setup" style="display: none;">
+                <h3 style="color: white; margin-bottom: 15px;">Setup 2FA</h3>
+                <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-bottom: 15px;">Scan this QR code with
+                    Google Authenticator App</p>
+                <img id="qr-code-img" src="" alt="QR Code"
+                    style="border-radius: 10px; margin-bottom: 20px; border: 5px solid white;">
+                <p style="color: rgba(255,255,255,0.5); font-size: 0.8rem; margin-bottom: 10px;">Or enter manual key:
+                    <span id="manual-secret" style="color: #667eea; font-weight: bold;"></span></p>
+            </div>
+
+            <div id="2fa-verify">
+                <h3 id="2fa-title" style="color: white; margin-bottom: 15px;">Two-Factor Authentication</h3>
+                <p style="color: rgba(255,255,255,0.7); font-size: 0.9rem; margin-bottom: 15px;">Enter the 6-digit code
+                    from your app</p>
+
+                <div class="form-group">
+                    <input type="text" id="2fa-code" placeholder="000 000" maxlength="6"
+                        style="text-align: center; letter-spacing: 5px; font-size: 1.2rem;">
+                </div>
+                <button type="button" id="verify-2fa-btn" class="login-btn">Verify Code</button>
+            </div>
+
+            <button type="button" onclick="cancel2FA()"
+                style="background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer; margin-top: 10px;">Back
+                to Login</button>
+        </div>
+
         <div class="forgot-password">
             <a href="#" onclick="alert('Contact administrator for password reset')">Forgot Password?</a>
         </div>
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+        let globalUsername = '';
+        let globalPassword = '';
+        let globalSecret = ''; // For setup
+
+        function cancel2FA() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('2fa-section').style.display = 'none';
+            document.getElementById('2fa-code').value = '';
+        }
+
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const errorMessage = document.getElementById('error-message');
             const loginBtn = document.querySelector('.login-btn');
-            
+
+            globalUsername = username;
+            globalPassword = password;
+
             // Disable button and show loading
             loginBtn.disabled = true;
-            loginBtn.textContent = 'Signing In...';
-            
+            loginBtn.textContent = 'Verifying...';
+
             try {
                 const response = await fetch('login-simple.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        username: username,
-                        password: password
-                    })
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
-                    // Successful login - redirect to dashboard
                     window.location.href = data.redirect || 'dashboard.html';
+                } else if (data.setup_2fa) {
+                    // SHOW SETUP UI
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('2fa-section').style.display = 'block';
+                    document.getElementById('2fa-setup').style.display = 'block';
+                    document.getElementById('2fa-code').value = ''; // clear previous
+
+                    document.getElementById('qr-code-img').src = data.qr_code;
+                    document.getElementById('manual-secret').textContent = data.secret;
+                    globalSecret = data.secret;
+
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
+
+                } else if (data.require_2fa) {
+                    // SHOW VERIFY UI
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('2fa-section').style.display = 'block';
+                    document.getElementById('2fa-setup').style.display = 'none';
+                    document.getElementById('2fa-code').value = ''; // clear previous
+
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
+
                 } else {
-                    // Show error message
                     errorMessage.textContent = data.message || 'Login failed';
-                    errorMessage.style.display = 'block';
-                    
-                    // Clear form
-                    document.getElementById('username').value = '';
-                    document.getElementById('password').value = '';
-                    
-                    // Hide error after 3 seconds
-                    setTimeout(() => {
-                        errorMessage.style.display = 'none';
-                    }, 3000);
+                    showError();
+                    loginBtn.disabled = false;
+                    loginBtn.textContent = 'Sign In';
                 }
             } catch (error) {
                 console.error('Login error:', error);
                 errorMessage.textContent = 'Connection error. Please try again.';
-                errorMessage.style.display = 'block';
-                
-                setTimeout(() => {
-                    errorMessage.style.display = 'none';
-                }, 3000);
-            } finally {
-                // Re-enable button
+                showError();
                 loginBtn.disabled = false;
                 loginBtn.textContent = 'Sign In';
             }
         });
 
+        // 2FA Verification Handler
+        document.getElementById('verify-2fa-btn').addEventListener('click', async function () {
+            const code = document.getElementById('2fa-code').value;
+            const btn = this;
+            const errorMessage = document.getElementById('error-message');
+
+            if (code.length < 6) {
+                errorMessage.textContent = 'Please enter a 6-digit code';
+                showError();
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Checking...';
+
+            const payload = {
+                username: globalUsername,
+                password: globalPassword
+            };
+
+            // If we have a global secret, it means we are in SETUP mode
+            if (globalSecret) {
+                payload.setup_code = code;
+                payload.setup_secret = globalSecret;
+            } else {
+                // Otherwise normal login verification
+                payload.code = code;
+            }
+
+            try {
+                const response = await fetch('login-simple.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    window.location.href = data.redirect || 'dashboard.html';
+                } else {
+                    errorMessage.textContent = data.message || 'Invalid 2FA Code';
+                    showError();
+                    btn.disabled = false;
+                    btn.textContent = 'Verify Code';
+                }
+            } catch (error) {
+                errorMessage.textContent = 'Connection Error';
+                showError();
+                btn.disabled = false;
+                btn.textContent = 'Verify Code';
+            }
+        });
+
+        function showError() {
+            const em = document.getElementById('error-message');
+            em.style.display = 'block';
+            setTimeout(() => { em.style.display = 'none'; }, 3000);
+        }
+
         // Hide error message when user starts typing
-        document.getElementById('username').addEventListener('input', function() {
+        document.getElementById('username').addEventListener('input', function () {
             document.getElementById('error-message').style.display = 'none';
         });
 
-        document.getElementById('password').addEventListener('input', function() {
+        document.getElementById('password').addEventListener('input', function () {
             document.getElementById('error-message').style.display = 'none';
         });
 
         // Password Toggle Logic
-        document.getElementById('togglePassword').addEventListener('click', function() {
+        document.getElementById('togglePassword').addEventListener('click', function () {
             const passwordInput = document.getElementById('password');
             const eyeIcon = document.getElementById('eyeIcon');
             const eyeOffIcon = document.getElementById('eyeOffIcon');
-            
+
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
                 eyeIcon.style.display = 'none';
@@ -341,4 +467,5 @@
         });
     </script>
 </body>
+
 </html>

@@ -40,16 +40,92 @@ try {
         
         // Verify credentials
         if ($username === $VALID_USERNAME && password_verify($password, $VALID_PASSWORD_HASH)) {
-            // Successful login
-            $_SESSION['logged_in'] = true;
-            $_SESSION['username'] = $username;
-            $_SESSION['login_time'] = time();
             
-            echo json_encode([
-                'success' => true,
-                'message' => 'Login successful',
-                'redirect' => 'dashboard.html'
-            ]);
+            require_once 'GoogleAuthenticator.php';
+            $g2fa = new GoogleAuthenticator();
+            $secretFile = '2fa_secret.txt';
+
+            // Check if 2FA is set up
+            if (file_exists($secretFile)) {
+                $secret = trim(file_get_contents($secretFile));
+                
+                // If code is provided, verify it
+                if (isset($input['code'])) {
+                     $code = trim($input['code']);
+                     if ($g2fa->verifyCode($secret, $code, 2)) { // 2 = 60s tolerance
+                        // SUCCESS
+                        $_SESSION['logged_in'] = true;
+                        $_SESSION['username'] = $username;
+                        $_SESSION['login_time'] = time();
+                        
+                        echo json_encode([
+                            'success' => true,
+                            'message' => 'Login successful',
+                            'redirect' => 'dashboard.html'
+                        ]);
+                     } else {
+                        // INVALID CODE
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Invalid 2FA Code' 
+                        ]);
+                     }
+                } else {
+                    // REQUIRE 2FA
+                    echo json_encode([
+                        'success' => false,
+                        'require_2fa' => true,
+                        'message' => 'Please enter 2FA Code'
+                    ]);
+                }
+
+            } else {
+                // 2FA NOT SETUP - First time setup logic
+                
+                // Check if user is trying to verify the setup
+                if (isset($input['setup_code']) && isset($input['setup_secret'])) {
+                    $code = trim($input['setup_code']);
+                    $tempSecret = trim($input['setup_secret']);
+                    
+                    if ($g2fa->verifyCode($tempSecret, $code, 2)) {
+                        // SAVE SECRET
+                        if (file_put_contents($secretFile, $tempSecret)) {
+                            $_SESSION['logged_in'] = true;
+                            $_SESSION['username'] = $username;
+                            $_SESSION['login_time'] = time();
+                            
+                            echo json_encode([
+                                'success' => true,
+                                'message' => '2FA Setup Complete & Login Successful',
+                                'redirect' => 'dashboard.html'
+                            ]);
+                        } else {
+                            echo json_encode([
+                                'success' => false,
+                                'message' => 'Failed to save 2FA secret'
+                            ]);
+                        }
+                    } else {
+                        echo json_encode([
+                            'success' => false,
+                            'message' => 'Invalid Verification Code'
+                        ]);
+                    }
+                } else {
+                    // GENERATE NEW SECRET for SETUP
+                    $secret = $g2fa->createSecret();
+                    $qrCodeUrl = $g2fa->getQRCodeGoogleUrl('TrishakiConsole', $secret, 'Trishaki Technologies');
+                    
+                    echo json_encode([
+                        'success' => false,
+                        'setup_2fa' => true,
+                        'secret' => $secret,
+                        'qr_code' => $qrCodeUrl,
+                        'message' => 'Setup Google Authenticator'
+                    ]);
+                }
+            }
+
         } else {
             // Failed login
             echo json_encode([
