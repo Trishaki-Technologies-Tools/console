@@ -93,7 +93,7 @@ class GoogleAuthenticator
      * @param int|null $currentTimeSlice time slice if we want use other that time()
      * @return bool
      */
-    public function verifyCode($secret, $code, $discrepancy = 1, $currentTimeSlice = null)
+    public function verifyCode($secret, $code, $discrepancy = 1, $currentTimeSlice = null, &$verifiedSlice = 0)
     {
         if ($currentTimeSlice === null) {
             $currentTimeSlice = floor(time() / 30);
@@ -104,8 +104,10 @@ class GoogleAuthenticator
         }
 
         for ($i = -$discrepancy; $i <= $discrepancy; ++$i) {
-            $calculatedCode = $this->getCode($secret, $currentTimeSlice + $i);
+            $calculatedSlice = $currentTimeSlice + $i;
+            $calculatedCode = $this->getCode($secret, $calculatedSlice);
             if ($this->timingSafeEquals($calculatedCode, $code)) {
+                $verifiedSlice = $calculatedSlice;
                 return true;
             }
         }

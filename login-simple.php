@@ -52,7 +52,28 @@ try {
                 // If code is provided, verify it
                 if (isset($input['code'])) {
                      $code = trim($input['code']);
-                     if ($g2fa->verifyCode($secret, $code, 2)) { // 2 = 60s tolerance
+                     $verifiedSlice = 0;
+                     if ($g2fa->verifyCode($secret, $code, 2, null, $verifiedSlice)) { // 2 = 60s tolerance
+                         
+                        // REPLAY CHECK
+                        $lastUsedFile = '2fa_last_used.txt';
+                        $lastUsedSlice = 0;
+                        if (file_exists($lastUsedFile)) {
+                            $lastUsedSlice = (int)trim(file_get_contents($lastUsedFile));
+                        }
+
+                        if ($verifiedSlice <= $lastUsedSlice) {
+                             // REPLAY ATTACK or EXPIRED
+                             echo json_encode([
+                                'success' => false,
+                                'message' => 'Code already used or expired'
+                            ]);
+                            exit;
+                        }
+
+                        // SAVE NEW SLICE
+                        file_put_contents($lastUsedFile, $verifiedSlice);
+
                         // SUCCESS
                         $_SESSION['logged_in'] = true;
                         $_SESSION['username'] = $username;
@@ -87,9 +108,13 @@ try {
                     $code = trim($input['setup_code']);
                     $tempSecret = trim($input['setup_secret']);
                     
-                    if ($g2fa->verifyCode($tempSecret, $code, 2)) {
+                    $verifiedSlice = 0;
+                    if ($g2fa->verifyCode($tempSecret, $code, 2, null, $verifiedSlice)) {
                         // SAVE SECRET
                         if (file_put_contents($secretFile, $tempSecret)) {
+                            // Initialize last used slice
+                            file_put_contents('2fa_last_used.txt', $verifiedSlice);
+
                             $_SESSION['logged_in'] = true;
                             $_SESSION['username'] = $username;
                             $_SESSION['login_time'] = time();
