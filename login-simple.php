@@ -9,7 +9,7 @@ header('Access-Control-Allow-Headers: Content-Type');
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Updated credentials with hash for "Kishan-trishaki-tech-console#304"
+
 $VALID_USERNAME = 'console@trishaki';
 $VALID_PASSWORD_HASH = '$2y$10$qJ2eYduGbqJT0vN0MxqrHufQVTBaWQxpetN0NJm5AJoO8oRXvUDYu';
 
@@ -81,8 +81,8 @@ try {
                         
                         echo json_encode([
                             'success' => true,
-                            'message' => 'Login successful',
-                            'redirect' => 'dashboard.html'
+                                'message' => 'Login successful',
+                            'redirect' => 'dashboard.php'
                         ]);
                      } else {
                         // INVALID CODE
@@ -122,7 +122,7 @@ try {
                             echo json_encode([
                                 'success' => true,
                                 'message' => '2FA Setup Complete & Login Successful',
-                                'redirect' => 'dashboard.html'
+                                'redirect' => 'dashboard.php'
                             ]);
                         } else {
                             echo json_encode([
