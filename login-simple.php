@@ -10,8 +10,8 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 
-$VALID_USERNAME = 'console@trishaki';
-$VALID_PASSWORD_HASH = '$2y$10$qJ2eYduGbqJT0vN0MxqrHufQVTBaWQxpetN0NJm5AJoO8oRXvUDYu';
+$VALID_USERNAME = 'Trishaki@console';
+$VALID_PASSWORD_HASH = '$2y$10$U6YeWhH9ausb3j2QraJ0Cu5JnR.2OQpujxR.ED2TSwiH6D8gNvbKu';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
