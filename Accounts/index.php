@@ -195,6 +195,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                                 <option value="quarterly">Quarter Wise</option>
                                 <option value="yearly">Year Wise</option>
                             </select>
+                            <button class="btn-primary" onclick="addReport()">+ Add Report</button>
                         </div>
                     </div>
                     <div id="reports-container" class="reports-grid"></div>

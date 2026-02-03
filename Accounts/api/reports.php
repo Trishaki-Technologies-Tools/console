@@ -7,7 +7,7 @@ $type = isset($_GET['type']) ? $_GET['type'] : 'monthly';
 $reports = [];
 
 try {
-    // 1. Fetch all raw transaction data grouped by period
+// 1. Fetch all raw transaction data grouped by period
     if ($type === 'monthly') {
         $sql = "
             SELECT 
@@ -15,11 +15,13 @@ try {
                 YEAR(date) as y,
                 MONTH(date) as m,
                 SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
-                SELECT date, amount, 'income' as type FROM incomes
+                SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
-                SELECT date, amount, 'expense' as type FROM expenses
+                SELECT date, amount, category, 'expense' as type FROM expenses
             ) as combined
             GROUP BY y, m
             ORDER BY y ASC, m ASC
@@ -31,11 +33,13 @@ try {
                 YEAR(date) as y,
                 QUARTER(date) as q,
                 SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
-                SELECT date, amount, 'income' as type FROM incomes
+                SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
-                SELECT date, amount, 'expense' as type FROM expenses
+                SELECT date, amount, category, 'expense' as type FROM expenses
             ) as combined
             GROUP BY y, q
             ORDER BY y ASC, q ASC
@@ -46,11 +50,13 @@ try {
                 CAST(YEAR(date) AS CHAR) as period_label,
                 YEAR(date) as y,
                 SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses
+                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
-                SELECT date, amount, 'income' as type FROM incomes
+                SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
-                SELECT date, amount, 'expense' as type FROM expenses
+                SELECT date, amount, category, 'expense' as type FROM expenses
             ) as combined
             GROUP BY y
             ORDER BY y ASC

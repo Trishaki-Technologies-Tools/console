@@ -37,19 +37,19 @@ window.addEventListener('DOMContentLoaded', function () {
     loadSalaryLogs();
     loadLoans();
     setupAutoCategorization();
-    
+
     // Set up continuous badge removal
     setInterval(removeBadgeElements, 1000); // Check every second
-    
+
     // Set up mutation observer to catch dynamically added badges
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
+    const observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (mutation) {
             if (mutation.type === 'childList') {
                 removeBadgeElements();
             }
         });
     });
-    
+
     observer.observe(document.body, {
         childList: true,
         subtree: true
@@ -798,7 +798,6 @@ function displayReports(reports) {
                 </div>
                 <div class="report-stat">
                     <span class="report-stat-icon">📊</span>
-                    <span class="report-stat-label">Profit/Loss</span>
                     <span class="report-stat-value ${profitClass}">₹${profit.toFixed(2)}</span>
                 </div>
                 <div class="report-stat">
@@ -806,13 +805,23 @@ function displayReports(reports) {
                     <span class="report-stat-label">Closing Balance</span>
                     <span class="report-stat-value">₹${parseFloat(report.closing_balance).toFixed(2)}</span>
                 </div>
+                 <div class="report-stat">
+                    <span class="report-stat-icon">🤝</span>
+                    <span class="report-stat-label">Loan Taken</span>
+                    <span class="report-stat-value" style="color: #6366f1;">₹${parseFloat(report.loan_taken || 0).toFixed(2)}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-icon">✅</span>
+                    <span class="report-stat-label">Loan Paid</span>
+                    <span class="report-stat-value" style="color: #10b981;">₹${parseFloat(report.loan_paid || 0).toFixed(2)}</span>
+                </div>
             </div>
             ${isCurrentPeriod ? '<div class="report-footer">Current Period - Updates automatically</div>' : ''}
         </div>`;
     });
 
     container.innerHTML = html;
-    
+
     // Force remove any remaining badge elements - multiple attempts
     setTimeout(() => {
         removeBadgeElements();
@@ -833,18 +842,18 @@ function removeBadgeElements() {
         element.style.display = 'none !important';
         element.remove();
     });
-    
+
     // Remove by content - check all elements for tick and cross symbols
     const allElements = document.querySelectorAll('*');
     allElements.forEach(element => {
-        if (element.textContent === '✓' || element.textContent === '✕' || 
+        if (element.textContent === '✓' || element.textContent === '✕' ||
             element.innerHTML === '✓' || element.innerHTML === '✕' ||
             element.textContent.includes('✓') || element.textContent.includes('✕')) {
             element.style.display = 'none !important';
             element.remove();
         }
     });
-    
+
     // Remove any span elements with these specific symbols
     const spans = document.querySelectorAll('span');
     spans.forEach(span => {
@@ -853,7 +862,7 @@ function removeBadgeElements() {
             span.remove();
         }
     });
-    
+
     // Remove any div elements containing report-badges
     const divs = document.querySelectorAll('div');
     divs.forEach(div => {
@@ -1885,8 +1894,33 @@ function onSalaryEmployeeSelect() {
     const select = document.getElementById('salaryEmployeeSelect');
     const roleInput = document.getElementById('salaryRole');
 
-    const selectedOption = select.options[select.selectedIndex];
     if (selectedOption && selectedOption.dataset.role) {
         roleInput.value = selectedOption.dataset.role;
+    }
+}
+
+// Add Report Function
+function addReport() {
+    const month = prompt("Enter month year (e.g., OCT-2025):");
+    if (month && month.match(/^[A-Z]{3}-\d{4}$/)) {
+        const formData = new FormData();
+        formData.append('month', month);
+
+        fetch('api/add_report.php', {
+            method: 'POST',
+            body: formData
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Report created successfully');
+                    loadReports();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to create report'));
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    } else if (month) {
+        alert("Invalid format. Please use MMM-YYYY format (e.g., JAN-2026)");
     }
 }
