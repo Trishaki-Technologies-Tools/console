@@ -778,9 +778,12 @@ function displayReports(reports) {
         html += `
         <div class="report-card">
             <div class="report-header">
-                <div class="report-month">${periodLabel}</div>
+                <div class="report-title">${periodLabel}</div>
+                <div class="report-actions">
+                     <button onclick="deleteReport('${report.period}')" class="btn-icon" title="Delete Report" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">🗑️</button>
+                </div>
             </div>
-            <div class="report-stats">
+            <div class="report-card-body">
                 <div class="report-stat">
                     <span class="report-stat-icon">💼</span>
                     <span class="report-stat-label">Opening Balance</span>
@@ -797,15 +800,6 @@ function displayReports(reports) {
                     <span class="report-stat-value negative">₹${parseFloat(report.expenses).toFixed(2)}</span>
                 </div>
                 <div class="report-stat">
-                    <span class="report-stat-icon">📊</span>
-                    <span class="report-stat-value ${profitClass}">₹${profit.toFixed(2)}</span>
-                </div>
-                <div class="report-stat">
-                    <span class="report-stat-icon">🏦</span>
-                    <span class="report-stat-label">Closing Balance</span>
-                    <span class="report-stat-value">₹${parseFloat(report.closing_balance).toFixed(2)}</span>
-                </div>
-                 <div class="report-stat">
                     <span class="report-stat-icon">🤝</span>
                     <span class="report-stat-label">Loan Taken</span>
                     <span class="report-stat-value" style="color: #6366f1;">₹${parseFloat(report.loan_taken || 0).toFixed(2)}</span>
@@ -814,6 +808,16 @@ function displayReports(reports) {
                     <span class="report-stat-icon">✅</span>
                     <span class="report-stat-label">Loan Paid</span>
                     <span class="report-stat-value" style="color: #10b981;">₹${parseFloat(report.loan_paid || 0).toFixed(2)}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-icon">📊</span>
+                    <span class="report-stat-label">Profit/Loss</span>
+                    <span class="report-stat-value ${profitClass}">₹${profit.toFixed(2)}</span>
+                </div>
+                <div class="report-stat">
+                    <span class="report-stat-icon">🏦</span>
+                    <span class="report-stat-label">Closing Balance</span>
+                    <span class="report-stat-value">₹${parseFloat(report.closing_balance).toFixed(2)}</span>
                 </div>
             </div>
             ${isCurrentPeriod ? '<div class="report-footer">Current Period - Updates automatically</div>' : ''}
@@ -828,13 +832,31 @@ function displayReports(reports) {
     }, 50);
     setTimeout(() => {
         removeBadgeElements();
-    }, 200);
-    setTimeout(() => {
-        removeBadgeElements();
     }, 500);
 }
 
-// Function to aggressively remove badge elements
+function deleteReport(month) {
+    if (confirm(`Are you sure you want to delete the report for ${month}? \n\nWARNING: This will delete the report entry AND ALL income/expense records for this month. This action cannot be undone.`)) {
+        fetch('api/delete_report.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ month: month })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Report deleted successfully');
+                    loadReports();
+                } else {
+                    alert('Error: ' + (data.error || 'Failed to delete report'));
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    }
+}
+
 function removeBadgeElements() {
     // Remove by class names
     const badgeElements = document.querySelectorAll('.report-badges, .badge-green, .badge-red, .badge');
@@ -872,11 +894,6 @@ function removeBadgeElements() {
         }
     });
 }
-
-// Remove the generateReport function as it's no longer needed
-
-
-// Category Management Functions
 function openCategoryModal() {
     document.getElementById('categoryModal').classList.add('show');
     loadCategories();
@@ -1900,27 +1917,92 @@ function onSalaryEmployeeSelect() {
 }
 
 // Add Report Function
+// Add Report Function
 function addReport() {
-    const month = prompt("Enter month year (e.g., OCT-2025):");
-    if (month && month.match(/^[A-Z]{3}-\d{4}$/)) {
-        const formData = new FormData();
-        formData.append('month', month);
+    document.getElementById('addReportModal').classList.add('show');
 
-        fetch('api/add_report.php', {
-            method: 'POST',
-            body: formData
+    const monthInput = document.getElementById('reportMonth');
+    // Default to current month
+    const now = new Date();
+    const monthStr = now.toISOString().slice(0, 7); // YYYY-MM
+    monthInput.value = monthStr;
+
+    // Trigger check immediately
+    fetchPreviousBalance(monthStr);
+
+    // Add change listener
+    monthInput.onchange = function () {
+        fetchPreviousBalance(this.value);
+    };
+}
+
+function fetchPreviousBalance(monthStr) {
+    if (!monthStr) return;
+
+    fetch(`api/get_previous_balance.php?month=${monthStr}`)
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    document.getElementById('reportOpeningBalance').value = parseFloat(data.opening_balance).toFixed(2);
+                } else {
+                    document.getElementById('reportOpeningBalance').value = "0.00";
+                    if (data.message) console.log("API Info:", data.message);
+                }
+            } catch (e) {
+                console.error("JSON Parse Error:", e);
+                console.error("Raw Response:", text);
+            }
         })
-            .then(response => response.json())
-            .then(data => {
+        .catch(e => console.error("Network Error:", e));
+}
+
+function closeAddReportModal() {
+    document.getElementById('addReportModal').classList.remove('show');
+    document.getElementById('addReportForm').reset();
+}
+
+function submitAddReport(event) {
+    event.preventDefault();
+
+    const monthInput = document.getElementById('reportMonth').value; // YYYY-MM
+    const openingBalance = parseFloat(document.getElementById('reportOpeningBalance').value) || 0;
+
+    // Convert YYYY-MM to MMM-YYYY (e.g., JAN-2026)
+    const [year, month] = monthInput.split('-');
+    const dateObj = new Date(year, month - 1);
+    const monthName = dateObj.toLocaleString('default', { month: 'short' }).toUpperCase();
+    const formattedMonth = `${monthName}-${year}`;
+
+    const formData = new FormData();
+    formData.append('month', formattedMonth);
+    formData.append('opening_balance', openingBalance);
+    formData.append('income', 0);
+    formData.append('expenses', 0);
+    // Assuming initial closing balance = opening balance
+    formData.append('closing_balance', openingBalance);
+
+    fetch('api/add_report.php', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
                 if (data.success) {
                     alert('Report created successfully');
+                    closeAddReportModal();
                     loadReports();
                 } else {
                     alert('Error: ' + (data.error || 'Failed to create report'));
                 }
-            })
-            .catch(error => console.error('Error:', error));
-    } else if (month) {
-        alert("Invalid format. Please use MMM-YYYY format (e.g., JAN-2026)");
-    }
+            } catch (e) {
+                console.error("JSON Parse Error:", e);
+                console.error("Raw Response:", text);
+                alert("Server Error. Check console for details.");
+            }
+        })
+        .catch(error => console.error('Error:', error));
 }

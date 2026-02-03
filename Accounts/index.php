@@ -991,6 +991,35 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
             </div>
         </div>
     </div>
+    <!-- Add Report Modal -->
+    <div id="addReportModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Add New Report</h3>
+                <button class="modal-close" onclick="closeAddReportModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addReportForm" onsubmit="submitAddReport(event)">
+                    <div class="form-group">
+                        <label class="form-label">Month <span class="required">*</span></label>
+                        <input type="month" id="reportMonth" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Opening Balance</label>
+                        <input type="number" id="reportOpeningBalance" class="form-input" placeholder="0.00" step="0.01" value="0.00">
+                        <small class="form-hint">Set to 0 if this is not the first report.</small>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeAddReportModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Create Report</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- History Modal -->
     <div id="loanHistoryModal" class="modal">
         <div class="modal-content">

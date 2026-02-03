@@ -14,14 +14,16 @@ try {
                 DATE_FORMAT(date, '%b-%Y') as period_label,
                 YEAR(date) as y,
                 MONTH(date) as m,
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
                 SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
                 SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
                 SELECT date, amount, category, 'expense' as type FROM expenses
+                UNION ALL
+                SELECT STR_TO_DATE(CONCAT('01-', month), '%d-%b-%Y') as date, 0 as amount, '' as category, 'report' as type FROM reports
             ) as combined
             GROUP BY y, m
             ORDER BY y ASC, m ASC
@@ -32,8 +34,8 @@ try {
                 CONCAT('Q', QUARTER(date), '-', YEAR(date)) as period_label,
                 YEAR(date) as y,
                 QUARTER(date) as q,
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
                 SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
@@ -49,8 +51,8 @@ try {
             SELECT 
                 CAST(YEAR(date) AS CHAR) as period_label,
                 YEAR(date) as y,
-                SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income,
-                SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expenses,
+                SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
+                SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
                 SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
             FROM (
@@ -78,7 +80,8 @@ try {
     if ($result) {
         while ($row = $result->fetch_assoc()) {
             $opening = $runningBalance;
-            $net = floatval($row['income']) - floatval($row['expenses']);
+            // Net calculates actual cash flow: (Income + Loans Taken) - (Expenses + Loans Paid)
+            $net = (floatval($row['income']) + floatval($row['loan_taken'])) - (floatval($row['expenses']) + floatval($row['loan_paid']));
             $closing = $opening + $net;
             
             $row['period'] = strtoupper($row['period_label']);
