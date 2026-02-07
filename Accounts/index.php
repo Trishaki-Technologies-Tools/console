@@ -173,6 +173,21 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>TriShaKi Technologies - Finance Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .btn-logout {
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-logout:hover {
+            background-color: #dc2626;
+        }
+    </style>
 </head>
 
 <body>
@@ -220,8 +235,7 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
                     <p class="welcome-text">Overview of your financial records</p>
                 </div>
                 <div class="user-info">
-                    <div class="user-avatar">T</div>
-                    <span style="color: #64748b;">👤</span>
+                    <button class="btn-logout" onclick="logout()">Sign Out</button>
                 </div>
             </header>
 

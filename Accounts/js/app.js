@@ -2008,3 +2008,23 @@ function submitAddReport(event) {
         })
         .catch(error => console.error('Error:', error));
 }
+
+// Logout Function
+function logout() {
+    if (confirm('Are you sure you want to sign out?')) {
+        fetch('api/logout.php')
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.href = '../dashboard.php';
+                } else {
+                    alert('Logout failed. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Logout Error:', error);
+                // Fallback redirect even if fetch fails (connection issue etc)
+                window.location.href = '../dashboard.php';
+            });
+    }
+}
