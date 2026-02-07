@@ -237,7 +237,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
         <div class="cards-container">
             <!-- Accounts Card -->
-            <a href="/Accounts/" class="card card-accounts" target="_blank">
+            <a href="Accounts/" class="card card-accounts" target="_blank">
                 <div class="card-header">
                     <div class="card-icon">👤</div>
                     <div class="card-title">accounts</div>

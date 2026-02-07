@@ -17,18 +17,22 @@ try {
                 SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
-                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid,
+                MAX(CASE WHEN type = 'report' THEN opening_balance ELSE 0 END) as stored_opening
             FROM (
-                SELECT date, amount, category, 'income' as type FROM incomes
+                SELECT date, amount, category, 'income' as type, 0 as opening_balance FROM incomes
                 UNION ALL
-                SELECT date, amount, category, 'expense' as type FROM expenses
+                SELECT date, amount, category, 'expense' as type, 0 as opening_balance FROM expenses
                 UNION ALL
-                SELECT STR_TO_DATE(CONCAT('01-', month), '%d-%b-%Y') as date, 0 as amount, '' as category, 'report' as type FROM reports
+                SELECT STR_TO_DATE(CONCAT('01-', month), '%d-%b-%Y') as date, 0 as amount, '' as category, 'report' as type, opening_balance FROM reports
             ) as combined
             GROUP BY y, m
             ORDER BY y ASC, m ASC
         ";
     } elseif ($type === 'quarterly') {
+        // Quarterly/Yearly doesn't really have a 'stored opening' concept from monthly reports easily 
+        // without complex logic. For now, we'll keep 0 or maybe try to find min month?
+        // Let's stick to 0 for non-monthly to avoid complexity unless requested.
         $sql = "
             SELECT 
                 CONCAT('Q', QUARTER(date), '-', YEAR(date)) as period_label,
@@ -37,7 +41,8 @@ try {
                 SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
-                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid,
+                0 as stored_opening
             FROM (
                 SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
@@ -54,7 +59,8 @@ try {
                 SUM(CASE WHEN type = 'income' AND category != 'Loan' THEN amount ELSE 0 END) as income,
                 SUM(CASE WHEN type = 'expense' AND category != 'Principal Amount' THEN amount ELSE 0 END) as expenses,
                 SUM(CASE WHEN type = 'income' AND category = 'Loan' THEN amount ELSE 0 END) as loan_taken,
-                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid
+                SUM(CASE WHEN type = 'expense' AND category = 'Principal Amount' THEN amount ELSE 0 END) as loan_paid,
+                0 as stored_opening
             FROM (
                 SELECT date, amount, category, 'income' as type FROM incomes
                 UNION ALL
@@ -68,8 +74,7 @@ try {
     $result = $conn->query($sql);
 
     // 2. Calculate Opening/Closing Balances sequentially
-    // Assuming cumulative balance starts at 0 from the beginning of recorded history.
-    $runningBalance = 0;
+    $runningBalance = null;
     
     // We need to process from oldest to newest to calculate balance, 
     // but typically users want to SEE newest first. 
@@ -79,6 +84,12 @@ try {
     
     if ($result) {
         while ($row = $result->fetch_assoc()) {
+            
+            // Initialize running balance with the stored opening of the very first record
+            if ($runningBalance === null) {
+                $runningBalance = floatval($row['stored_opening']);
+            }
+
             $opening = $runningBalance;
             // Net calculates actual cash flow: (Income + Loans Taken) - (Expenses + Loans Paid)
             $net = (floatval($row['income']) + floatval($row['loan_taken'])) - (floatval($row['expenses']) + floatval($row['loan_paid']));
