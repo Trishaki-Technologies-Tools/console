@@ -8,8 +8,8 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 // 2FA Check for Accounts Module
 if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verified'] !== true) {
     
-    // Check if 2FA secret exists
-    $secretFile = '../2fa_secret.txt';
+    // Check if 2FA secret exists (Specific for Accounts)
+    $secretFile = 'accounts_secret.txt';
     $isSetup = !file_exists($secretFile);
     $qrCodeUrl = '';
     $secret = '';
@@ -18,7 +18,8 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
         require_once '../GoogleAuthenticator.php';
         $g2fa = new GoogleAuthenticator();
         $secret = $g2fa->createSecret();
-        $qrCodeUrl = $g2fa->getQRCodeGoogleUrl('TrishakiConsole', $secret, 'Trishaki Technologies');
+        // unique name for the app
+        $qrCodeUrl = $g2fa->getQRCodeGoogleUrl('TrishakiAccounts', $secret, 'Trishaki Technologies');
     }
     ?>
     <!DOCTYPE html>
@@ -1168,6 +1169,15 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
                         <label class="form-label">Opening Balance</label>
                         <input type="number" id="reportOpeningBalance" class="form-input" placeholder="0.00" step="0.01" value="0.00">
                         <small class="form-hint">Set to 0 if this is not the first report.</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode</label>
+                        <select id="reportPaymentMode" class="form-select">
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
                     </div>
 
                     <div class="modal-actions">

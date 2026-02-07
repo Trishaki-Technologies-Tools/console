@@ -120,7 +120,7 @@ function loadDashboardData() {
                 document.getElementById('cash-balance').textContent = '₹' + data.cash_balance;
                 document.getElementById('this-month-expense').textContent = '₹' + data.this_month_expense;
                 document.getElementById('this-month-profit').textContent = '₹' + data.this_month_profit;
-                document.getElementById('overall-profit').textContent = '₹' + data.balance;
+                document.getElementById('overall-profit').textContent = '₹' + data.overall_profit;
             } catch (e) {
                 console.error('Dashboard Error:', text);
                 // Set default values on error
@@ -1968,6 +1968,7 @@ function submitAddReport(event) {
 
     const monthInput = document.getElementById('reportMonth').value; // YYYY-MM
     const openingBalance = parseFloat(document.getElementById('reportOpeningBalance').value) || 0;
+    const paymentMode = document.getElementById('reportPaymentMode').value;
 
     // Convert YYYY-MM to MMM-YYYY (e.g., JAN-2026)
     const [year, month] = monthInput.split('-');
@@ -1978,6 +1979,7 @@ function submitAddReport(event) {
     const formData = new FormData();
     formData.append('month', formattedMonth);
     formData.append('opening_balance', openingBalance);
+    formData.append('payment_mode', paymentMode);
     formData.append('income', 0);
     formData.append('expenses', 0);
     // Assuming initial closing balance = opening balance

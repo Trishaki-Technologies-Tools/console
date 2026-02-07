@@ -19,7 +19,7 @@ try {
         // Adjust paths to reach root directory
         require_once '../../GoogleAuthenticator.php';
         $g2fa = new GoogleAuthenticator();
-        $secretFile = '../../2fa_secret.txt';
+        $secretFile = '../accounts_secret.txt'; // Separate secret for Accounts
 
         $action = $input['action'] ?? 'verify';
 
