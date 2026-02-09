@@ -500,8 +500,77 @@ function addIncome(description, amount, category, paymentMode) {
 
 // Edit income
 function editIncome(id) {
-    // For now, just show an alert. You can implement a modal later
-    alert('Edit functionality - Income ID: ' + id);
+    Promise.all([
+        fetch(`api/get_income.php?id=${id}`).then(r => r.json()),
+        fetch('api/income_categories.php').then(r => r.json())
+    ])
+        .then(([income, categories]) => {
+            if (income.error) {
+                alert(income.error);
+                return;
+            }
+
+            // Populate details
+            document.getElementById('editIncomeId').value = income.id;
+            document.getElementById('editIncomeDate').value = income.date;
+            document.getElementById('editIncomeDescription').value = income.description;
+            document.getElementById('editIncomeAmount').value = income.amount;
+            document.getElementById('editIncomePaymentMode').value = income.payment_mode;
+
+            // Populate categories
+            const select = document.getElementById('editIncomeCategorySelect');
+            let html = '<option value="">Select Category</option>';
+            categories.forEach(cat => {
+                const selected = cat.category_name === income.category ? 'selected' : '';
+                html += `<option value="${cat.category_name}" ${selected}>${cat.category_name}</option>`;
+            });
+            select.innerHTML = html;
+
+            // Show modal
+            document.getElementById('editIncomeModal').classList.add('show');
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function closeEditIncomeModal() {
+    document.getElementById('editIncomeModal').classList.remove('show');
+    document.getElementById('editIncomeForm').reset();
+}
+
+function submitEditIncome(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('editIncomeId').value;
+    const date = document.getElementById('editIncomeDate').value;
+    const description = document.getElementById('editIncomeDescription').value;
+    const category = document.getElementById('editIncomeCategorySelect').value;
+    const paymentMode = document.getElementById('editIncomePaymentMode').value;
+    const amount = document.getElementById('editIncomeAmount').value;
+
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('date', date);
+    formData.append('description', description);
+    formData.append('category', category);
+    formData.append('payment_mode', paymentMode);
+    formData.append('amount', amount);
+
+    fetch('api/edit_income.php', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeEditIncomeModal();
+                loadIncomes();
+                loadDashboardData();
+                loadReports();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to update income'));
+            }
+        })
+        .catch(error => console.error('Error:', error));
 }
 
 // Delete income
@@ -685,7 +754,77 @@ function addExpense(description, amount, category, paymentMode) {
 
 // Edit expense
 function editExpense(id) {
-    alert('Edit functionality - Expense ID: ' + id);
+    Promise.all([
+        fetch(`api/get_expense.php?id=${id}`).then(r => r.json()),
+        fetch('api/expense_categories.php').then(r => r.json())
+    ])
+        .then(([expense, categories]) => {
+            if (expense.error) {
+                alert(expense.error);
+                return;
+            }
+
+            // Populate details
+            document.getElementById('editExpenseId').value = expense.id;
+            document.getElementById('editExpenseDate').value = expense.date;
+            document.getElementById('editExpenseDescription').value = expense.description;
+            document.getElementById('editExpenseAmount').value = expense.amount;
+            document.getElementById('editExpensePaymentMode').value = expense.payment_mode;
+
+            // Populate categories
+            const select = document.getElementById('editExpenseCategorySelect');
+            let html = '<option value="">Select Category</option>';
+            categories.forEach(cat => {
+                const selected = cat.category_name === expense.category ? 'selected' : '';
+                html += `<option value="${cat.category_name}" ${selected}>${cat.category_name}</option>`;
+            });
+            select.innerHTML = html;
+
+            // Show modal
+            document.getElementById('editExpenseModal').classList.add('show');
+        })
+        .catch(error => console.error('Error:', error));
+}
+
+function closeEditExpenseModal() {
+    document.getElementById('editExpenseModal').classList.remove('show');
+    document.getElementById('editExpenseForm').reset();
+}
+
+function submitEditExpense(event) {
+    event.preventDefault();
+
+    const id = document.getElementById('editExpenseId').value;
+    const date = document.getElementById('editExpenseDate').value;
+    const description = document.getElementById('editExpenseDescription').value;
+    const category = document.getElementById('editExpenseCategorySelect').value;
+    const paymentMode = document.getElementById('editExpensePaymentMode').value;
+    const amount = document.getElementById('editExpenseAmount').value;
+
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('date', date);
+    formData.append('description', description);
+    formData.append('category', category);
+    formData.append('payment_mode', paymentMode);
+    formData.append('amount', amount);
+
+    fetch('api/edit_expense.php', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                closeEditExpenseModal();
+                loadExpenses();
+                loadDashboardData();
+                loadReports();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to update expense'));
+            }
+        })
+        .catch(error => console.error('Error:', error));
 }
 
 // Delete expense

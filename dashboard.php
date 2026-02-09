@@ -253,7 +253,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
             </a>
 
             <!-- Interns Card -->
-            <a href="/interns/" class="card card-interns" target="_blank">
+            <a href="https://interns.trishaki.com/admin/" class="card card-interns" target="_blank">
                 <div class="card-header">
                     <div class="card-icon">🎓</div>
                     <div class="card-title">interns</div>

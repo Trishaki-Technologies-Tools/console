@@ -1203,6 +1203,110 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
         </div>
     </div>
 
+    <!-- Edit Income Modal -->
+    <div id="editIncomeModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Income</h3>
+                <button class="modal-close" onclick="closeEditIncomeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editIncomeForm" onsubmit="submitEditIncome(event)">
+                    <input type="hidden" id="editIncomeId">
+                    
+                    <div class="form-group">
+                        <label class="form-label">Date <span class="required">*</span></label>
+                        <input type="date" id="editIncomeDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <input type="text" id="editIncomeDescription" class="form-input" placeholder="Enter description" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category Type <span class="required">*</span></label>
+                        <select id="editIncomeCategorySelect" class="form-select" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode <span class="required">*</span></label>
+                        <select id="editIncomePaymentMode" class="form-select" required>
+                            <option value="">Select Payment Mode</option>
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="editIncomeAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeEditIncomeModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Update Income</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Expense Modal -->
+    <div id="editExpenseModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit Expense</h3>
+                <button class="modal-close" onclick="closeEditExpenseModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editExpenseForm" onsubmit="submitEditExpense(event)">
+                    <input type="hidden" id="editExpenseId">
+
+                    <div class="form-group">
+                        <label class="form-label">Date <span class="required">*</span></label>
+                        <input type="date" id="editExpenseDate" class="form-input" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Description <span class="required">*</span></label>
+                        <input type="text" id="editExpenseDescription" class="form-input" placeholder="Enter description" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Category Type <span class="required">*</span></label>
+                        <select id="editExpenseCategorySelect" class="form-select" required>
+                            <option value="">Select Category</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Payment Mode <span class="required">*</span></label>
+                        <select id="editExpensePaymentMode" class="form-select" required>
+                            <option value="">Select Payment Mode</option>
+                            <option value="HDFC Bank">HDFC Bank</option>
+                            <option value="Cash">Cash</option>
+                            <option value="Cheque">Cheque</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Amount <span class="required">*</span></label>
+                        <input type="number" id="editExpenseAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeEditExpenseModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Update Expense</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- History Modal -->
     <div id="loanHistoryModal" class="modal">
         <div class="modal-content">
