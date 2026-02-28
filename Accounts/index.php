@@ -224,6 +224,17 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
                     <span class="icon">🤝</span>
                     <span>Loans</span>
                 </a>
+                <div class="nav-item-dropdown">
+                    <a href="#" class="nav-item" onclick="toggleInvoiceDropdown(event)">
+                        <span class="icon">🧾</span>
+                        <span>Invoice</span>
+                        <span class="dropdown-arrow">▼</span>
+                    </a>
+                    <div class="dropdown-content" id="invoiceDropdown">
+                        <a href="#" class="dropdown-item" data-page="invoice-generate">Generate Invoice</a>
+                        <a href="#" class="dropdown-item" data-page="invoice-users">User Info</a>
+                    </div>
+                </div>
             </nav>
         </aside>
 
@@ -663,6 +674,54 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
                         <div class="table-container" id="expense-list"></div>
                     </div>
                 </div>
+
+                <!-- Invoice Content -->
+                <div class="page-content hidden" id="invoice-generate-page">
+                    <div class="section-header">
+                        <h2>Invoice Generator</h2>
+                        <button class="btn-primary" onclick="showInvoiceTypeSelection()">+ Generate New Invoice</button>
+                    </div>
+                    <p class="page-subtitle">Generate and manage GST and Non-GST invoices</p>
+
+                    <div id="invoiceTypeSelectionDiv" class="invoice-type-selection" style="display: none;">
+                        <div class="invoice-type-card" onclick="selectInvoiceType('non-gst')">
+                            <div class="invoice-type-icon">📄</div>
+                            <h3>Non-GST Invoice</h3>
+                            <p>For customers without GST registration</p>
+                        </div>
+                        <div class="invoice-type-card" onclick="selectInvoiceType('gst')">
+                            <div class="invoice-type-icon">🧾</div>
+                            <h3>GST Invoice</h3>
+                            <p>For GST registered customers</p>
+                        </div>
+                    </div>
+
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Generated Invoices</h3>
+                        </div>
+                        <div class="table-container" id="invoice-list">
+                            <p style="padding: 40px; text-align: center; color: #64748b;">No invoices generated yet. Click "Generate New Invoice" to create one!</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Info Content -->
+                <div class="page-content hidden" id="invoice-users-page">
+                    <div class="section-header">
+                        <h2>User Information</h2>
+                    </div>
+                    <p class="page-subtitle">View all customer details</p>
+
+                    <div class="records-section">
+                        <div class="records-header">
+                            <h3>Customer List</h3>
+                        </div>
+                        <div class="table-container" id="user-info-list">
+                            <p style="padding: 40px; text-align: center; color: #64748b;">No users found.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </main>
     </div>
@@ -1036,6 +1095,7 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
     </div>
 
     <script src="js/app.js"></script>
+    <script src="js/invoice_functions.js"></script>
 
     <!-- Edit Loan Modal -->
     <div id="editLoanModal" class="modal">
@@ -1329,6 +1389,121 @@ if (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verifi
                         </tbody>
                     </table>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Non-GST Invoice Modal -->
+    <div id="nonGstInvoiceModal" class="modal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>Non-GST Invoice Details</h3>
+                <button class="modal-close" onclick="closeNonGstModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="nonGstInvoiceForm" onsubmit="generateNonGstInvoice(event)">
+                    <div class="form-group">
+                        <label class="form-label">Bill To Name <span class="required">*</span></label>
+                        <input type="text" id="nonGstBillToName" class="form-input" placeholder="Enter customer name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="nonGstPhone" class="form-input" placeholder="Enter phone number" required oninput="checkExistingUser(this.value, 'non-gst')">
+                        <div id="existingUserNonGst" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="nonGstEmail" class="form-input" placeholder="Enter email (optional)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Invoice Items <span class="required">*</span></label>
+                        <div id="nonGstItemsContainer">
+                            <div class="invoice-item-row">
+                                <input type="text" class="form-input" placeholder="Description" required style="flex: 2;">
+                                <select class="form-select" required style="flex: 1;">
+                                    <option value="">Payment Mode</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                                <input type="date" class="form-input" required style="flex: 1;">
+                                <input type="number" class="form-input nongst-total" placeholder="Total Amount" step="0.01" min="0" required style="flex: 1;">
+                                <input type="number" class="form-input nongst-paid" placeholder="Paid Amount" step="0.01" min="0" required style="flex: 1;">
+                                <button type="button" class="btn-add-item" onclick="addNonGstItem()">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeNonGstModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Generate Invoice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- GST Invoice Modal -->
+    <div id="gstInvoiceModal" class="modal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h3>GST Invoice Details</h3>
+                <button class="modal-close" onclick="closeGstModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="gstInvoiceForm" onsubmit="generateGstInvoice(event)">
+                    <div class="form-group">
+                        <label class="form-label">Bill To Name <span class="required">*</span></label>
+                        <input type="text" id="gstBillToName" class="form-input" placeholder="Enter customer name" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Phone Number <span class="required">*</span></label>
+                        <input type="tel" id="gstPhone" class="form-input" placeholder="Enter phone number" required oninput="checkExistingUser(this.value, 'gst')">
+                        <div id="existingUserGst" style="margin-top: 10px;"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">GST Number <span class="required">*</span></label>
+                        <input type="text" id="gstNumber" class="form-input" placeholder="Enter GST number" required pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}">
+                        <small style="color: #64748b; font-size: 12px;">Format: 22AAAAA0000A1Z5</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" id="gstEmail" class="form-input" placeholder="Enter email (optional)">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Invoice Items <span class="required">*</span></label>
+                        <div id="gstItemsContainer" style="overflow-x: auto;">
+                            <div class="invoice-item-row-gst">
+                                <input type="text" class="form-input gst-desc" placeholder="Description" required style="min-width: 150px;">
+                                <select class="form-select gst-mode" required style="min-width: 100px;">
+                                    <option value="">Payment Mode</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                                <input type="date" class="form-input gst-date" required style="min-width: 130px;">
+                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required oninput="calculateGstFromTotal(this);" style="min-width: 120px;">
+                                <input type="number" class="form-input gst-paid-amt" placeholder="Paid Amount" step="0.01" min="0" required style="min-width: 120px;">
+                                <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+                                <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+                                <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                                    <input type="checkbox" class="gst-desc-check"> Desc.%
+                                </label>
+                                <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-cancel" onclick="closeGstModal()">Cancel</button>
+                        <button type="submit" class="btn-save">Generate Invoice</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

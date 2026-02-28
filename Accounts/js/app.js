@@ -21,10 +21,16 @@ document.querySelectorAll('.nav-item').forEach(item => {
         document.querySelectorAll('.page-content').forEach(content => content.classList.add('hidden'));
 
         // Show selected page
-        document.getElementById(page + '-page').classList.remove('hidden');
+        const pageElement = document.getElementById(page + '-page');
+        if (pageElement) {
+            pageElement.classList.remove('hidden');
+        }
 
         // Update page title
-        document.getElementById('page-title').textContent = this.querySelector('span:last-child').textContent;
+        const titleSpan = this.querySelector('span:last-child');
+        if (titleSpan) {
+            document.getElementById('page-title').textContent = titleSpan.textContent;
+        }
     });
 });
 
@@ -2167,3 +2173,462 @@ function logout() {
             });
     }
 }
+
+
+// Invoice Functions
+// generatedInvoices is declared in invoice_functions.js
+
+function showInvoiceTypeSelection() {
+    const div = document.getElementById('invoiceTypeSelectionDiv');
+    div.style.display = div.style.display === 'none' ? 'grid' : 'none';
+}
+
+function selectInvoiceType(type) {
+    document.getElementById('invoiceTypeSelectionDiv').style.display = 'none';
+    if (type === 'non-gst') {
+        document.getElementById('nonGstInvoiceModal').classList.add('show');
+    } else if (type === 'gst') {
+        document.getElementById('gstInvoiceModal').classList.add('show');
+    }
+}
+
+function closeNonGstModal() {
+    document.getElementById('nonGstInvoiceModal').classList.remove('show');
+    document.getElementById('nonGstInvoiceForm').reset();
+    
+    // Clear dataset attributes
+    delete document.getElementById('nonGstInvoiceForm').dataset.continueFrom;
+    delete document.getElementById('nonGstInvoiceForm').dataset.originalTotalPayable;
+    delete document.getElementById('nonGstInvoiceForm').dataset.cumulativeTotalPaid;
+    delete document.getElementById('nonGstInvoiceForm').dataset.editIndex;
+    
+    // Clear existing user message
+    document.getElementById('existingUserNonGst').innerHTML = '';
+    
+    // Reset to single item with today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('nonGstItemsContainer').innerHTML = `
+        <div class="invoice-item-row">
+            <input type="text" class="form-input" placeholder="Description" required style="flex: 2;">
+            <select class="form-select" required style="flex: 1;">
+                <option value="">Payment Mode</option>
+                <option value="Cash">Cash</option>
+                <option value="Online">Online</option>
+            </select>
+            <input type="date" class="form-input" value="${today}" required style="flex: 1;">
+            <input type="number" class="form-input nongst-total" placeholder="Total Amount" step="0.01" min="0" required style="flex: 1;">
+            <input type="number" class="form-input nongst-paid" placeholder="Paid Amount" step="0.01" min="0" required style="flex: 1;">
+            <button type="button" class="btn-add-item" onclick="addNonGstItem()">+</button>
+        </div>
+    `;
+}
+
+function closeGstModal() {
+    document.getElementById('gstInvoiceModal').classList.remove('show');
+    document.getElementById('gstInvoiceForm').reset();
+    
+    // Clear dataset attributes
+    delete document.getElementById('gstInvoiceForm').dataset.continueFrom;
+    delete document.getElementById('gstInvoiceForm').dataset.originalTotalPayable;
+    delete document.getElementById('gstInvoiceForm').dataset.cumulativeTotalPaid;
+    delete document.getElementById('gstInvoiceForm').dataset.editIndex;
+    
+    // Clear existing user message
+    document.getElementById('existingUserGst').innerHTML = '';
+    
+    // Reset to single item with today's date
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('gstItemsContainer').innerHTML = `
+        <div class="invoice-item-row-gst">
+            <input type="text" class="form-input gst-desc" placeholder="Description" required style="min-width: 150px;">
+            <select class="form-select gst-mode" required style="min-width: 100px;">
+                <option value="">Payment Mode</option>
+                <option value="Cash">Cash</option>
+                <option value="Online">Online</option>
+            </select>
+            <input type="date" class="form-input gst-date" value="${today}" required style="min-width: 130px;">
+            <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required oninput="calculateGstFromTotal(this)" style="min-width: 120px;">
+            <input type="number" class="form-input gst-paid-amt" placeholder="Paid Amount" step="0.01" min="0" required style="min-width: 120px;">
+            <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+            <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+            <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                <input type="checkbox" class="gst-desc-check"> Desc.%
+            </label>
+            <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
+        </div>
+    `;
+}
+
+function addNonGstItem() {
+    const container = document.getElementById('nonGstItemsContainer');
+    const today = new Date().toISOString().split('T')[0];
+    const newRow = document.createElement('div');
+    newRow.className = 'invoice-item-row';
+    newRow.innerHTML = `
+        <input type="text" class="form-input" placeholder="Description" required style="flex: 2;">
+        <select class="form-select" required style="flex: 1;">
+            <option value="">Payment Mode</option>
+            <option value="Cash">Cash</option>
+            <option value="Online">Online</option>
+        </select>
+        <input type="date" class="form-input" value="${today}" required style="flex: 1;">
+        <input type="number" class="form-input nongst-total" placeholder="Total Amount" step="0.01" min="0" required style="flex: 1;">
+        <input type="number" class="form-input nongst-paid" placeholder="Paid Amount" step="0.01" min="0" required style="flex: 1;">
+        <button type="button" class="btn-remove-item" onclick="removeItem(this)">−</button>
+    `;
+    container.appendChild(newRow);
+}
+
+function addGstItem() {
+    const container = document.getElementById('gstItemsContainer');
+    const today = new Date().toISOString().split('T')[0];
+    const newRow = document.createElement('div');
+    newRow.className = 'invoice-item-row-gst';
+    newRow.innerHTML = `
+        <input type="text" class="form-input gst-desc" placeholder="Description" required style="min-width: 150px;">
+        <select class="form-select gst-mode" required style="min-width: 100px;">
+            <option value="">Payment Mode</option>
+            <option value="Cash">Cash</option>
+            <option value="Online">Online</option>
+        </select>
+        <input type="date" class="form-input gst-date" value="${today}" required style="min-width: 130px;">
+        <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required oninput="calculateGstFromTotal(this);" style="min-width: 120px;">
+        <input type="number" class="form-input gst-paid-amt" placeholder="Paid Amount" step="0.01" min="0" required style="min-width: 120px;">
+        <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+        <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+        <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+            <input type="checkbox" class="gst-desc-check"> Desc.%
+        </label>
+        <button type="button" class="btn-remove-item" onclick="removeItem(this)">−</button>
+    `;
+    container.appendChild(newRow);
+}
+
+function removeItem(button) {
+    button.parentElement.remove();
+}
+
+function calculateGstItem(input) {
+    const row = input.parentElement;
+    const charges = parseFloat(input.value) || 0;
+    const gstAmount = charges * 0.18;
+    const total = charges + gstAmount;
+    
+    row.querySelector('.gst-tax').value = gstAmount.toFixed(2);
+    row.querySelector('.gst-total').value = total.toFixed(2);
+}
+
+function calculateGstFromTotal(input) {
+    const row = input.parentElement;
+    const totalInclTax = parseFloat(input.value) || 0;
+    
+    // Total = Charges + GST
+    // Total = Charges + (Charges * 0.18)
+    // Total = Charges * 1.18
+    // Charges = Total / 1.18
+    
+    const charges = totalInclTax / 1.18;
+    const gstAmount = totalInclTax - charges;
+    
+    row.querySelector('.gst-charges').value = charges.toFixed(2);
+    row.querySelector('.gst-tax').value = gstAmount.toFixed(2);
+}
+
+// Auto-fill paid amount for GST invoices (when not a part payment)
+function autoFillPaidAmount(input) {
+    const row = input.parentElement;
+    const totalInclTax = parseFloat(input.value) || 0;
+    const paidAmtField = row.querySelector('.gst-paid-amt');
+    
+    // Only auto-fill if the paid amount field is empty and not readonly
+    // AND if the total amount is greater than 0
+    if (!paidAmtField.readOnly && !paidAmtField.value && totalInclTax > 0) {
+        paidAmtField.value = totalInclTax.toFixed(2);
+    }
+}
+
+// Auto-fill paid amount for Non-GST invoices (when not a part payment)
+function autoFillNonGstPaidAmount(input) {
+    const row = input.parentElement;
+    const totalAmount = parseFloat(input.value) || 0;
+    const paidAmtField = row.querySelector('.nongst-paid');
+    
+    // Only auto-fill if the paid amount field is empty and not readonly
+    // AND if the total amount is greater than 0
+    if (!paidAmtField.readOnly && !paidAmtField.value && totalAmount > 0) {
+        paidAmtField.value = totalAmount.toFixed(2);
+    }
+}
+
+function generateNonGstInvoice(event) {
+    event.preventDefault();
+    
+    const billToName = document.getElementById('nonGstBillToName').value;
+    const phone = document.getElementById('nonGstPhone').value;
+    const email = document.getElementById('nonGstEmail').value;
+    const editIndex = document.getElementById('nonGstInvoiceForm').dataset.editIndex;
+    const continueFrom = document.getElementById('nonGstInvoiceForm').dataset.continueFrom;
+    const originalTotalPayable = document.getElementById('nonGstInvoiceForm').dataset.originalTotalPayable;
+    const cumulativeTotalPaid = document.getElementById('nonGstInvoiceForm').dataset.cumulativeTotalPaid;
+    
+    // Collect all items
+    const items = [];
+    let totalAmount = 0;
+    let totalPaid = 0;
+    
+    const rows = document.querySelectorAll('#nonGstItemsContainer .invoice-item-row');
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        const amount = parseFloat(inputs[3].value) || 0;
+        const paidAmt = parseFloat(inputs[4].value) || 0;
+        
+        totalAmount += amount;
+        totalPaid += paidAmt;
+        
+        items.push({
+            description: inputs[0].value,
+            paymentMode: inputs[1].value,
+            date: inputs[2].value,
+            amount: inputs[3].value,
+            paidAmt: inputs[4].value
+        });
+    });
+    
+    // If this is a NEW invoice (not continuing) with partial payment, set the totals
+    let finalOriginalTotalPayable = originalTotalPayable;
+    let finalCumulativeTotalPaid = cumulativeTotalPaid;
+    
+    if (!continueFrom && totalAmount > totalPaid) {
+        // This is a new partial payment invoice
+        finalOriginalTotalPayable = totalAmount.toFixed(2);
+        finalCumulativeTotalPaid = '0'; // No previous payments
+    }
+    
+    // Create invoice data
+    const invoiceData = {
+        type: 'non-gst',
+        billToName: billToName,
+        phone: phone,
+        email: email,
+        items: JSON.stringify(items),
+        date: new Date().toISOString().split('T')[0],
+        continueFrom: continueFrom || null,
+        originalTotalPayable: finalOriginalTotalPayable || null,
+        cumulativeTotalPaid: finalCumulativeTotalPaid || null
+    };
+    
+    if (editIndex !== undefined && editIndex !== '') {
+        // Update existing invoice
+        const existingInvoice = generatedInvoices[parseInt(editIndex)];
+        generatedInvoices[parseInt(editIndex)] = {
+            ...existingInvoice,
+            ...invoiceData
+        };
+        delete generatedInvoices[parseInt(editIndex)].continueFrom;
+        delete generatedInvoices[parseInt(editIndex)].originalTotalPayable;
+        delete generatedInvoices[parseInt(editIndex)].cumulativeTotalPaid;
+        localStorage.setItem('generatedInvoices', JSON.stringify(generatedInvoices));
+        displayInvoices();
+        openInvoiceWindow(generatedInvoices[parseInt(editIndex)]);
+        delete document.getElementById('nonGstInvoiceForm').dataset.editIndex;
+    } else {
+        // Save new invoice
+        saveInvoice(invoiceData);
+        // Invoice window will be opened by saveInvoice() after successful save
+    }
+    
+    // Clean up
+    delete document.getElementById('nonGstInvoiceForm').dataset.continueFrom;
+    delete document.getElementById('nonGstInvoiceForm').dataset.originalTotalPayable;
+    delete document.getElementById('nonGstInvoiceForm').dataset.cumulativeTotalPaid;
+    closeNonGstModal();
+}
+
+function generateGstInvoice(event) {
+    event.preventDefault();
+    
+    const billToName = document.getElementById('gstBillToName').value;
+    const phone = document.getElementById('gstPhone').value;
+    const gstNumber = document.getElementById('gstNumber').value;
+    const email = document.getElementById('gstEmail').value;
+    const editIndex = document.getElementById('gstInvoiceForm').dataset.editIndex;
+    const continueFrom = document.getElementById('gstInvoiceForm').dataset.continueFrom;
+    const originalTotalPayable = document.getElementById('gstInvoiceForm').dataset.originalTotalPayable;
+    const cumulativeTotalPaid = document.getElementById('gstInvoiceForm').dataset.cumulativeTotalPaid;
+    
+    // Collect all items (only new payment rows, not the reference rows)
+    const items = [];
+    let totalAmount = 0;
+    let totalPaid = 0;
+    
+    const rows = document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst');
+    rows.forEach(row => {
+        const inputs = row.querySelectorAll('input, select');
+        const paidAmt = parseFloat(inputs[4].value) || 0;
+        const totalInclTax = parseFloat(inputs[3].value) || 0;
+        
+        totalAmount += totalInclTax;
+        totalPaid += paidAmt;
+        
+        // Calculate GST and charges based on PAID amount, not total
+        const charges = paidAmt / 1.18;
+        const gst = paidAmt - charges;
+        
+        items.push({
+            description: inputs[0].value,
+            paymentMode: inputs[1].value,
+            date: inputs[2].value,
+            totalInclTax: inputs[3].value,
+            paidAmt: paidAmt,
+            gst: gst.toFixed(2),
+            charges: charges.toFixed(2),
+            hasDesc: inputs[7].checked
+        });
+    });
+    
+    // If this is a NEW invoice (not continuing) with partial payment, set the totals
+    let finalOriginalTotalPayable = originalTotalPayable;
+    let finalCumulativeTotalPaid = cumulativeTotalPaid;
+    
+    if (!continueFrom && totalAmount > totalPaid) {
+        // This is a new partial payment invoice
+        finalOriginalTotalPayable = totalAmount.toFixed(2);
+        finalCumulativeTotalPaid = '0'; // No previous payments
+    }
+    
+    // Create invoice data
+    const invoiceData = {
+        type: 'gst',
+        billToName: billToName,
+        phone: phone,
+        gstNumber: gstNumber,
+        email: email,
+        items: JSON.stringify(items),
+        date: new Date().toISOString().split('T')[0],
+        continueFrom: continueFrom || null,
+        originalTotalPayable: finalOriginalTotalPayable || null,
+        cumulativeTotalPaid: finalCumulativeTotalPaid || null
+    };
+    
+    if (editIndex !== undefined && editIndex !== '') {
+        // Update existing invoice
+        const existingInvoice = generatedInvoices[parseInt(editIndex)];
+        generatedInvoices[parseInt(editIndex)] = {
+            ...existingInvoice,
+            ...invoiceData
+        };
+        delete generatedInvoices[parseInt(editIndex)].continueFrom;
+        delete generatedInvoices[parseInt(editIndex)].originalTotalPayable;
+        delete generatedInvoices[parseInt(editIndex)].cumulativeTotalPaid;
+        localStorage.setItem('generatedInvoices', JSON.stringify(generatedInvoices));
+        displayInvoices();
+        openInvoiceWindow(generatedInvoices[parseInt(editIndex)]);
+        delete document.getElementById('gstInvoiceForm').dataset.editIndex;
+    } else {
+        // Save new invoice
+        saveInvoice(invoiceData);
+        // Invoice window will be opened by saveInvoice() after successful save
+    }
+    
+    // Clean up
+    delete document.getElementById('gstInvoiceForm').dataset.continueFrom;
+    delete document.getElementById('gstInvoiceForm').dataset.originalTotalPayable;
+    delete document.getElementById('gstInvoiceForm').dataset.cumulativeTotalPaid;
+    closeGstModal();
+}
+
+// saveInvoice function is defined in invoice_functions.js
+
+// loadInvoices, displayInvoices, and viewInvoice functions are defined in invoice_functions.js
+
+function editInvoice(index) {
+    const invoice = generatedInvoices[index];
+    
+    if (invoice.type === 'gst') {
+        // Populate GST form
+        document.getElementById('gstBillToName').value = invoice.billToName;
+        document.getElementById('gstPhone').value = invoice.phone;
+        document.getElementById('gstNumber').value = invoice.gstNumber;
+        document.getElementById('gstEmail').value = invoice.email || '';
+        
+        // Populate items
+        const items = JSON.parse(invoice.items);
+        const container = document.getElementById('gstItemsContainer');
+        container.innerHTML = '';
+        
+        items.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'invoice-item-row-gst';
+            row.innerHTML = `
+                <input type="text" class="form-input gst-desc" placeholder="Description" value="${item.description}" required style="min-width: 150px;">
+                <select class="form-select gst-mode" required style="min-width: 100px;">
+                    <option value="">Payment Mode</option>
+                    <option value="Cash" ${item.paymentMode === 'Cash' ? 'selected' : ''}>Cash</option>
+                    <option value="Online" ${item.paymentMode === 'Online' ? 'selected' : ''}>Online</option>
+                </select>
+                <input type="date" class="form-input gst-date" value="${item.date}" required style="min-width: 130px;">
+                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" value="${item.totalInclTax}" step="0.01" min="0" required oninput="calculateGstFromTotal(this)" style="min-width: 120px;">
+                <input type="number" class="form-input gst-tax" placeholder="GST 18%" value="${item.gst}" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+                <input type="number" class="form-input gst-charges" placeholder="Charges" value="${item.charges}" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
+                <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                    <input type="checkbox" class="gst-desc-check" ${item.hasDesc ? 'checked' : ''}> Desc.%
+                </label>
+                <button type="button" class="btn-${idx === 0 ? 'add' : 'remove'}-item" onclick="${idx === 0 ? 'addGstItem()' : 'removeItem(this)'}">${idx === 0 ? '+' : '−'}</button>
+            `;
+            container.appendChild(row);
+        });
+        
+        // Store the index for updating
+        document.getElementById('gstInvoiceForm').dataset.editIndex = index;
+        document.getElementById('gstInvoiceModal').classList.add('show');
+        
+    } else {
+        // Populate Non-GST form
+        document.getElementById('nonGstBillToName').value = invoice.billToName;
+        document.getElementById('nonGstPhone').value = invoice.phone;
+        document.getElementById('nonGstEmail').value = invoice.email || '';
+        
+        // Populate items
+        const items = JSON.parse(invoice.items);
+        const container = document.getElementById('nonGstItemsContainer');
+        container.innerHTML = '';
+        
+        items.forEach((item, idx) => {
+            const row = document.createElement('div');
+            row.className = 'invoice-item-row';
+            row.innerHTML = `
+                <input type="text" class="form-input" placeholder="Description" value="${item.description}" required style="flex: 2;">
+                <select class="form-select" required style="flex: 1;">
+                    <option value="">Payment Mode</option>
+                    <option value="Cash" ${item.paymentMode === 'Cash' ? 'selected' : ''}>Cash</option>
+                    <option value="Online" ${item.paymentMode === 'Online' ? 'selected' : ''}>Online</option>
+                </select>
+                <input type="date" class="form-input" value="${item.date}" required style="flex: 1;">
+                <input type="number" class="form-input" placeholder="Amount" value="${item.amount}" step="0.01" min="0" required style="flex: 1;">
+                <button type="button" class="btn-${idx === 0 ? 'add' : 'remove'}-item" onclick="${idx === 0 ? 'addNonGstItem()' : 'removeItem(this)'}">${idx === 0 ? '+' : '−'}</button>
+            `;
+            container.appendChild(row);
+        });
+        
+        // Store the index for updating
+        document.getElementById('nonGstInvoiceForm').dataset.editIndex = index;
+        document.getElementById('nonGstInvoiceModal').classList.add('show');
+    }
+}
+
+// openInvoiceWindow function is defined in invoice_functions.js
+
+// Load invoices when page loads
+window.addEventListener('DOMContentLoaded', function() {
+    loadInvoicesFromDB();
+    loadCustomersFromDB();
+    
+    // Set today's date for initial invoice items
+    const today = new Date().toISOString().split('T')[0];
+    const dateInputs = document.querySelectorAll('.gst-date, #nonGstItemsContainer input[type="date"]');
+    dateInputs.forEach(input => {
+        if (!input.value) {
+            input.value = today;
+        }
+    });
+});

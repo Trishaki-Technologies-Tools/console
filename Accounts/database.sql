@@ -1,6 +1,5 @@
--- Create database
-CREATE DATABASE IF NOT EXISTS finance_dashboard;
-USE finance_dashboard;
+-- Use existing database
+USE u164024082_console;
 
 -- Create expense_categories table
 CREATE TABLE IF NOT EXISTS expense_categories (
@@ -95,4 +94,32 @@ CREATE TABLE IF NOT EXISTS salary_logs (
     payment_date DATE NOT NULL,
     payment_mode VARCHAR(50) DEFAULT 'Bank Transfer',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create customers table
+CREATE TABLE IF NOT EXISTS customers (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    phone VARCHAR(20) NOT NULL UNIQUE,
+    email VARCHAR(255),
+    gst_number VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- Create invoices table
+CREATE TABLE IF NOT EXISTS invoices (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_no VARCHAR(50) NOT NULL UNIQUE,
+    customer_id INT NOT NULL,
+    type ENUM('gst', 'non-gst') NOT NULL,
+    items JSON NOT NULL,
+    original_total_payable DECIMAL(10, 2),
+    cumulative_total_paid DECIMAL(10, 2),
+    invoice_date DATE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE,
+    INDEX idx_customer (customer_id),
+    INDEX idx_invoice_no (invoice_no),
+    INDEX idx_type (type)
 );
