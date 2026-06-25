@@ -2,25 +2,19 @@
 header('Content-Type: application/json');
 require_once 'config.php';
 
-if (isset($_GET['id'])) {
-    $id = intval($_GET['id']);
-    
-    // Check if category is being used
-    $categoryQuery = "SELECT category_name FROM income_categories WHERE id = $id";
-    $categoryResult = $conn->query($categoryQuery);
-    
-    if ($categoryResult->num_rows > 0) {
-        $category = $categoryResult->fetch_assoc()['category_name'];
+try {
+    if (isset($_GET['id'])) {
+        $id = intval($_GET['id']);
         
-        // Check if any incomes use this category
-        $usageQuery = "SELECT COUNT(*) as count FROM incomes WHERE category = '$category'";
+        // Check if any incomes use this category_id
+        $usageQuery = "SELECT COUNT(*) as count FROM incomes WHERE category_id = $id";
         $usageResult = $conn->query($usageQuery);
         $usageCount = $usageResult->fetch_assoc()['count'];
         
         if ($usageCount > 0) {
             echo json_encode(['success' => false, 'error' => 'Cannot delete category that is in use']);
         } else {
-            $query = "DELETE FROM income_categories WHERE id = $id";
+            $query = "DELETE FROM incomes_categories WHERE id = $id";
             
             if ($conn->query($query)) {
                 echo json_encode(['success' => true]);
@@ -29,8 +23,11 @@ if (isset($_GET['id'])) {
             }
         }
     } else {
-        echo json_encode(['success' => false, 'error' => 'Category not found']);
+        echo json_encode(['success' => false, 'error' => 'No ID provided']);
     }
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
 
 $conn->close();

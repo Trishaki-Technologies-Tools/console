@@ -2,7 +2,7 @@
 header('Content-Type: application/json');
 require_once 'config.php';
 
-$query = "SELECT * FROM income_categories ORDER BY category_name ASC";
+$query = "SELECT * FROM incomes_categories ORDER BY id ASC";
 $result = $conn->query($query);
 
 $categories = [];

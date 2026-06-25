@@ -2,10 +2,40 @@
 header('Content-Type: application/json');
 require_once 'config.php';
 
+function getCategoryId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM expenses_categories WHERE category_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO expenses_categories (category_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
+function getPaymentModeId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM payment_modes WHERE mode_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO payment_modes (mode_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loan_id = intval($_POST['loan_id']);
     $amount = floatval($_POST['amount']);
-    $payment_date = $_POST['payment_date'];
+    $payment_date = $_POST['payment_date'] ?? date('Y-m-d');
     
     if ($amount <= 0) {
         echo json_encode(['success' => false, 'error' => 'Invalid amount']);
@@ -13,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     try {
+        $conn->begin_transaction();
+
         // 1. Fetch Loan
         $stmt = $conn->prepare("SELECT * FROM loans WHERE id = ?");
         $stmt->bind_param("i", $loan_id);
@@ -24,50 +56,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             throw new Exception("Loan not found");
         }
         
-        // 2. Insert Expense (Repayment)
-        $description = "Loan Repayment: " . $loan['creditor_name'];
-        $category = "Principal Amount"; 
-        $payment_mode = "Cash"; 
+        // 2. Insert into loans_payments table
+        $lpStmt = $conn->prepare("INSERT INTO loans_payments (loan_id, payment_date, amount, payment_type) VALUES (?, ?, ?, 'repayment')");
+        $lpStmt->bind_param("isd", $loan_id, $payment_date, $amount);
+        if (!$lpStmt->execute()) {
+            throw new Exception("Loan payment insert failed");
+        }
+        $lpStmt->close();
+
+        // 3. Insert Expense (Repayment)
+        $description = "Loan Repayment: " . $loan['description']; // creditor_name mapped to description
+        $category_id = getCategoryId($conn, "Principal Amount"); 
+        $payment_mode_id = getPaymentModeId($conn, "Cash"); 
         
-        $expStmt = $conn->prepare("INSERT INTO expenses (description, amount, date, category, payment_mode, loan_id) VALUES (?, ?, ?, ?, ?, ?)");
-        $expStmt->bind_param("sdsssi", $description, $amount, $payment_date, $category, $payment_mode, $loan_id);
+        $expStmt = $conn->prepare("INSERT INTO expenses (description, amount, date, category_id, payment_mode_id) VALUES (?, ?, ?, ?, ?)");
+        $expStmt->bind_param("sdgii", $description, $amount, $payment_date, $category_id, $payment_mode_id);
         
         if (!$expStmt->execute()) {
              throw new Exception("Expense insert failed: " . $conn->error);
         }
+        $expenseId = $conn->insert_id;
         $expStmt->close();
+
+        // Log to transactions table
+        $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description) VALUES ('expense', ?, ?, ?, 'expenses', ?)");
+        $tStmt->bind_param("dsis", $amount, $payment_date, $expenseId, $description);
+        $tStmt->execute();
         
-        // 3. Update Loan (Paid Amount & Check Status)
-        $newPaidAmount = floatval($loan['paid_amount']) + $amount;
+        // 4. Calculate total repayment to see if loan is settled
+        $totalPaidQuery = "SELECT COALESCE(SUM(amount), 0) as total FROM loans_payments WHERE loan_id = ? AND payment_type = 'repayment'";
+        $tpStmt = $conn->prepare($totalPaidQuery);
+        $tpStmt->bind_param("i", $loan_id);
+        $tpStmt->execute();
+        $totalPaid = $tpStmt->get_result()->fetch_assoc()['total'];
+        $tpStmt->close();
+
         $principal = floatval($loan['principal_amount']);
-        
-        $newStatus = $loan['status'];
-        // Floating point comparison tolerance
-        if ($newPaidAmount >= ($principal - 0.01)) { 
-            $newStatus = 'Closed';
+        $newStatus = 'active';
+        if ($totalPaid >= ($principal - 0.01)) { 
+            $newStatus = 'settled';
+            
+            $updStmt = $conn->prepare("UPDATE loans SET status = 'settled' WHERE id = ?");
+            $updStmt->bind_param("i", $loan_id);
+            $updStmt->execute();
+            $updStmt->close();
         }
         
-        $updStmt = $conn->prepare("UPDATE loans SET paid_amount = ?, status = ? WHERE id = ?");
-        $updStmt->bind_param("dsi", $newPaidAmount, $newStatus, $loan_id);
+        $conn->commit();
         
-        if ($updStmt->execute()) {
-             // 4. Update Reports
-             recalculateReport($conn, $payment_date);
-             
-             echo json_encode(['success' => true, 'message' => 'Repayment recorded', 'new_status' => $newStatus]);
-        } else {
-             throw new Exception("Loan update failed: " . $conn->error);
-        }
-        $updStmt->close();
+        // Update reports
+        recalculateReport($conn, $payment_date);
+        
+        echo json_encode(['success' => true, 'message' => 'Repayment recorded', 'new_status' => ($newStatus === 'settled' ? 'Settled' : 'Active')]);
 
     } catch (Throwable $e) {
+        $conn->rollback();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
 }
 
 function recalculateReport($conn, $date) {
-    // Standard Report Recalculation
     $month = strtoupper(date('M-Y', strtotime($date)));
     $firstDay = date('Y-m-01', strtotime($date));
     $lastDay = date('Y-m-t', strtotime($date));

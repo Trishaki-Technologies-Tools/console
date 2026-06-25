@@ -25,7 +25,7 @@ try {
             c.email,
             c.gst_number as gstNumber
         FROM invoices i
-        JOIN customers c ON i.customer_id = c.id
+        JOIN clients c ON i.client_id = c.id
         WHERE i.invoice_no = ?
     ");
     $stmt->bind_param("s", $invoiceNo);
@@ -39,7 +39,7 @@ try {
     
     $invoice = $result->fetch_assoc();
     
-    error_log("view_invoice.php - Found invoice: {$invoice['invoice_no']} for customer: {$invoice['billToName']}");
+    error_log("view_invoice.php - Found invoice: {$invoice['invoice_no']} for client: {$invoice['billToName']}");
     
     // Redirect to generate_invoice.php with all parameters
     $params = http_build_query([
@@ -48,6 +48,7 @@ try {
         'phone' => $invoice['phone'],
         'email' => $invoice['email'],
         'gstNumber' => $invoice['gstNumber'],
+        'address' => '',
         'invoiceNo' => $invoice['invoice_no'],
         'items' => $invoice['items'],
         'date' => $invoice['invoice_date'],

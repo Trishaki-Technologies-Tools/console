@@ -243,46 +243,6 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
                     <div class="card-title">accounts</div>
                 </div>
             </a>
-
-            <!-- Forms Card -->
-            <a href="https://forms.trishaki.com/admin" class="card card-forms" target="_blank">
-                <div class="card-header">
-                    <div class="card-icon">📝</div>
-                    <div class="card-title">forms</div>
-                </div>
-            </a>
-
-            <!-- Interns Card -->
-            <a href="https://interns.trishaki.com/admin/" class="card card-interns" target="_blank">
-                <div class="card-header">
-                    <div class="card-icon">🎓</div>
-                    <div class="card-title">interns</div>
-                </div>
-            </a>
-
-            <!-- Projects Card -->
-            <a href="/projects/" class="card card-projects" target="_blank">
-                <div class="card-header">
-                    <div class="card-icon">🚀</div>
-                    <div class="card-title">projects</div>
-                </div>
-            </a>
-
-            <!-- Tools Card -->
-            <a href="/tools/" class="card card-tools" target="_blank">
-                <div class="card-header">
-                    <div class="card-icon">🛠️</div>
-                    <div class="card-title">tools</div>
-                </div>
-            </a>
-
-            <!-- Vaulto Card -->
-            <a href="https://vaulto.trishaki.com" class="card card-vaulto" target="_blank">
-                <div class="card-header">
-                    <div class="card-icon">🔐</div>
-                    <div class="card-title">vaulto</div>
-                </div>
-            </a>
         </div>
     </div>
 

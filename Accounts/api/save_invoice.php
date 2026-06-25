@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'invoice_utils.php';
 
 // Get POST data
 $data = json_decode(file_get_contents('php://input'), true);
@@ -17,47 +18,184 @@ $billToName = $data['billToName'] ?? '';
 $phone = $data['phone'] ?? '';
 $email = $data['email'] ?? '';
 $gstNumber = $data['gstNumber'] ?? '';
+$address = $data['address'] ?? '';
 $type = $data['type'] ?? 'non-gst';
 $items = $data['items'] ?? '[]';
-$invoiceDate = $data['date'] ?? date('Y-m-d');
+$invoiceDateInput = $data['date'] ?? '';
 $continueFrom = $data['continueFrom'] ?? null;
-$originalTotalPayable = $data['originalTotalPayable'] ?? null;
-$cumulativeTotalPaid = $data['cumulativeTotalPaid'] ?? null;
+$originalTotalPayableInput = !empty($data['originalTotalPayable']) ? floatval($data['originalTotalPayable']) : null;
+$cumulativeTotalPaid = !empty($data['cumulativeTotalPaid']) ? floatval($data['cumulativeTotalPaid']) : 0;
+$editInvoiceNo = !empty($data['invoiceNo']) ? trim($data['invoiceNo']) : null;
 
 try {
     // Start transaction
     $conn->begin_transaction();
     
-    // Check if customer exists
-    $stmt = $conn->prepare("SELECT id FROM customers WHERE phone = ?");
+    // Check if client exists
+    $stmt = $conn->prepare("SELECT id FROM clients WHERE phone = ?");
     $stmt->bind_param("s", $phone);
     $stmt->execute();
     $result = $stmt->get_result();
     
     if ($result->num_rows > 0) {
-        // Customer exists, get ID
-        $customer = $result->fetch_assoc();
-        $customerId = $customer['id'];
+        // Client exists, get ID
+        $client = $result->fetch_assoc();
+        $clientId = $client['id'];
         
-        // Update customer info
-        $stmt = $conn->prepare("UPDATE customers SET name = ?, email = ?, gst_number = ? WHERE id = ?");
-        $stmt->bind_param("sssi", $billToName, $email, $gstNumber, $customerId);
+        // Update client info
+        $stmt = $conn->prepare("UPDATE clients SET name = ?, email = ?, gst_number = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $billToName, $email, $gstNumber, $clientId);
         $stmt->execute();
     } else {
-        // Create new customer
-        $stmt = $conn->prepare("INSERT INTO customers (name, phone, email, gst_number) VALUES (?, ?, ?, ?)");
+        // Create new client
+        $stmt = $conn->prepare("INSERT INTO clients (name, phone, email, gst_number) VALUES (?, ?, ?, ?)");
         $stmt->bind_param("ssss", $billToName, $phone, $email, $gstNumber);
         $stmt->execute();
-        $customerId = $conn->insert_id;
+        $clientId = $conn->insert_id;
     }
     
-    // Generate invoice number
-    $invoiceNo = generateInvoiceNumber($conn, $customerId, $type, $continueFrom, $items);
+    // Check if we are in edit mode
+    $isEditMode = false;
+    $existingInvoiceId = null;
+    if ($editInvoiceNo) {
+        $stmt = $conn->prepare("SELECT id FROM invoices WHERE invoice_no = ?");
+        $stmt->bind_param("s", $editInvoiceNo);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res->num_rows > 0) {
+            $existingInvoiceId = $res->fetch_assoc()['id'];
+            $isEditMode = true;
+            $invoiceNo = $editInvoiceNo;
+        }
+    }
+
+    if (!$isEditMode) {
+        // Generate new invoice number
+        $invoiceNo = generateInvoiceNumber($conn, $clientId, $type, $continueFrom, $items);
+    }
     
-    // Insert invoice
-    $stmt = $conn->prepare("INSERT INTO invoices (invoice_no, customer_id, type, items, original_total_payable, cumulative_total_paid, invoice_date) VALUES (?, ?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sissdds", $invoiceNo, $customerId, $type, $items, $originalTotalPayable, $cumulativeTotalPaid, $invoiceDate);
-    $stmt->execute();
+    // Calculate totals from items
+    $paidItems = json_decode($items, true);
+    $currentPaid = 0;
+    $calcTotal = 0;
+    $itemDate = null;
+    if (is_array($paidItems)) {
+        if (!empty($paidItems) && isset($paidItems[0]['date'])) {
+            $itemDate = $paidItems[0]['date'];
+        }
+        foreach ($paidItems as $item) {
+            $currentPaid += floatval($item['paidAmt'] ?? $item['amount'] ?? 0);
+            if ($type === 'gst') {
+                $calcTotal += floatval($item['totalInclTax'] ?? $item['amount'] ?? 0);
+            } else {
+                $calcTotal += floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
+            }
+        }
+    }
+    
+    $invoiceDate = !empty($invoiceDateInput) ? $invoiceDateInput : (!empty($itemDate) ? $itemDate : date('Y-m-d'));
+    
+    $originalTotalPayable = ($originalTotalPayableInput !== null && $originalTotalPayableInput > 0)
+        ? $originalTotalPayableInput
+        : ($calcTotal > 0 ? $calcTotal : 5000.00);
+
+    // Extract base invoice prefix to identify continuation group
+    $baseInvoice = null;
+    if (preg_match('/^(TSK-\d{4}-\d{3})/', $invoiceNo, $matches)) {
+        $baseInvoice = $matches[1];
+    }
+
+    // Find previous sum for the continuation group if continuing or editing
+    $prevSum = 0;
+    if ($isEditMode) {
+        if ($baseInvoice) {
+            $stmt = $conn->prepare("
+                SELECT SUM(COALESCE(
+                    JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].paidAmt')),
+                    JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].amount')),
+                    0
+                )) as total_prev 
+                FROM invoices 
+                WHERE invoice_no LIKE ? AND id < ?
+            ");
+            $pattern = $baseInvoice . "%";
+            $stmt->bind_param("si", $pattern, $existingInvoiceId);
+            $stmt->execute();
+            $prevSum = floatval($stmt->get_result()->fetch_assoc()['total_prev'] ?? 0);
+        }
+    } else {
+        if ($continueFrom) {
+            if (preg_match('/^(TSK-\d{4}-\d{3})/', $continueFrom, $matches)) {
+                $baseInvoice = $matches[1];
+                $stmt = $conn->prepare("
+                    SELECT SUM(COALESCE(
+                        JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].paidAmt')),
+                        JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].amount')),
+                        0
+                    )) as total_prev 
+                    FROM invoices 
+                    WHERE invoice_no LIKE ?
+                ");
+                $pattern = $baseInvoice . "%";
+                $stmt->bind_param("s", $pattern);
+                $stmt->execute();
+                $prevSum = floatval($stmt->get_result()->fetch_assoc()['total_prev'] ?? 0);
+            }
+        }
+    }
+    $totalCumulative = $prevSum + $currentPaid;
+    
+    // Status calculation
+    $status = 'unpaid';
+    if ($totalCumulative >= $originalTotalPayable - 0.01) {
+        $status = 'paid';
+    } elseif ($totalCumulative > 0) {
+        $status = 'partially_paid';
+    }
+
+    if ($isEditMode) {
+        // Update existing invoice row
+        $stmt = $conn->prepare("UPDATE invoices SET client_id = ?, type = ?, items = ?, original_total_payable = ?, cumulative_total_paid = ?, invoice_date = ?, status = ? WHERE id = ?");
+        $stmt->bind_param("issddssi", $clientId, $type, $items, $originalTotalPayable, $totalCumulative, $invoiceDate, $status, $existingInvoiceId);
+        $stmt->execute();
+
+        // Cascade update to any subsequent installments in the same continuation group
+        if ($baseInvoice) {
+            $stmt = $conn->prepare("SELECT id, items, original_total_payable FROM invoices WHERE invoice_no LIKE ? AND id > ? ORDER BY id ASC");
+            $pattern = $baseInvoice . "%";
+            $stmt->bind_param("si", $pattern, $existingInvoiceId);
+            $stmt->execute();
+            $subsequentResult = $stmt->get_result();
+            $runningCumulative = $totalCumulative;
+            while ($subInv = $subsequentResult->fetch_assoc()) {
+                $subItems = json_decode($subInv['items'], true);
+                $subPaid = 0;
+                if (is_array($subItems)) {
+                    foreach ($subItems as $subItem) {
+                        $subPaid += floatval($subItem['paidAmt'] ?? $subItem['amount'] ?? 0);
+                    }
+                }
+                $runningCumulative += $subPaid;
+                
+                $subStatus = 'unpaid';
+                $subOrig = floatval($subInv['original_total_payable']);
+                if ($runningCumulative >= $subOrig - 0.01) {
+                    $subStatus = 'paid';
+                } elseif ($runningCumulative > 0) {
+                    $subStatus = 'partially_paid';
+                }
+                
+                $updateStmt = $conn->prepare("UPDATE invoices SET cumulative_total_paid = ?, status = ? WHERE id = ?");
+                $updateStmt->bind_param("dsi", $runningCumulative, $subStatus, $subInv['id']);
+                $updateStmt->execute();
+            }
+        }
+    } else {
+        // Insert new invoice row
+        $stmt = $conn->prepare("INSERT INTO invoices (invoice_no, client_id, type, items, original_total_payable, cumulative_total_paid, invoice_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $stmt->bind_param("sissddss", $invoiceNo, $clientId, $type, $items, $originalTotalPayable, $totalCumulative, $invoiceDate, $status);
+        $stmt->execute();
+    }
     
     // Commit transaction
     $conn->commit();
@@ -65,75 +203,11 @@ try {
     echo json_encode([
         'success' => true,
         'invoiceNo' => $invoiceNo,
-        'customerId' => $customerId
+        'clientId' => $clientId
     ]);
     
 } catch (Exception $e) {
     $conn->rollback();
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-}
-
-function generateInvoiceNumber($conn, $customerId, $type, $continueFrom, $items) {
-    $year = date('Y');
-    
-    // Debug logging
-    error_log("generateInvoiceNumber - customerId: $customerId, type: $type, continueFrom: " . ($continueFrom ?? 'null'));
-    
-    // Check if current invoice is a partial payment
-    $itemsArray = json_decode($items, true);
-    $currentTotalPayable = 0;
-    $currentTotalPaid = 0;
-    
-    foreach ($itemsArray as $item) {
-        $currentTotalPayable += floatval($item['totalInclTax'] ?? $item['amount'] ?? 0);
-        $currentTotalPaid += floatval($item['paidAmt'] ?? $item['amount'] ?? 0);
-    }
-    
-    $isPartialPayment = $currentTotalPayable > $currentTotalPaid;
-    error_log("generateInvoiceNumber - totalPayable: $currentTotalPayable, totalPaid: $currentTotalPaid, isPartial: " . ($isPartialPayment ? 'yes' : 'no'));
-    
-    // If continuing from existing invoice (user clicked "Continue Part Payment")
-    if ($continueFrom) {
-        // Extract base invoice number and increment payment number
-        if (preg_match('/^(TSK-\d{4}-\d{3})(?:\/P(\d+))?$/', $continueFrom, $matches)) {
-            $baseInvoice = $matches[1];
-            $paymentNum = isset($matches[2]) ? intval($matches[2]) + 1 : 2;
-            $newInvoiceNo = $baseInvoice . '/P' . $paymentNum;
-            error_log("generateInvoiceNumber - Continuing from $continueFrom, new invoice: $newInvoiceNo");
-            return $newInvoiceNo;
-        }
-    }
-    
-    // Generate new invoice number - count distinct base invoice numbers
-    $stmt = $conn->prepare("
-        SELECT COUNT(DISTINCT 
-            CASE 
-                WHEN invoice_no LIKE '%/P%' THEN SUBSTRING_INDEX(invoice_no, '/P', 1)
-                ELSE invoice_no
-            END
-        ) as count 
-        FROM invoices 
-        WHERE invoice_no LIKE ?
-    ");
-    $pattern = "TSK-$year-%";
-    $stmt->bind_param("s", $pattern);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    $row = $result->fetch_assoc();
-    $nextNumber = $row['count'] + 1;
-    
-    error_log("generateInvoiceNumber - Base invoice count: {$row['count']}, next number: $nextNumber");
-    
-    $baseInvoiceNo = 'TSK-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
-    
-    // If this is a partial payment, add /P1
-    if ($isPartialPayment) {
-        $finalInvoiceNo = $baseInvoiceNo . '/P1';
-        error_log("generateInvoiceNumber - New partial payment invoice: $finalInvoiceNo");
-        return $finalInvoiceNo;
-    }
-    
-    error_log("generateInvoiceNumber - New full payment invoice: $baseInvoiceNo");
-    return $baseInvoiceNo;
 }
 ?>

@@ -18,7 +18,7 @@ try {
             c.email,
             c.gst_number as gstNumber
         FROM invoices i
-        JOIN customers c ON i.customer_id = c.id
+        JOIN clients c ON i.client_id = c.id
         ORDER BY i.created_at DESC
     ");
     
@@ -38,6 +38,7 @@ try {
             'phone' => $row['phone'],
             'email' => $row['email'],
             'gstNumber' => $row['gstNumber'],
+            'address' => '', // client has no address field in new schema
             'date' => $row['invoice_date'],
             'generatedAt' => $row['created_at']
         ];

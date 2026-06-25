@@ -2,71 +2,128 @@
 header('Content-Type: application/json');
 require_once 'config.php';
 
+function getEmployeeId($conn, $name, $role, $salary) {
+    $stmt = $conn->prepare("SELECT id FROM employees WHERE name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO employees (name, role, salary) VALUES (?, ?, ?)");
+        $stmt2->bind_param("ssd", $name, $role, $salary);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
+function getCategoryId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM expenses_categories WHERE category_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO expenses_categories (category_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
+function getPaymentModeId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM payment_modes WHERE mode_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO payment_modes (mode_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = intval($_POST['id']);
-    $employee_name = $_POST['employee_name'];
-    $role = $_POST['role'];
-    $month = $_POST['month'];
-    $amount = floatval($_POST['amount']);
-    $payment_date = $_POST['payment_date'];
-    $payment_mode = $_POST['payment_mode'];
-    $status = $_POST['status'];
+    $employee_name = $_POST['employee_name'] ?? '';
+    $role = $_POST['role'] ?? '';
+    $month = $_POST['month'] ?? '';
+    $amount = floatval($_POST['amount'] ?? 0);
+    $payment_date = $_POST['payment_date'] ?? date('Y-m-d');
+    $payment_mode = $_POST['payment_mode'] ?? 'Bank Transfer';
 
     try {
-        // First get the existing linked expense_id and old amount/date to handle report updates properly
-        // Actually, simplest way for report update is:
-        // 1. Get old expense_id. 
-        // 2. Update salary log.
-        // 3. Update expense log.
-        // 4. Trigger report recalculation for BOTH old date (if changed) and new date.
-        
-        $getStmt = $conn->prepare("SELECT expense_id FROM salary_logs WHERE id = ?");
+        $conn->begin_transaction();
+
+        // 1. Get old salary log and employee details
+        $getStmt = $conn->prepare("
+            SELECT s.amount, s.payment_date, e.name AS employee_name, e.role 
+            FROM salary_logs s 
+            JOIN employees e ON s.employee_id = e.id 
+            WHERE s.id = ?
+        ");
         $getStmt->bind_param("i", $id);
         $getStmt->execute();
-        $result = $getStmt->get_result();
-        $expenseId = null;
-        if ($row = $result->fetch_assoc()) {
-            $expenseId = $row['expense_id'];
-        }
+        $oldLog = $getStmt->get_result()->fetch_assoc();
         $getStmt->close();
 
-        // Update Salary Log
-        $stmt = $conn->prepare("UPDATE salary_logs SET employee_name=?, role=?, month=?, amount=?, payment_date=?, payment_mode=?, status=? WHERE id=?");
-        $stmt->bind_param("sssssssi", $employee_name, $role, $month, $amount, $payment_date, $payment_mode, $status, $id);
+        if (!$oldLog) {
+            throw new Exception("Salary record not found");
+        }
+
+        $oldName = $oldLog['employee_name'];
+        $oldRole = $oldLog['role'];
+        $oldAmount = floatval($oldLog['amount']);
+        $oldDate = $oldLog['payment_date'];
+
+        // 2. Resolve employee ID (insert if new)
+        $employee_id = getEmployeeId($conn, $employee_name, $role, $amount);
+
+        // 3. Find and update linked expense
+        $oldExpDesc = "Salary: " . $oldName . " (" . $oldRole . ")";
+        $expQuery = "SELECT id FROM expenses WHERE description = ? AND amount = ? AND date = ?";
+        $expStmt = $conn->prepare($expQuery);
+        $expStmt->bind_param("sds", $oldExpDesc, $oldAmount, $oldDate);
+        $expStmt->execute();
+        $expRes = $expStmt->get_result()->fetch_assoc();
+        $expStmt->close();
+
+        if ($expRes) {
+            $expenseId = $expRes['id'];
+            $newExpDesc = "Salary: " . $employee_name . " (" . $role . ")";
+            $category_id = getCategoryId($conn, "Salary");
+            $payment_mode_id = getPaymentModeId($conn, $payment_mode);
+
+            // Update expense
+            $updExp = $conn->prepare("UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, payment_mode_id = ? WHERE id = ?");
+            $updExp->bind_param("sdgiii", $newExpDesc, $amount, $payment_date, $category_id, $payment_mode_id, $expenseId);
+            $updExp->execute();
+            $updExp->close();
+
+            // Update transaction log
+            $tStmt = $conn->prepare("UPDATE transactions SET amount = ?, date = ?, description = ? WHERE reference_id = ? AND reference_table = 'expenses'");
+            $tStmt->bind_param("dssi", $amount, $payment_date, $newExpDesc, $expenseId);
+            $tStmt->execute();
+            $tStmt->close();
+        }
+
+        // 4. Update Salary Log
+        $stmt = $conn->prepare("UPDATE salary_logs SET employee_id = ?, amount = ?, net_salary = ?, payment_date = ?, payment_mode = ?, month_year = ? WHERE id = ?");
+        $stmt->bind_param("iddsssi", $employee_id, $amount, $amount, $payment_date, $payment_mode, $month, $id);
         
         if ($stmt->execute()) {
             $stmt->close();
+            $conn->commit();
             
-            // Update Linked Expense
-            if ($expenseId) {
-                // Get old date of expense for report recalc
-                $oldExpDate = null;
-                $eStmt = $conn->prepare("SELECT date FROM expenses WHERE id = ?");
-                $eStmt->bind_param("i", $expenseId);
-                $eStmt->execute();
-                $res = $eStmt->get_result();
-                if ($r = $res->fetch_assoc()) {
-                     $oldExpDate = $r['date'];
-                }
-                $eStmt->close();
-
-                // Update expense record
-                $expenseDescription = "Salary: " . $employee_name . " (" . $role . ")";
-                $expenseCategory = "Salary";
-                $updateExp = $conn->prepare("UPDATE expenses SET description=?, amount=?, date=?, category=?, payment_mode=? WHERE id=?");
-                $updateExp->bind_param("sdsssi", $expenseDescription, $amount, $payment_date, $expenseCategory, $payment_mode, $expenseId);
-                $updateExp->execute();
-                $updateExp->close();
-                
-                // Recalculate reports
-                // 1. Recalculate for Old Date (if different from new date)
-                if ($oldExpDate && date('Y-m', strtotime($oldExpDate)) != date('Y-m', strtotime($payment_date))) {
-                    recalculateReport($conn, $oldExpDate);
-                }
-                
-                // 2. Recalculate for New Date
-                recalculateReport($conn, $payment_date);
+            // Recalculate reports for old date (if changed) and new date
+            if (date('Y-m', strtotime($oldDate)) != date('Y-m', strtotime($payment_date))) {
+                recalculateReport($conn, $oldDate);
             }
+            recalculateReport($conn, $payment_date);
             
             echo json_encode(['success' => true, 'message' => 'Salary updated successfully']);
         } else {
@@ -74,6 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } catch (Throwable $e) {
+        $conn->rollback();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
@@ -96,7 +154,6 @@ function recalculateReport($conn, $date) {
     if ($reportResult && $reportResult->num_rows > 0) {
         $report = $reportResult->fetch_assoc();
         $closingBalance = $report['opening_balance'] + $report['income'] - $totalExpenses;
-        
         $updateQuery = "UPDATE reports SET expenses = $totalExpenses, closing_balance = $closingBalance WHERE month = '$month'";
         $conn->query($updateQuery);
     }

@@ -1,0 +1,5 @@
+BillToName,Phone,Email,Description,PaymentMode,Date,Amount,Type
+"John Doe","9876543210","john@example.com","Service Charge","Online","2026-04-01","15000.00","non-gst"
+"Jane Smith","9988776655","jane@example.com","Annual Membership","Cash","2026-04-01","12000.00","gst"
+"Vinay K","8877665544","vinay@example.com","Consultation","Online","2026-04-02","5000.00","non-gst"
+"TriShaKi Client","9148710506","info@trishaki.com","Platform Charges","Online","2026-04-02","25000.00","gst"

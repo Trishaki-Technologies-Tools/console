@@ -4,49 +4,74 @@ require_once 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $id = intval($_POST['id']);
-    $creditor_name = $_POST['creditor_name'];
-    $principal_amount = floatval($_POST['principal_amount']);
-    $interest_rate = floatval($_POST['interest_rate']);
-    $interest_type = $_POST['interest_type'];
-    $start_date = $_POST['start_date'];
-    $description = $_POST['description'];
-    $status = $_POST['status'];
+    $creditor_name = $_POST['creditor_name'] ?? '';
+    $principal_amount = floatval($_POST['principal_amount'] ?? 0);
+    $interest_rate = floatval($_POST['interest_rate'] ?? 0);
+    $start_date = $_POST['start_date'] ?? date('Y-m-d');
+    $status = strtolower($_POST['status'] ?? 'active');
+    
+    // Map status
+    if ($status === 'active') {
+        $status = 'active';
+    } else {
+        $status = 'settled';
+    }
 
     try {
-        // 1. Get existing loan linkage
-        $getStmt = $conn->prepare("SELECT income_id, start_date FROM loans WHERE id = ?");
+        $conn->begin_transaction();
+
+        // 1. Get existing loan details
+        $getStmt = $conn->prepare("SELECT description AS creditor_name, principal_amount, start_date FROM loans WHERE id = ?");
         $getStmt->bind_param("i", $id);
         $getStmt->execute();
         $loanRow = $getStmt->get_result()->fetch_assoc();
         $getStmt->close();
         
-        $incomeId = $loanRow['income_id'];
+        if (!$loanRow) {
+            throw new Exception("Loan not found");
+        }
+        
+        $oldCreditor = $loanRow['creditor_name'];
+        $oldAmount = floatval($loanRow['principal_amount']);
         $oldDate = $loanRow['start_date'];
 
-        // 2. Update Loan
-        $stmt = $conn->prepare("UPDATE loans SET creditor_name=?, principal_amount=?, interest_rate=?, interest_type=?, start_date=?, description=?, status=? WHERE id=?");
-        $stmt->bind_param("sdsssssi", $creditor_name, $principal_amount, $interest_rate, $interest_type, $start_date, $description, $status, $id);
+        // 2. Find and Update Linked Income
+        $oldIncDesc = "Loan from " . $oldCreditor;
+        $incQuery = "SELECT id FROM incomes WHERE description = ? AND amount = ? AND date = ?";
+        $incStmt = $conn->prepare($incQuery);
+        $incStmt->bind_param("sds", $oldIncDesc, $oldAmount, $oldDate);
+        $incStmt->execute();
+        $incRes = $incStmt->get_result()->fetch_assoc();
+        $incStmt->close();
+        
+        if ($incRes) {
+            $incomeId = $incRes['id'];
+            $newIncDesc = "Loan from " . $creditor_name;
+            
+            $updInc = $conn->prepare("UPDATE incomes SET description = ?, amount = ?, date = ? WHERE id = ?");
+            $updInc->bind_param("sdsi", $newIncDesc, $principal_amount, $start_date, $incomeId);
+            $updInc->execute();
+            $updInc->close();
+
+            // Update transaction log
+            $tStmt = $conn->prepare("UPDATE transactions SET amount = ?, date = ?, description = ? WHERE reference_id = ? AND reference_table = 'incomes'");
+            $tStmt->bind_param("dssi", $principal_amount, $start_date, $newIncDesc, $incomeId);
+            $tStmt->execute();
+        }
+
+        // 3. Update Loan
+        $stmt = $conn->prepare("UPDATE loans SET description = ?, principal_amount = ?, interest_rate = ?, start_date = ?, status = ? WHERE id = ?");
+        $stmt->bind_param("sddssi", $creditor_name, $principal_amount, $interest_rate, $start_date, $status, $id);
         
         if ($stmt->execute()) {
             $stmt->close();
+            $conn->commit();
             
-            // 3. Update Linked Income
-            if ($incomeId) {
-                $incomeDescription = "Loan from " . $creditor_name;
-                // Update income record
-                $updInc = $conn->prepare("UPDATE incomes SET description=?, amount=?, date=? WHERE id=?");
-                $updInc->bind_param("sdsi", $incomeDescription, $principal_amount, $start_date, $incomeId);
-                $updInc->execute();
-                $updInc->close();
-                
-                // 4. Update Reports
-                // Recalculate for Old Month (if changed)
-                if (date('Y-m', strtotime($oldDate)) != date('Y-m', strtotime($start_date))) {
-                    recalculateReport($conn, date('Y-m-d', strtotime($oldDate)));
-                }
-                // Recalculate for New Month
-                recalculateReport($conn, $start_date);
+            // 4. Update Reports
+            if (date('Y-m', strtotime($oldDate)) != date('Y-m', strtotime($start_date))) {
+                recalculateReport($conn, date('Y-m-d', strtotime($oldDate)));
             }
+            recalculateReport($conn, $start_date);
 
             echo json_encode(['success' => true, 'message' => 'Loan updated successfully']);
         } else {
@@ -54,6 +79,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
     } catch (Throwable $e) {
+        $conn->rollback();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
@@ -62,17 +88,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 function recalculateReport($conn, $date) {
-    // This is a simplified report recalculation for Income mostly
     $month = strtoupper(date('M-Y', strtotime($date)));
     $firstDay = date('Y-m-01', strtotime($date));
     $lastDay = date('Y-m-t', strtotime($date));
     
-    // Get total income
     $incQuery = "SELECT COALESCE(SUM(amount), 0) as total FROM incomes WHERE date >= '$firstDay' AND date <= '$lastDay'";
     $incResult = $conn->query($incQuery);
     $totalIncome = $incResult->fetch_assoc()['total'];
     
-    // Get report to update
     $reportQuery = "SELECT opening_balance, expenses FROM reports WHERE month = '$month'";
     $reportResult = $conn->query($reportQuery);
     

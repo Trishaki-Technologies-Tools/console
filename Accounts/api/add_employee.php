@@ -3,26 +3,53 @@ header('Content-Type: application/json');
 require_once 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $name = $conn->real_escape_string($_POST['name']);
-    $role = $conn->real_escape_string($_POST['role']);
+    $name = trim($_POST['name'] ?? '');
 
     if (empty($name)) {
         echo json_encode(['success' => false, 'error' => 'Name is required']);
         exit;
     }
 
-    $sql = "INSERT INTO employees (name, role) VALUES ('$name', '$role')";
+    // Check if employee already exists
+    $checkStmt = $conn->prepare("SELECT id FROM employees WHERE name = ?");
+    $checkStmt->bind_param("s", $name);
+    $checkStmt->execute();
+    $result = $checkStmt->get_result();
+    
+    if ($result->num_rows > 0) {
+        echo json_encode(['success' => false, 'error' => 'Employee already exists']);
+        $checkStmt->close();
+        $conn->close();
+        exit;
+    }
+    $checkStmt->close();
 
-    if ($conn->query($sql) === TRUE) {
+    // Insert new employee — detect available columns first
+    $eCols = [];
+    $cr = $conn->query("SHOW COLUMNS FROM employees");
+    while ($c = $cr->fetch_assoc()) $eCols[] = $c['Field'];
+
+    if (in_array('role', $eCols) && in_array('status', $eCols)) {
+        $stmt = $conn->prepare("INSERT INTO employees (name, role, status) VALUES (?, '', 'Active')");
+    } elseif (in_array('role', $eCols)) {
+        $stmt = $conn->prepare("INSERT INTO employees (name, role) VALUES (?, '')");
+    } elseif (in_array('status', $eCols)) {
+        $stmt = $conn->prepare("INSERT INTO employees (name, status) VALUES (?, 'Active')");
+    } else {
+        $stmt = $conn->prepare("INSERT INTO employees (name) VALUES (?)");
+    }
+    $stmt->bind_param("s", $name);
+
+    if ($stmt->execute()) {
         echo json_encode(['success' => true, 'id' => $conn->insert_id]);
     } else {
-        // Check for duplicate entry
-        if ($conn->errno == 1062) {
-             echo json_encode(['success' => false, 'error' => 'Employee already exists']);
-        } else {
-             echo json_encode(['success' => false, 'error' => $conn->error]);
-        }
+        echo json_encode(['success' => false, 'error' => $conn->error]);
     }
+    
+    $stmt->close();
+} else {
+    echo json_encode(['success' => false, 'error' => 'Invalid request method']);
 }
+
 $conn->close();
 ?>

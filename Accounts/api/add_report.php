@@ -45,20 +45,29 @@ try {
                     $date = $dateObj->format('Y-m-01');
                     
                     // Check if Opening Balance already exists for this month to avoid duplicates (simplified check)
-                    // Or usually Opening Balance is a one-time thing per report. 
-                    // We'll delete any existing 'Opening Balance' for this month to be safe/idempotent
-                    $delSql = "DELETE FROM incomes WHERE category = 'Opening Balance' AND DATE_FORMAT(date, '%b-%Y') = '$month'";
+                    // Get or create "Opening Balance" category
+                    $catRow = $conn->query("SELECT id FROM incomes_categories WHERE category_name = 'Opening Balance'")->fetch_assoc();
+                    if (!$catRow) {
+                        $conn->query("INSERT INTO incomes_categories (category_name) VALUES ('Opening Balance')");
+                        $catId = $conn->insert_id;
+                    } else {
+                        $catId = $catRow['id'];
+                    }
+
+                    // Get payment mode id
+                    $pmRow = $conn->query("SELECT id FROM payment_modes WHERE mode_name = '$payment_mode' LIMIT 1")->fetch_assoc();
+                    $pmId = $pmRow ? $pmRow['id'] : 1;
+
+                    // Delete existing Opening Balance for this month
+                    $delSql = "DELETE FROM incomes WHERE category_id = $catId AND DATE_FORMAT(date, '%b-%Y') = '$month'";
                     $conn->query($delSql);
 
                     $desc = "Opening Balance for " . $month;
-                    $cat = "Opening Balance";
                     
-                    $insSql = "INSERT INTO incomes (date, description, category, payment_mode, amount) 
-                               VALUES ('$date', '$desc', '$cat', '$payment_mode', $opening_balance)";
+                    $insSql = "INSERT INTO incomes (date, description, category_id, payment_mode_id, amount) 
+                               VALUES ('$date', '$desc', $catId, $pmId, $opening_balance)";
                     
                     if (!$conn->query($insSql)) {
-                        // Log error but don't fail the whole request? Or fail?
-                        // Let's just log it. 
                         error_log("Failed to insert Opening Balance transaction: " . $conn->error);
                     }
                 }

@@ -5,6 +5,9 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Load 2FA Configuration
+require_once '2fa_config.php';
+
 // Enable error reporting for debugging
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
@@ -40,6 +43,21 @@ try {
         
         // Verify credentials
         if ($username === $VALID_USERNAME && password_verify($password, $VALID_PASSWORD_HASH)) {
+            
+            // Bypass 2FA if disabled
+            if (!defined('ENABLE_2FA') || !ENABLE_2FA) {
+                $_SESSION['logged_in'] = true;
+                $_SESSION['username'] = $username;
+                $_SESSION['login_time'] = time();
+                $_SESSION['accounts_2fa_verified'] = true; // Auto-verify Accounts module 2FA
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Login successful',
+                    'redirect' => 'dashboard.php'
+                ]);
+                exit;
+            }
             
             require_once 'GoogleAuthenticator.php';
             $g2fa = new GoogleAuthenticator();

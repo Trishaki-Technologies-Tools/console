@@ -2,11 +2,43 @@
 header('Content-Type: application/json');
 require_once 'config.php';
 
+function getCategoryId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM expenses_categories WHERE category_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO expenses_categories (category_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
+function getPaymentModeId($conn, $name) {
+    $stmt = $conn->prepare("SELECT id FROM payment_modes WHERE mode_name = ?");
+    $stmt->bind_param("s", $name);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    if ($res->num_rows > 0) {
+        return $res->fetch_assoc()['id'];
+    } else {
+        $stmt2 = $conn->prepare("INSERT INTO payment_modes (mode_name) VALUES (?)");
+        $stmt2->bind_param("s", $name);
+        $stmt2->execute();
+        return $conn->insert_id;
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $loan_id = intval($_POST['loan_id']);
-    $payment_date = $_POST['payment_date'];
+    $payment_date = $_POST['payment_date'] ?? date('Y-m-d');
     
     try {
+        $conn->begin_transaction();
+
         // 1. Fetch Loan Details
         $lStmt = $conn->prepare("SELECT * FROM loans WHERE id = ?");
         $lStmt->bind_param("i", $loan_id);
@@ -21,15 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // 2. Calculate Interest Amount
         $principal = floatval($loan['principal_amount']);
         $rate = floatval($loan['interest_rate']);
-        $type = $loan['interest_type']; // 'Monthly' or 'Annual'
-        
-        if ($type === 'Annual') {
-            $monthlyRate = $rate / 12;
-        } else {
-            $monthlyRate = $rate;
-        }
-        
-        $calculatedInterest = ($principal * $monthlyRate) / 100;
+        $calculatedInterest = ($principal * $rate) / 100; // Monthly
         
         // Use custom amount if provided, else use calculated
         if (isset($_POST['custom_amount']) && is_numeric($_POST['custom_amount'])) {
@@ -38,22 +62,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $interestAmount = $calculatedInterest;
         }
         
-        // 3. Insert into Expenses
-        $description = "Interest Payment: " . $loan['creditor_name'];
-        $category = "Interest"; 
-        $payment_mode = "Cash"; // Default
+        // 3. Insert into loans_payments table
+        $lpStmt = $conn->prepare("INSERT INTO loans_payments (loan_id, payment_date, amount, payment_type) VALUES (?, ?, ?, 'interest')");
+        $lpStmt->bind_param("isd", $loan_id, $payment_date, $interestAmount);
+        if (!$lpStmt->execute()) {
+            throw new Exception("Interest payment insert failed");
+        }
+        $lpStmt->close();
+
+        // 4. Insert into Expenses
+        $description = "Interest Payment: " . $loan['description'];
+        $category_id = getCategoryId($conn, "Interest"); 
+        $payment_mode_id = getPaymentModeId($conn, "Cash"); // Default
         
-        $expStmt = $conn->prepare("INSERT INTO expenses (description, amount, date, category, payment_mode, loan_id) VALUES (?, ?, ?, ?, ?, ?)");
-        $expStmt->bind_param("sdsssi", $description, $interestAmount, $payment_date, $category, $payment_mode, $loan_id);
+        $expStmt = $conn->prepare("INSERT INTO expenses (description, amount, date, category_id, payment_mode_id) VALUES (?, ?, ?, ?, ?)");
+        $expStmt->bind_param("sdgii", $description, $interestAmount, $payment_date, $category_id, $payment_mode_id);
         
         if ($expStmt->execute()) {
+            $expenseId = $conn->insert_id;
             $expStmt->close();
             
-            // 4. Update Loan (Last Payment Date)
-            $updStmt = $conn->prepare("UPDATE loans SET last_interest_payment_date = ? WHERE id = ?");
-            $updStmt->bind_param("si", $payment_date, $loan_id);
-            $updStmt->execute();
-            $updStmt->close();
+            // Log to transactions table
+            $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description) VALUES ('expense', ?, ?, ?, 'expenses', ?)");
+            $tStmt->bind_param("dsis", $interestAmount, $payment_date, $expenseId, $description);
+            $tStmt->execute();
+
+            $conn->commit();
             
             // 5. Update Reports
             recalculateReport($conn, $payment_date);
@@ -64,6 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         
     } catch (Throwable $e) {
+        $conn->rollback();
         http_response_code(500);
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
     }
