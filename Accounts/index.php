@@ -176,6 +176,15 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>TriShaKi Technologies - Finance Dashboard</title>
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        .dropdown-option {
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .dropdown-option:hover {
+            background-color: rgba(255, 255, 255, 0.08) !important;
+            color: #6366f1 !important;
+        }
+    </style>
 </head>
 
 <body>
@@ -701,7 +710,14 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <div class="filter-row">
                             <button class="btn-secondary" onclick="triggerCSVImport()">📂 Bulk Import (CSV)</button>
                             <button class="btn-danger" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3);" onclick="clearAllInvoices()">🗑️ Clear All</button>
-                            <button class="btn-primary" onclick="openInvoiceForm()">+ Generate Invoice</button>
+                            <div class="generate-invoice-container" style="position: relative; display: inline-block;">
+                                <button class="btn-primary" onclick="showInvoiceTypeSelection()">+ Generate Invoice</button>
+                                <!-- Invoice Type Selection Dropdown -->
+                                <div id="invoiceTypeSelectionDiv" style="display: none; position: absolute; right: 0; top: 110%; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); grid-template-columns: 1fr; gap: 8px; min-width: 180px;">
+                                    <button class="btn-secondary dropdown-option" style="text-align: left; padding: 10px; width: 100%; border: none; background: transparent; color: white;" onclick="selectInvoiceType('gst')">📝 GST Invoice (18%)</button>
+                                    <button class="btn-secondary dropdown-option" style="text-align: left; padding: 10px; width: 100%; border: none; background: transparent; color: white;" onclick="selectInvoiceType('non-gst')">📄 Non-GST Invoice</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -1798,7 +1814,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">GST Number <span class="required">*</span></label>
-                        <input type="text" id="gstNumber" class="form-input" placeholder="Enter GST number" required pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}">
+                        <input type="text" id="gstModalNumber" class="form-input" placeholder="Enter GST number" required pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}">
                         <small style="color: #64748b; font-size: 12px;">Format: 22AAAAA0000A1Z5</small>
                     </div>
 
@@ -1808,31 +1824,80 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label">Address</label>
+                        <input type="text" id="gstAddress" class="form-input" placeholder="Enter address (optional)">
+                    </div>
+
+                    <div class="form-group">
                         <label class="form-label">Invoice Items <span class="required">*</span></label>
-                        <div id="gstItemsContainer" style="overflow-x: auto;">
-                            <div class="invoice-item-row-gst">
-                                <input type="text" class="form-input gst-desc" placeholder="Description" required style="min-width: 150px;">
-                                <select class="form-select gst-mode" required style="min-width: 100px;">
-                                    <option value="">Payment Mode</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Online">Online</option>
-                                </select>
-                                <input type="date" class="form-input gst-date" required style="min-width: 130px;">
-                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required oninput="calculateGstFromTotal(this);" style="min-width: 120px;">
-                                <input type="number" class="form-input gst-paid-amt" placeholder="Paid Amount" step="0.01" min="0" required style="min-width: 120px;">
-                                <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                                <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                                <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                        <div id="gstItemsContainer">
+                            <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px;">
+                                <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
+                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+                                <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
                                     <input type="checkbox" class="gst-desc-check"> Desc.%
                                 </label>
                                 <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
+                            </div>
+                        </div>
+                        <button type="button" id="btnGstDone" class="btn-primary" style="margin-top: 10px; background-color: #0ea5e9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;" onclick="clickGstDone()">Done</button>
+                    </div>
+
+                    <!-- Payment & Summary Section -->
+                    <div id="gstPaymentSummarySection" style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px;">
+                        <h4 style="margin-bottom: 15px; color: #1e293b; font-size: 15px; font-weight: 600;">Payment & Summary</h4>
+                        
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label class="form-label">Payment Mode <span class="required">*</span></label>
+                                <select id="gstPaymentMode" class="form-select">
+                                    <option value="">Select Mode</option>
+                                    <option value="Cash">Cash</option>
+                                    <option value="Online">Online</option>
+                                </select>
+                            </div>
+                            
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label class="form-label">Payment Date <span class="required">*</span></label>
+                                <input type="date" id="gstPaymentDate" class="form-input">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1; margin-bottom: 0;">
+                                <label class="form-label">Amount Paid <span class="required">*</span></label>
+                                <input type="number" id="gstAmountPaid" class="form-input" placeholder="Enter amount paid" step="0.01" min="0" oninput="updateGstSummary()">
+                            </div>
+                        </div>
+                        
+                        <!-- Summary Box -->
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                                <span style="color: #64748b; font-weight: 500;">Charges (Excl. Tax):</span>
+                                <span id="summaryGstCharges" style="font-weight: 700; color: #0f172a;">₹0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                                <span style="color: #64748b; font-weight: 500;">GST (18%):</span>
+                                <span id="summaryGstTax" style="font-weight: 700; color: #0f172a;">₹0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                                <span style="color: #64748b; font-weight: 500;">Total Amount (Incl. Tax):</span>
+                                <span id="summaryGstTotal" style="font-weight: 700; color: #0f172a;">₹0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                                <span style="color: #64748b; font-weight: 500;">Amount Paid:</span>
+                                <span id="summaryGstPaid" style="font-weight: 700; color: #10b981;">₹0.00</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px; font-size: 13px;">
+                                <span style="color: #64748b; font-weight: 600;">Balance Due:</span>
+                                <span id="summaryGstDue" style="font-weight: 700; color: #ef4444;">₹0.00</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" onclick="closeGstModal()">Cancel</button>
-                        <button type="submit" class="btn-save">Generate Invoice</button>
+                        <button type="submit" id="btnGstGenerate" class="btn-save" style="display: none;">Generate Invoice</button>
                     </div>
                 </form>
             </div>
@@ -1976,6 +2041,15 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
         function logout() {
             window.location.href = 'api/logout.php';
         }
+
+        // Close Invoice Type Selection Dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('invoiceTypeSelectionDiv');
+            const container = document.querySelector('.generate-invoice-container');
+            if (dropdown && container && !container.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
 
         // Add this to handle generic page transitions for dynamic content
         document.querySelectorAll('.dropdown-item, .nav-item:not(.has-dropdown)').forEach(item => {

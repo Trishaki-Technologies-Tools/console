@@ -92,8 +92,32 @@ function displayInvoices() {
 
     if (document.getElementById('total-invoice-count')) {
         document.getElementById('total-invoice-count').innerText = totInvoices;
-        document.getElementById('total-invoice-collected').innerText = '₹' + totColl.toLocaleString('en-IN');
-        document.getElementById('total-invoice-pending').innerText = '₹' + totPend.toLocaleString('en-IN');
+    }
+    
+    // Calculate total amount billed
+    let totBilled = 0;
+    Object.values(studentLatest).forEach(inv => {
+        totBilled += parseFloat(inv.originalTotalPayable || 0);
+    });
+
+    const amountEl = document.getElementById('total-invoice-amount');
+    if (amountEl) {
+        amountEl.innerText = '₹' + totBilled.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+    
+    const paidEl = document.getElementById('total-invoice-paid');
+    if (paidEl) {
+        paidEl.innerText = '₹' + totColl.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+
+    // Also support legacy/alternative IDs if they exist
+    const collectedEl = document.getElementById('total-invoice-collected');
+    if (collectedEl) {
+        collectedEl.innerText = '₹' + totColl.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+    const pendingEl = document.getElementById('total-invoice-pending');
+    if (pendingEl) {
+        pendingEl.innerText = '₹' + totPend.toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
 }
 
@@ -116,8 +140,9 @@ function editInvoiceByNo(invoiceNo) {
         // Populate GST form
         document.getElementById('gstBillToName').value = invoice.billToName;
         document.getElementById('gstPhone').value = invoice.phone;
-        document.getElementById('gstNumber').value = invoice.gstNumber;
+        document.getElementById('gstModalNumber').value = invoice.gstNumber;
         document.getElementById('gstEmail').value = invoice.email || '';
+        document.getElementById('gstAddress').value = invoice.address || '';
         
         // Populate items
         const items = JSON.parse(invoice.items);
@@ -127,25 +152,35 @@ function editInvoiceByNo(invoiceNo) {
         items.forEach((item, idx) => {
             const row = document.createElement('div');
             row.className = 'invoice-item-row-gst';
+            row.style = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
             row.innerHTML = `
-                <input type="text" class="form-input gst-desc" placeholder="Description" value="${item.description}" required style="min-width: 150px;">
-                <select class="form-select gst-mode" required style="min-width: 100px;">
-                    <option value="">Payment Mode</option>
-                    <option value="Cash" ${item.paymentMode === 'Cash' ? 'selected' : ''}>Cash</option>
-                    <option value="Online" ${item.paymentMode === 'Online' ? 'selected' : ''}>Online</option>
-                </select>
-                <input type="date" class="form-input gst-date" value="${item.date}" required style="min-width: 130px;">
-                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" value="${item.totalInclTax}" step="0.01" min="0" required oninput="calculateGstFromTotal(this)" style="min-width: 120px;">
-                <input type="number" class="form-input gst-paid-amt" placeholder="Paid Now" value="${item.paidAmt}" step="0.01" min="0" required style="min-width: 120px;">
-                <input type="number" class="form-input gst-tax" placeholder="GST 18%" value="${item.gst}" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                <input type="number" class="form-input gst-charges" placeholder="Charges" value="${item.charges}" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                <input type="text" class="form-input gst-desc" placeholder="Description" value="${item.description}" required style="flex: 3;">
+                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" value="${item.totalInclTax || item.amount}" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+                <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
                     <input type="checkbox" class="gst-desc-check" ${item.hasDesc ? 'checked' : ''}> Desc.%
                 </label>
                 <button type="button" class="btn-${idx === 0 ? 'add' : 'remove'}-item" onclick="${idx === 0 ? 'addGstItem()' : 'removeItem(this)'}">${idx === 0 ? '+' : '−'}</button>
             `;
             container.appendChild(row);
         });
+        
+        // Populate payment & summary fields
+        if (items.length > 0) {
+            document.getElementById('gstPaymentMode').value = items[0].paymentMode || '';
+            document.getElementById('gstPaymentDate').value = items[0].date || '';
+            let totalPaidAmt = 0;
+            items.forEach(item => {
+                totalPaidAmt += parseFloat(item.paidAmt || 0);
+            });
+            document.getElementById('gstAmountPaid').value = totalPaidAmt.toFixed(2);
+        }
+        
+        // Show section and generate button
+        document.getElementById('gstPaymentSummarySection').style.display = 'block';
+        document.getElementById('btnGstGenerate').style.display = 'inline-block';
+        
+        // Update summary display
+        updateGstSummary();
         
         document.getElementById('gstInvoiceForm').dataset.editInvoiceNo = invoiceNo;
         document.getElementById('gstInvoiceModal').classList.add('show');
@@ -208,35 +243,88 @@ function checkExistingUser(phone, type) {
             if (existingInvoices && existingInvoices.length > 0) {
                 const lastInvoice = existingInvoices[existingInvoices.length - 1];
                 
-                let totalPayable = 0;
-                let totalPaid = 0;
-                
+                // Group invoices by base invoice number to track dues separately
+                const baseInvoiceGroups = {};
                 existingInvoices.forEach(inv => {
-                    const invItems = JSON.parse(inv.items);
+                    let baseNo = inv.invoiceNo;
+                    if (inv.invoiceNo.includes('/P')) {
+                        baseNo = inv.invoiceNo.split('/P')[0];
+                    }
+                    
+                    if (!baseInvoiceGroups[baseNo]) {
+                        baseInvoiceGroups[baseNo] = {
+                            baseInvoiceNo: baseNo,
+                            lastInvoiceNo: inv.invoiceNo,
+                            totalPayable: 0,
+                            totalPaid: 0,
+                            billToName: inv.billToName,
+                            gstNumber: inv.gstNumber || '',
+                            email: inv.email || '',
+                            address: inv.address || ''
+                        };
+                    }
+                    
+                    const invItems = JSON.parse(inv.items || '[]');
+                    if (!inv.invoiceNo.includes('/P') || inv.invoiceNo.endsWith('/P1')) {
+                        invItems.forEach(item => {
+                            baseInvoiceGroups[baseNo].totalPayable += parseFloat(item.totalInclTax || item.amount || 0);
+                        });
+                    }
                     invItems.forEach(item => {
-                        if (inv.invoiceNo.endsWith('/P1') || !inv.invoiceNo.includes('/P')) {
-                            totalPayable += parseFloat(item.totalInclTax || item.amount || 0);
-                        }
-                        totalPaid += parseFloat(item.paidAmt || item.amount || 0);
+                        baseInvoiceGroups[baseNo].totalPaid += parseFloat(item.paidAmt || item.amount || 0);
                     });
+                    
+                    baseInvoiceGroups[baseNo].lastInvoiceNo = inv.invoiceNo;
                 });
                 
-                const hasDue = totalPayable > (totalPaid + 0.01);
+                // Find all groups with active balance due
+                const activeDues = [];
+                Object.keys(baseInvoiceGroups).forEach(baseNo => {
+                    const group = baseInvoiceGroups[baseNo];
+                    const due = group.totalPayable - group.totalPaid;
+                    if (due > 0.01) {
+                        activeDues.push({
+                            baseInvoiceNo: baseNo,
+                            lastInvoiceNo: group.lastInvoiceNo,
+                            dueAmount: due
+                        });
+                    }
+                });
                 
                 let html = `
-                    <div style="background: #e0f2fe; border: 1px solid #0284c7; padding: 10px; border-radius: 6px; margin-top: 10px; font-size: 13px; color: #0369a1; text-align: left;">
+                    <div style="background: #e0f2fe; border: 1px solid #0284c7; padding: 12px; border-radius: 6px; margin-top: 10px; font-size: 13px; color: #0369a1; text-align: left; line-height: 1.5;">
                         <strong>Existing Customer Found!</strong><br>
                         Name: ${lastInvoice.billToName}<br>
                         ${lastInvoice.gstNumber ? 'GST: ' + lastInvoice.gstNumber + '<br>' : ''}
-                        Last Invoice: ${lastInvoice.invoiceNo}<br>
                         Previous Invoices: ${existingInvoices.length}<br>`;
                 
-                if (hasDue) {
-                    const dueAmount = totalPayable - totalPaid;
-                    html += `<span style="color: #dc2626; font-weight: bold;">Balance Due: ₹${dueAmount.toFixed(2)}</span><br>`;
-                    html += `<button type="button" class="btn-primary" style="margin-top: 10px; background: #0ea5e9; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="continuePartPayment('${phone}', '${type}')">Continue Payment</button>`;
+                if (activeDues.length > 0) {
+                    html += `<div style="margin-top: 8px; padding-top: 8px; border-top: 1px dashed #0284c7;">`;
+                    html += `<strong style="color: #0369a1;">Select an Outstanding Due to Continue Payment:</strong><br>`;
+                    activeDues.forEach(dueItem => {
+                        html += `
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 6px; background: #ffffff; padding: 6px 8px; border-radius: 4px; border: 1px solid #bae6fd; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+                                <div>
+                                    <span style="font-weight: 600; color: #1e293b;">Invoice: ${dueItem.baseInvoiceNo}</span><br>
+                                    <span style="font-size: 11px; color: #ef4444; font-weight: 500;">Due: ₹${dueItem.dueAmount.toFixed(2)}</span>
+                                </div>
+                                <button type="button" class="btn-primary" style="background: #ef4444; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;" onclick="continuePartPayment('${phone}', '${type}', '${dueItem.lastInvoiceNo}')">Pay Due</button>
+                            </div>
+                        `;
+                    });
+                    html += `</div>`;
+                    
+                    html += `
+                        <div style="margin-top: 12px; display: flex; gap: 8px;">
+                            <button type="button" class="btn-primary" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;" onclick="loadExistingCustomer('${phone}', '${type}')">Create Fresh Invoice</button>
+                        </div>
+                    `;
                 } else {
-                    html += `<button type="button" class="btn-primary" style="margin-top: 10px; background: #0ea5e9; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer;" onclick="loadExistingCustomer('${phone}', '${type}')">Load Customer Data</button>`;
+                    html += `
+                        <div style="margin-top: 10px;">
+                            <button type="button" class="btn-primary" style="background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 12px;" onclick="loadExistingCustomer('${phone}', '${type}')">Load Customer Data</button>
+                        </div>
+                    `;
                 }
                 
                 html += `</div>`;
@@ -263,12 +351,47 @@ function loadExistingCustomer(phone, type) {
             
             if (type === 'gst') {
                 document.getElementById('gstBillToName').value = lastInvoice.billToName;
-                document.getElementById('gstNumber').value = lastInvoice.gstNumber || '';
+                document.getElementById('gstModalNumber').value = lastInvoice.gstNumber || '';
                 document.getElementById('gstEmail').value = lastInvoice.email || '';
+                
+                const form = document.getElementById('gstInvoiceForm');
+                delete form.dataset.continueFrom;
+                delete form.dataset.originalTotalPayable;
+                delete form.dataset.cumulativeTotalPaid;
+                
+                const container = document.getElementById('gstItemsContainer');
+                container.innerHTML = `
+                    <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
+                        <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+                        <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
+                            <input type="checkbox" class="gst-desc-check"> Desc.%
+                        </label>
+                        <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
+                    </div>
+                `;
+                document.getElementById('gstPaymentSummarySection').style.display = 'none';
+                document.getElementById('btnGstGenerate').style.display = 'none';
             } else {
                 document.getElementById('nonGstBillToName').value = lastInvoice.billToName;
                 document.getElementById('nonGstEmail').value = lastInvoice.email || '';
                 document.getElementById('nonGstAddress').value = lastInvoice.address || '';
+                
+                const form = document.getElementById('nonGstInvoiceForm');
+                delete form.dataset.continueFrom;
+                delete form.dataset.originalTotalPayable;
+                delete form.dataset.cumulativeTotalPaid;
+                
+                const container = document.getElementById('nonGstItemsContainer');
+                container.innerHTML = `
+                    <div class="invoice-item-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
+                        <input type="text" class="form-input nongst-item-desc" placeholder="Description" required style="flex: 3;">
+                        <input type="number" class="form-input nongst-item-amount" placeholder="Amount" step="0.01" min="0" required style="flex: 1;" oninput="onNonGstItemAmountChange()">
+                        <button type="button" class="btn-add-item" onclick="addNonGstItem()">+</button>
+                    </div>
+                `;
+                document.getElementById('nonGstPaymentSummarySection').style.display = 'none';
+                document.getElementById('btnNonGstGenerate').style.display = 'none';
             }
         })
         .catch(error => {
@@ -277,33 +400,53 @@ function loadExistingCustomer(phone, type) {
 }
 
 // Continue part payment
-function continuePartPayment(phone, type) {
+function continuePartPayment(phone, type, targetLastInvoiceNo) {
     fetch(`api/get_customer_invoices.php?phone=${encodeURIComponent(phone)}&type=${type}`)
         .then(response => response.json())
         .then(existingInvoices => {
             if (existingInvoices.length === 0) return;
             
-            const lastInvoice = existingInvoices[existingInvoices.length - 1];
+            // Extract the base invoice of targetLastInvoiceNo
+            let targetBaseNo = targetLastInvoiceNo;
+            if (targetLastInvoiceNo.includes('/P')) {
+                targetBaseNo = targetLastInvoiceNo.split('/P')[0];
+            }
             
             let totalPayable = 0;
             let totalPaid = 0;
+            let lastInvoiceRecord = null;
             
             existingInvoices.forEach(inv => {
-                const items = JSON.parse(inv.items);
-                items.forEach(item => {
-                    if (inv.invoiceNo.endsWith('/P1') || !inv.invoiceNo.includes('/P')) {
-                        totalPayable += parseFloat(item.totalInclTax || item.amount || 0);
+                let invBase = inv.invoiceNo;
+                if (inv.invoiceNo.includes('/P')) {
+                    invBase = inv.invoiceNo.split('/P')[0];
+                }
+                
+                if (invBase === targetBaseNo) {
+                    lastInvoiceRecord = inv;
+                    const items = JSON.parse(inv.items || '[]');
+                    
+                    if (!inv.invoiceNo.includes('/P') || inv.invoiceNo.endsWith('/P1')) {
+                        items.forEach(item => {
+                            totalPayable += parseFloat(item.totalInclTax || item.amount || 0);
+                        });
                     }
-                    totalPaid += parseFloat(item.paidAmt || item.amount || 0);
-                });
+                    
+                    items.forEach(item => {
+                        totalPaid += parseFloat(item.paidAmt || item.amount || 0);
+                    });
+                }
             });
+            
+            if (!lastInvoiceRecord) return;
             
             const balanceDue = totalPayable - totalPaid;
             
             if (type === 'gst') {
-                document.getElementById('gstBillToName').value = lastInvoice.billToName;
-                document.getElementById('gstNumber').value = lastInvoice.gstNumber || '';
-                document.getElementById('gstEmail').value = lastInvoice.email || '';
+                document.getElementById('gstBillToName').value = lastInvoiceRecord.billToName;
+                document.getElementById('gstModalNumber').value = lastInvoiceRecord.gstNumber || '';
+                document.getElementById('gstEmail').value = lastInvoiceRecord.email || '';
+                document.getElementById('gstAddress').value = lastInvoiceRecord.address || '';
                 
                 const container = document.getElementById('gstItemsContainer');
                 container.innerHTML = '';
@@ -311,37 +454,38 @@ function continuePartPayment(phone, type) {
                 const today = new Date().toISOString().split('T')[0];
                 const newRow = document.createElement('div');
                 newRow.className = 'invoice-item-row-gst';
+                newRow.style = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
                 newRow.innerHTML = `
-                    <input type="text" class="form-input gst-desc" placeholder="Payment Description" value="Part Payment" required style="min-width: 150px;">
-                    <select class="form-select gst-mode" required style="min-width: 100px;">
-                        <option value="">Payment Mode</option>
-                        <option value="Cash">Cash</option>
-                        <option value="Online">Online</option>
-                    </select>
-                    <input type="date" class="form-input gst-date" value="${today}" required style="min-width: 130px;">
-                    <input type="number" class="form-input gst-total-incl" placeholder="Balance Due" value="${balanceDue.toFixed(2)}" step="0.01" min="0" readonly style="min-width: 120px; background: #f1f5f9;">
-                    <input type="number" class="form-input gst-paid-amt" placeholder="Paying Now" step="0.01" min="0" required style="min-width: 120px;">
-                    <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                    <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-                    <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+                    <input type="text" class="form-input gst-desc" placeholder="Payment Description" value="Part Payment" required style="flex: 3;">
+                    <input type="number" class="form-input gst-total-incl" placeholder="Balance Due" value="${balanceDue.toFixed(2)}" step="0.01" min="0" readonly style="flex: 1; background: #f1f5f9;" oninput="onGstItemAmountChange()">
+                    <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
                         <input type="checkbox" class="gst-desc-check"> Desc.%
                     </label>
                     <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
                 `;
                 container.appendChild(newRow);
                 
-                document.getElementById('gstInvoiceForm').dataset.continueFrom = lastInvoice.invoiceNo;
-                document.getElementById('gstInvoiceForm').dataset.originalTotalPayable = totalPayable.toFixed(2);
-                document.getElementById('gstInvoiceForm').dataset.cumulativeTotalPaid = totalPaid.toFixed(2);
+                document.getElementById('gstPaymentDate').value = today;
+                document.getElementById('gstAmountPaid').value = balanceDue.toFixed(2);
                 
+                const form = document.getElementById('gstInvoiceForm');
+                form.dataset.continueFrom = targetLastInvoiceNo;
+                form.dataset.originalTotalPayable = totalPayable.toFixed(2);
+                form.dataset.cumulativeTotalPaid = totalPaid.toFixed(2);
+                
+                document.getElementById('gstPaymentSummarySection').style.display = 'block';
+                document.getElementById('btnGstGenerate').style.display = 'inline-block';
+                
+                updateGstSummary();
             } else {
-                document.getElementById('nonGstBillToName').value = lastInvoice.billToName;
-                document.getElementById('nonGstEmail').value = lastInvoice.email || '';
-                document.getElementById('nonGstAddress').value = lastInvoice.address || '';
+                document.getElementById('nonGstBillToName').value = lastInvoiceRecord.billToName;
+                document.getElementById('nonGstEmail').value = lastInvoiceRecord.email || '';
+                document.getElementById('nonGstAddress').value = lastInvoiceRecord.address || '';
                 
                 const container = document.getElementById('nonGstItemsContainer');
                 container.innerHTML = '';
                 
+                const today = new Date().toISOString().split('T')[0];
                 const newRow = document.createElement('div');
                 newRow.className = 'invoice-item-row';
                 newRow.style = 'display: flex; gap: 8px; margin-bottom: 8px;';
@@ -352,12 +496,11 @@ function continuePartPayment(phone, type) {
                 `;
                 container.appendChild(newRow);
                 
-                const today = new Date().toISOString().split('T')[0];
                 document.getElementById('nonGstPaymentDate').value = today;
                 document.getElementById('nonGstAmountPaid').value = balanceDue.toFixed(2);
                 
                 const form = document.getElementById('nonGstInvoiceForm');
-                form.dataset.continueFrom = lastInvoice.invoiceNo;
+                form.dataset.continueFrom = targetLastInvoiceNo;
                 form.dataset.originalTotalPayable = totalPayable.toFixed(2);
                 form.dataset.cumulativeTotalPaid = totalPaid.toFixed(2);
                 
@@ -391,11 +534,30 @@ function selectInvoiceType(type) {
 function closeGstModal() {
     document.getElementById('gstInvoiceModal').classList.remove('show');
     document.getElementById('gstInvoiceForm').reset();
+    
     const form = document.getElementById('gstInvoiceForm');
     delete form.dataset.editInvoiceNo;
     delete form.dataset.continueFrom;
     delete form.dataset.originalTotalPayable;
     delete form.dataset.cumulativeTotalPaid;
+    
+    document.getElementById('gstPaymentSummarySection').style.display = 'none';
+    document.getElementById('btnGstGenerate').style.display = 'none';
+    
+    const container = document.getElementById('gstItemsContainer');
+    container.innerHTML = `
+        <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px;">
+            <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
+            <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+            <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
+                <input type="checkbox" class="gst-desc-check"> Desc.%
+            </label>
+            <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
+        </div>
+    `;
+    
+    const lookupContainer = document.getElementById('existingUserGst');
+    if (lookupContainer) lookupContainer.innerHTML = '';
 }
 
 function closeNonGstModal() {
@@ -426,29 +588,37 @@ function closeNonGstModal() {
 
 // Item row management
 function addGstItem() {
+    const rows = document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst');
+    let allValid = true;
+    rows.forEach(row => {
+        const descInput = row.querySelector('.gst-desc');
+        const amtInput = row.querySelector('.gst-total-incl');
+        if (descInput && !descInput.value.trim()) {
+            descInput.reportValidity();
+            allValid = false;
+        } else if (amtInput && (!amtInput.value.trim() || parseFloat(amtInput.value) < 0)) {
+            amtInput.reportValidity();
+            allValid = false;
+        }
+    });
+    
+    if (!allValid) return;
+
     const container = document.getElementById('gstItemsContainer');
-    const today = new Date().toISOString().split('T')[0];
     const row = document.createElement('div');
     row.className = 'invoice-item-row-gst';
+    row.style = 'display: flex; gap: 8px; margin-bottom: 8px; align-items: center;';
     row.innerHTML = `
-        <input type="text" class="form-input gst-desc" placeholder="Description" required style="min-width: 150px;">
-        <select class="form-select gst-mode" required style="min-width: 100px;">
-            <option value="">Payment Mode</option>
-            <option value="Cash">Cash</option>
-            <option value="Online">Online</option>
-        </select>
-        <input type="date" class="form-input gst-date" value="${today}" required style="min-width: 130px;">
-        <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" value="5000" step="0.01" min="0" required oninput="calculateGstFromTotal(this)" style="min-width: 120px;">
-        <input type="number" class="form-input gst-paid-amt" placeholder="Paid Amount" step="0.01" min="0" required style="min-width: 120px;">
-        <input type="number" class="form-input gst-tax" placeholder="GST 18%" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-        <input type="number" class="form-input gst-charges" placeholder="Charges" step="0.01" readonly style="min-width: 100px; background: #f1f5f9;">
-        <label style="display: flex; align-items: center; gap: 5px; min-width: 80px;">
+        <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
+        <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+        <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
             <input type="checkbox" class="gst-desc-check"> Desc.%
         </label>
         <button type="button" class="btn-remove-item" onclick="removeItem(this)">−</button>
     `;
     container.appendChild(row);
 }
+
 
 function addNonGstItem() {
     const rows = document.querySelectorAll('#nonGstItemsContainer .invoice-item-row');
@@ -487,6 +657,7 @@ function removeNonGstItem(button) {
 
 function removeItem(button) {
     button.parentElement.remove();
+    onGstItemAmountChange();
 }
 
 function onNonGstItemAmountChange() {
@@ -496,13 +667,75 @@ function onNonGstItemAmountChange() {
     }
 }
 
-function calculateGstFromTotal(input) {
-    const row = input.parentElement;
-    const totalInclTax = parseFloat(input.value) || 0;
-    const charges = totalInclTax / 1.18;
-    const gstAmount = totalInclTax - charges;
-    row.querySelector('.gst-charges').value = charges.toFixed(2);
-    row.querySelector('.gst-tax').value = gstAmount.toFixed(2);
+function onGstItemAmountChange() {
+    const section = document.getElementById('gstPaymentSummarySection');
+    if (section && section.style.display !== 'none') {
+        updateGstSummary();
+    }
+}
+
+// Done Action for GST
+function clickGstDone() {
+    const billToName = document.getElementById('gstBillToName');
+    const phone = document.getElementById('gstPhone');
+    const gstNumber = document.getElementById('gstModalNumber');
+    
+    if (!billToName.value.trim()) {
+        billToName.reportValidity();
+        return;
+    }
+    if (!phone.value.trim()) {
+        phone.reportValidity();
+        return;
+    }
+    if (!gstNumber.value.trim()) {
+        gstNumber.reportValidity();
+        return;
+    }
+    
+    const rows = document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst');
+    if (rows.length === 0) {
+        alert('Please add at least one invoice item.');
+        return;
+    }
+    
+    let allValid = true;
+    rows.forEach(row => {
+        const descInput = row.querySelector('.gst-desc');
+        const amtInput = row.querySelector('.gst-total-incl');
+        if (descInput && !descInput.value.trim()) {
+            descInput.reportValidity();
+            allValid = false;
+        } else if (amtInput && (!amtInput.value.trim() || parseFloat(amtInput.value) < 0)) {
+            amtInput.reportValidity();
+            allValid = false;
+        }
+    });
+    
+    if (!allValid) return;
+    
+    const dateInput = document.getElementById('gstPaymentDate');
+    if (!dateInput.value) {
+        dateInput.value = new Date().toISOString().split('T')[0];
+    }
+    
+    let totalItemsAmt = 0;
+    rows.forEach(row => {
+        const amtInput = row.querySelector('.gst-total-incl');
+        totalItemsAmt += parseFloat(amtInput.value) || 0;
+    });
+    
+    const amountPaidInput = document.getElementById('gstAmountPaid');
+    if (!amountPaidInput.value) {
+        amountPaidInput.value = totalItemsAmt.toFixed(2);
+    }
+    
+    document.getElementById('gstPaymentSummarySection').style.display = 'block';
+    document.getElementById('btnGstGenerate').style.display = 'inline-block';
+    
+    updateGstSummary();
+    
+    document.getElementById('gstPaymentSummarySection').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 // Done Action for Non-GST
@@ -598,22 +831,95 @@ function updateNonGstSummary() {
     }
 }
 
+function updateGstSummary() {
+    const rows = document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst');
+    let totalItemsAmt = 0;
+    rows.forEach(row => {
+        const amtInput = row.querySelector('.gst-total-incl');
+        totalItemsAmt += parseFloat(amtInput.value) || 0;
+    });
+    
+    const form = document.getElementById('gstInvoiceForm');
+    
+    let totalPayable = totalItemsAmt;
+    let prevPaid = 0;
+    
+    if (form.dataset.continueFrom) {
+        totalPayable = parseFloat(form.dataset.originalTotalPayable) || totalItemsAmt;
+        prevPaid = parseFloat(form.dataset.cumulativeTotalPaid) || 0;
+    }
+    
+    const exclTax = totalPayable / 1.18;
+    const gstAmt = totalPayable - exclTax;
+    
+    const amountPaid = parseFloat(document.getElementById('gstAmountPaid').value) || 0;
+    const totalPaidSoFar = prevPaid + amountPaid;
+    const balanceDue = Math.max(0, totalPayable - totalPaidSoFar);
+    
+    document.getElementById('summaryGstCharges').innerText = '₹' + exclTax.toFixed(2);
+    document.getElementById('summaryGstTax').innerText = '₹' + gstAmt.toFixed(2);
+    document.getElementById('summaryGstTotal').innerText = '₹' + totalPayable.toFixed(2);
+    document.getElementById('summaryGstPaid').innerText = '₹' + amountPaid.toFixed(2);
+    
+    const dueElement = document.getElementById('summaryGstDue');
+    dueElement.innerText = '₹' + balanceDue.toFixed(2);
+    if (balanceDue > 0.01) {
+        dueElement.style.color = '#dc2626';
+    } else {
+        dueElement.style.color = '#10b981';
+    }
+}
+
 // Save logic
 async function generateGstInvoice(event) {
     if (event) event.preventDefault();
     const invoiceNo = document.getElementById('gstInvoiceForm').dataset.editInvoiceNo;
-    const items = [];
+    
+    const paymentMode = document.getElementById('gstPaymentMode').value;
+    const paymentDate = document.getElementById('gstPaymentDate').value;
+    const amountPaid = parseFloat(document.getElementById('gstAmountPaid').value) || 0;
+    
+    if (!paymentMode) {
+        alert('Please select a payment mode.');
+        return;
+    }
+    
+    // Calculate total sum of items
+    let totalItemsAmt = 0;
     document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst').forEach(row => {
-        const inputs = row.querySelectorAll('input, select');
+        const amtVal = parseFloat(row.querySelector('.gst-total-incl').value) || 0;
+        totalItemsAmt += amtVal;
+    });
+    
+    const ratio = totalItemsAmt > 0 ? (amountPaid / totalItemsAmt) : 0;
+    
+    const items = [];
+    const rows = document.querySelectorAll('#gstItemsContainer .invoice-item-row-gst');
+    rows.forEach((row, index) => {
+        const desc = row.querySelector('.gst-desc').value;
+        const totalIncl = parseFloat(row.querySelector('.gst-total-incl').value) || 0;
+        const hasDesc = row.querySelector('.gst-desc-check').checked;
+        
+        const charges = totalIncl / 1.18;
+        const gst = totalIncl - charges;
+        
+        let itemPaid = totalIncl * ratio;
+        // Adjust the last item to avoid rounding issues
+        if (index === rows.length - 1) {
+            let sumPaidPrev = 0;
+            items.forEach(itm => sumPaidPrev += parseFloat(itm.paidAmt));
+            itemPaid = amountPaid - sumPaidPrev;
+        }
+        
         items.push({
-            description: inputs[0].value,
-            paymentMode: inputs[1].value,
-            date: inputs[2].value,
-            totalInclTax: inputs[3].value,
-            paidAmt: inputs[4].value,
-            gst: inputs[5].value,
-            charges: inputs[6].value,
-            hasDesc: inputs[7].checked
+            description: desc,
+            paymentMode: paymentMode,
+            date: paymentDate,
+            totalInclTax: totalIncl.toFixed(2),
+            paidAmt: itemPaid.toFixed(2),
+            gst: gst.toFixed(2),
+            charges: charges.toFixed(2),
+            hasDesc: hasDesc
         });
     });
 
@@ -622,8 +928,9 @@ async function generateGstInvoice(event) {
         type: 'gst',
         billToName: document.getElementById('gstBillToName').value,
         phone: document.getElementById('gstPhone').value,
-        gstNumber: document.getElementById('gstNumber').value,
+        gstNumber: document.getElementById('gstModalNumber').value,
         email: document.getElementById('gstEmail').value,
+        address: document.getElementById('gstAddress').value,
         items: JSON.stringify(items),
         invoiceNo: invoiceNo || null
     };

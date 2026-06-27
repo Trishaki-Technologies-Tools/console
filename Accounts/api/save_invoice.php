@@ -110,36 +110,44 @@ try {
     if ($isEditMode) {
         if ($baseInvoice) {
             $stmt = $conn->prepare("
-                SELECT SUM(COALESCE(
-                    JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].paidAmt')),
-                    JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].amount')),
-                    0
-                )) as total_prev 
+                SELECT items 
                 FROM invoices 
                 WHERE invoice_no LIKE ? AND id < ?
             ");
             $pattern = $baseInvoice . "%";
             $stmt->bind_param("si", $pattern, $existingInvoiceId);
             $stmt->execute();
-            $prevSum = floatval($stmt->get_result()->fetch_assoc()['total_prev'] ?? 0);
+            $res = $stmt->get_result();
+            while ($invRow = $res->fetch_assoc()) {
+                $invItems = json_decode($invRow['items'], true);
+                if (is_array($invItems)) {
+                    foreach ($invItems as $itm) {
+                        $prevSum += floatval($itm['paidAmt'] ?? $itm['amount'] ?? 0);
+                    }
+                }
+            }
         }
     } else {
         if ($continueFrom) {
             if (preg_match('/^(TSK-\d{4}-\d{3})/', $continueFrom, $matches)) {
                 $baseInvoice = $matches[1];
                 $stmt = $conn->prepare("
-                    SELECT SUM(COALESCE(
-                        JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].paidAmt')),
-                        JSON_UNQUOTE(JSON_EXTRACT(items, '$[0].amount')),
-                        0
-                    )) as total_prev 
+                    SELECT items 
                     FROM invoices 
                     WHERE invoice_no LIKE ?
                 ");
                 $pattern = $baseInvoice . "%";
                 $stmt->bind_param("s", $pattern);
                 $stmt->execute();
-                $prevSum = floatval($stmt->get_result()->fetch_assoc()['total_prev'] ?? 0);
+                $res = $stmt->get_result();
+                while ($invRow = $res->fetch_assoc()) {
+                    $invItems = json_decode($invRow['items'], true);
+                    if (is_array($invItems)) {
+                        foreach ($invItems as $itm) {
+                            $prevSum += floatval($itm['paidAmt'] ?? $itm['amount'] ?? 0);
+                        }
+                    }
+                }
             }
         }
     }
