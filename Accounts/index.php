@@ -1947,90 +1947,212 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 </form>
             </div>
         </div>
+    </div>
+    
+    <!-- Add/Edit Quotation Modal -->
     <!-- Add/Edit Quotation Modal -->
     <div id="quotationModal" class="modal">
-        <div class="modal-content" style="max-width: 800px;">
-            <div class="modal-header">
-                <h3 id="quotationModalTitle">Create Corporate Quotation</h3>
+        <div class="modal-content fullscreen">
+            <div class="modal-header" style="margin-bottom: 0; padding: 15px 24px; background: #ffffff; border-bottom: 1px solid var(--border-light);">
+                <h3 id="quotationModalTitle" style="color: var(--text-main); font-weight: 800; font-size: 18px;">Create Corporate Quotation</h3>
                 <button class="modal-close" onclick="closeQuotationModal()">&times;</button>
             </div>
-            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
-                <form id="quotationForm" onsubmit="saveQuotation(event)">
-                    <input type="hidden" id="quotationId" value="">
-                    
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label class="form-label">Client Name <span class="required">*</span></label>
-                            <input type="text" id="qClientName" class="form-input" required placeholder="e.g. John Doe">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Phone Number <span class="required">*</span></label>
-                            <input type="text" id="qClientPhone" class="form-input" required placeholder="e.g. 9876543210">
-                        </div>
+            <input type="hidden" id="quotationId" value="">
+            <div class="qb-container">
+                <!-- Left Panel: Form Steps -->
+                <div class="qb-editor">
+                    <div class="qb-tabs">
+                        <button type="button" class="qb-tab-btn active" id="tab-btn-info" onclick="switchQuotationTab('info')">1. Client & Project</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-commercial" onclick="switchQuotationTab('commercial')">2. Commercial Details</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-scope" onclick="switchQuotationTab('scope')">3. Scope of Work</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-terms" onclick="switchQuotationTab('terms')">4. Terms & Signatures</button>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label class="form-label">Email Address</label>
-                            <input type="email" id="qClientEmail" class="form-input" placeholder="e.g. client@example.com">
+                    <div class="qb-tab-content">
+                        <!-- Step 1: Client & Project Info -->
+                        <div id="step-info" class="qb-step-panel active">
+                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Client Information</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label class="form-label">Phone Number <span class="required">*</span></label>
+                                    <input type="text" id="qClientPhone" class="form-input" required placeholder="e.g. 9876543210" style="color: var(--text-main); background: #fff;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Client Name <span class="required">*</span></label>
+                                    <input type="text" id="qClientName" class="form-input" required placeholder="e.g. John Doe" style="color: var(--text-main); background: #fff;">
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                                <div class="form-group">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" id="qClientEmail" class="form-input" placeholder="e.g. client@example.com" style="color: var(--text-main); background: #fff;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">GST Number</label>
+                                    <input type="text" id="qClientGst" class="form-input" placeholder="e.g. 29ABCDE1234F1Z5" style="color: var(--text-main); background: #fff;">
+                                </div>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 25px;">
+                                <div class="form-group">
+                                    <label class="form-label">Billing Address</label>
+                                    <input type="text" id="qClientAddress" class="form-input" placeholder="Enter client address" style="color: var(--text-main); background: #fff;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Quotation Date <span class="required">*</span></label>
+                                    <input type="date" id="qDate" class="form-input" required style="color: var(--text-main); background: #fff;">
+                                </div>
+                            </div>
+                            
+                            <h4 style="margin-top: 20px; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Project Details</h4>
+                            <div class="form-group" style="margin-bottom: 15px;">
+                                <label class="form-label">Project Name <span class="required">*</span></label>
+                                <input type="text" id="qProjectName" class="form-input" required placeholder="e.g. E-Commerce Website Development" style="color: var(--text-main); background: #fff;">
+                            </div>
+                            <div class="form-group" style="margin-bottom: 10px;">
+                                <label class="form-label">Project Description</label>
+                                <textarea id="qProjectDescription" class="form-input" rows="3" placeholder="Brief outline of the project objectives and scope..." style="color: var(--text-main); background: #fff; resize: vertical;"></textarea>
+                            </div>
+                            <div style="margin-top: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="qIncludeScope" checked onchange="toggleScopeStepVisibility()" style="width: 18px; height: 18px; cursor: pointer;">
+                                <label for="qIncludeScope" style="font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; user-select: none;">Include Project Scope Page in PDF</label>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">GST Number (Optional)</label>
-                            <input type="text" id="qClientGst" class="form-input" placeholder="e.g. 29ABCDE1234F1Z5">
+                        
+                        <!-- Step 2: Commercial Details -->
+                        <div id="step-commercial" class="qb-step-panel">
+                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Commercial Line Items</h4>
+                            
+                            <div class="table-responsive" style="overflow: visible; margin-bottom: 15px;">
+                                <table style="width: 100%;">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40px;"></th>
+                                            <th>Description</th>
+                                            <th style="width: 150px; text-align: right; padding-right: 15px;">Amount (₹)</th>
+                                            <th style="width: 50px; text-align: center;"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="qItemsTableBody" class="sortable-list">
+                                        <!-- Items loaded dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            
+                            <button type="button" class="btn-secondary" onclick="addQuotationItemRowNew()" style="margin-bottom: 25px;">+ Add Item</button>
+                            
+                            <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                                <div style="display: flex; flex-direction: column; gap: 12px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Discount Amount (₹)</label>
+                                        <input type="number" id="qDiscountInput" class="form-input" min="0" value="0" step="0.01" oninput="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff;">
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">GST Percentage (%)</label>
+                                        <select id="qGstRateInput" class="form-input" onchange="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff; height: 42px;">
+                                            <option value="18" selected>18% (Standard GST)</option>
+                                            <option value="12">12%</option>
+                                            <option value="5">5%</option>
+                                            <option value="0">0% (Without GST / Tax Exempt)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div style="display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right;">
+                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                        <span>Subtotal:</span>
+                                        <strong id="qSubtotalVal" style="color: var(--text-main);">₹0.00</strong>
+                                    </div>
+                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                        <span>Discount:</span>
+                                        <strong id="qDiscountVal" style="color: #ef4444;">-₹0.00</strong>
+                                    </div>
+                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                        <span id="qCgstLabel">CGST (9%):</span>
+                                        <strong id="qCgstVal" style="color: var(--text-main);">₹0.00</strong>
+                                    </div>
+                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 10px;">
+                                        <span id="qSgstLabel">SGST (9%):</span>
+                                        <strong id="qSgstVal" style="color: var(--text-main);">₹0.00</strong>
+                                    </div>
+                                    <div style="border-top: 2px solid #cbd5e1; padding-top: 10px; width: 100%; max-width: 280px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 700; color: var(--text-main); font-size: 16px;">Grand Total:</span>
+                                        <strong id="qGrandTotalVal" style="font-size: 22px; color: var(--primary); font-weight: 800;">₹0.00</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Scope of Work Builder -->
+                        <div id="step-scope" class="qb-step-panel">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: var(--text-main); font-size: 15px;">Project Scope Modules</h4>
+                                <button type="button" class="btn-primary" onclick="addScopeModule()" style="padding: 6px 12px; font-size: 12px;">+ Add Module</button>
+                            </div>
+                            
+                            <div id="qScopeModulesList" class="sortable-list" style="margin-bottom: 20px;">
+                                <!-- Modules will be populated here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Terms & Signatures -->
+                        <div id="step-terms" class="qb-step-panel">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: var(--text-main); font-size: 15px;">Terms & Conditions</h4>
+                                <button type="button" class="btn-secondary" onclick="addTermRow()" style="padding: 6px 12px; font-size: 12px;">+ Add Section</button>
+                            </div>
+                            
+                            <div id="qTermsList" class="sortable-list" style="margin-bottom: 25px;">
+                                <!-- Terms populated here -->
+                            </div>
+                            
+                            <h4 style="margin-top: 20px; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Client Acceptance Signature Box</h4>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
+                                <div class="form-group">
+                                    <label class="form-label">Client Signatory Name</label>
+                                    <input type="text" id="qClientSignName" class="form-input" placeholder="e.g. John Doe" oninput="updateQuotationPreview()" style="color: var(--text-main); background: #fff;">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Signature Date</label>
+                                    <input type="date" id="qClientSignDate" class="form-input" oninput="updateQuotationPreview()" style="color: var(--text-main); background: #fff;">
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                        <div class="form-group">
-                            <label class="form-label">Billing Address</label>
-                            <textarea id="qClientAddress" class="form-input" rows="2" placeholder="Enter billing address"></textarea>
+                    
+                    <div class="modal-actions" style="padding: 15px 24px; border-top: 1px solid var(--border-light); background: #ffffff; margin-top: 0; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <button type="button" class="btn-cancel" onclick="closeQuotationModal()" style="border: 1px solid #cbd5e1;">Cancel</button>
                         </div>
-                        <div class="form-group">
-                            <label class="form-label">Quotation Date <span class="required">*</span></label>
-                            <input type="date" id="qDate" class="form-input" required>
-                        </div>
-                    </div>
-
-                    <h4 style="margin-top: 25px; margin-bottom: 10px; color: #fff;">Quotation Items</h4>
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Description</th>
-                                    <th>Qty</th>
-                                    <th>Rate (₹)</th>
-                                    <th>Amount (₹)</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody id="qItemsTableBody">
-                                <!-- Dynamically added items -->
-                            </tbody>
-                        </table>
-                    </div>
-                    <div style="margin-top: 15px; margin-bottom: 25px;">
-                        <button type="button" class="btn-secondary" onclick="addQuotationItemRow()">+ Add Item</button>
-                    </div>
-
-                    <div style="display: flex; justify-content: flex-end; border-top: 1px solid var(--border-light); padding-top: 15px;">
-                        <div style="text-align: right; font-size: 16px;">
-                            <p style="color: var(--text-muted);">Subtotal: <span id="qSubtotal" style="color: #fff; font-weight: 600;">₹0.00</span></p>
-                            <p style="color: var(--text-muted); margin-top: 5px;">GST (18%): <span id="qGst" style="color: #fff; font-weight: 600;">₹0.00</span></p>
-                            <h3 style="font-size: 22px; color: #fff; margin-top: 10px;">Total Amount: <span id="qTotal">₹0.00</span></h3>
+                        <div style="display: flex; gap: 8px;">
+                            <button type="button" class="btn-secondary" id="btnQuotationPrev" style="display: none;" onclick="navigateQuotationStep(-1)">Back</button>
+                            <button type="button" class="btn-primary" id="btnQuotationNext" onclick="navigateQuotationStep(1)">Next</button>
+                            <button type="button" class="btn-secondary" id="btnQuotationSaveDraft" onclick="saveQuotationNew('draft')" style="background: #e2e8f0; color: #334155; border: none;">Save Draft</button>
+                            <button type="button" class="btn-save" id="btnQuotationSubmit" onclick="saveQuotationNew('sent')" style="display: none;">Save & Generate</button>
                         </div>
                     </div>
-
-                    <div class="modal-actions" style="margin-top: 30px;">
-                        <button type="button" class="btn-cancel" onclick="closeQuotationModal()">Cancel</button>
-                        <button type="submit" class="btn-save">Save & Generate Quotation</button>
+                </div>
+                
+                <!-- Right Panel: Live Document Preview -->
+                <div class="qb-preview">
+                    <!-- Page 1 Preview -->
+                    <div class="qb-paper" id="previewPage1">
+                        <!-- Dynamically filled by updateQuotationPreview() -->
                     </div>
-                </form>
+                    
+                    <!-- Page 2 Preview -->
+                    <div class="qb-paper" id="previewPage2">
+                        <!-- Dynamically filled by updateQuotationPreview() -->
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+
     <script src="js/app.js"></script>
     <script src="js/invoice_functions.js"></script>
+    <script src="js/quotation_functions.js"></script>
     <script>
         function toggleInvoiceDropdown(event) {
             event.preventDefault();

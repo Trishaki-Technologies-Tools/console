@@ -53,6 +53,13 @@ try {
         $stmt = $conn->prepare("UPDATE quotations SET client_id = ?, items = ?, total_amount = ?, quotation_date = ?, status = ? WHERE quotation_no = ?");
         $stmt->bind_param("isdsss", $clientId, $itemsJson, $totalAmount, $date, $status, $quotationNo);
         $stmt->execute();
+
+        // Get ID of edited quotation
+        $stmt_id = $conn->prepare("SELECT id FROM quotations WHERE quotation_no = ?");
+        $stmt_id->bind_param("s", $quotationNo);
+        $stmt_id->execute();
+        $id = $stmt_id->get_result()->fetch_assoc()['id'];
+        $stmt_id->close();
     } else {
         // Create mode
         $year = date('Y');
@@ -67,10 +74,11 @@ try {
         $stmt = $conn->prepare("INSERT INTO quotations (quotation_no, client_id, items, total_amount, quotation_date, status) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sisdss", $quotationNo, $clientId, $itemsJson, $totalAmount, $date, $status);
         $stmt->execute();
+        $id = $conn->insert_id;
     }
 
     $conn->commit();
-    echo json_encode(['success' => true, 'quotationNo' => $quotationNo]);
+    echo json_encode(['success' => true, 'quotationNo' => $quotationNo, 'id' => $id]);
 
 } catch (Exception $e) {
     $conn->rollback();

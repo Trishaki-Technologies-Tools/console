@@ -10,7 +10,7 @@ if (!$data || !is_array($data)) {
 }
 
 try {
-    $stmt = $conn->prepare("INSERT INTO settings (`key`, `value`) VALUES (?, ?) ON DUPLICATE KEY UPDATE `value` = ?");
+    $stmt = $conn->prepare("INSERT INTO settings (setting_key, setting_value) VALUES (?, ?) ON DUPLICATE KEY UPDATE setting_value = ?");
     
     foreach ($data as $key => $value) {
         $keyStr = strval($key);

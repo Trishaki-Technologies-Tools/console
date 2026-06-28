@@ -77,6 +77,10 @@ function switchPage(pageId, title = null) {
     localStorage.setItem('activeAccountsPage', pageId);
 
     // Load page-specific data if functions exist
+    if (pageId === 'dashboard') {
+        loadDashboardData();
+        loadReports();
+    }
     if (pageId === 'transactions') loadTransactions();
     if (pageId === 'salary-logs') loadSalaryLogs();
     if (pageId === 'loans') loadLoans();
@@ -123,22 +127,9 @@ function initApp() {
 
     const savedPage = localStorage.getItem('activeAccountsPage') || 'dashboard';
     
-    // Switch to page first
+    // Switch to page first (loads active page data on demand)
     switchPage(savedPage);
-
-    // Initial silent load of all base data
-    loadDashboardData();
-    loadIncomes();
-    loadExpenses();
-    loadReports();
-    loadSalaryLogs();
-    loadLoans();
     
-    // specialized record types (Global)
-    if (typeof loadInvoicesFromDB === 'function') loadInvoicesFromDB();
-    if (typeof loadVouchers === 'function') loadVouchers();
-    if (typeof loadPayslips === 'function') loadPayslips();
-    if (typeof loadCustomersFromDB === 'function') loadCustomersFromDB();
     if (typeof setInitialDates === 'function') setInitialDates();
 
     setInterval(removeBadgeElements, 1000); 
@@ -3027,26 +3018,43 @@ function loadClients() {
             const tbody = document.getElementById('clients-list-container');
             if (!tbody) return;
             
-            let html = '';
-            data.forEach(client => {
-                const lastDate = client.lastInvoiceDate 
-                    ? new Date(client.lastInvoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})
-                    : 'No Invoices';
-                    
-                html += `
+            let html = `<table>
+                <thead>
                     <tr>
-                        <td><strong>#${client.id}</strong></td>
-                        <td>${client.name}</td>
-                        <td>${client.phone}</td>
-                        <td>${client.email}</td>
-                        <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${client.gstNumber}</span></td>
-                        <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600;">${client.invoiceCount} Invoices</span></td>
-                        <td>${lastDate}</td>
+                        <th>ID</th>
+                        <th>Client Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>GST Number</th>
+                        <th>Invoices</th>
+                        <th>Last Invoice Date</th>
                     </tr>
-                `;
-            });
+                </thead>
+                <tbody>`;
             
-            tbody.innerHTML = html || '<tr><td colspan="7" class="text-center" style="color: var(--text-muted); padding: 30px;">No clients available.</td></tr>';
+            if (data.length === 0) {
+                html += '<tr><td colspan="7" class="text-center" style="color: var(--text-muted); padding: 30px;">No clients available.</td></tr>';
+            } else {
+                data.forEach(client => {
+                    const lastDate = client.lastInvoiceDate 
+                        ? new Date(client.lastInvoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})
+                        : 'No Invoices';
+                        
+                    html += `
+                        <tr>
+                            <td><strong>#${client.id}</strong></td>
+                            <td>${client.name}</td>
+                            <td>${client.phone}</td>
+                            <td>${client.email}</td>
+                            <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${client.gstNumber}</span></td>
+                            <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600;">${client.invoiceCount} Invoices</span></td>
+                            <td>${lastDate}</td>
+                        </tr>
+                    `;
+                });
+            }
+            html += '</tbody></table>';
+            tbody.innerHTML = html;
         })
         .catch(err => console.error('Error loading clients:', err));
 }
@@ -3074,34 +3082,50 @@ function displayQuotations(quotes) {
     const tbody = document.getElementById('quotations-list-container');
     if (!tbody) return;
     
-    let html = '';
-    quotes.forEach(q => {
-        const total = parseFloat(q.totalAmount);
-        const dateStr = new Date(q.date).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'});
-        
-        html += `
+    let html = `<table>
+        <thead>
             <tr>
-                <td><strong style="color: #38bdf8;">${q.quotationNo}</strong></td>
-                <td>${dateStr}</td>
-                <td>${q.clientName}<br><span style="font-size: 11px; color: var(--text-muted);">${q.phone}</span></td>
-                <td style="font-weight: 700; color: var(--text-main);">₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                <td>
-                    <span class="status-badge" style="background: rgba(14, 165, 233, 0.08); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.15); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
-                        ${q.status}
-                    </span>
-                </td>
-                <td>
-                    <div style="display: flex; gap: 8px;">
-                        <button class="btn-action" onclick="printQuotation(${q.id})" title="Print Quotation" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print</button>
-                        <button class="btn-action" onclick="openQuotationModal('${q.quotationNo}')" title="Edit Quotation" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit</button>
-                        <button class="btn-action" onclick="deleteQuotation(${q.id})" title="Delete Quotation" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete</button>
-                    </div>
-                </td>
+                <th>Quotation No</th>
+                <th>Date</th>
+                <th>Prospect</th>
+                <th>Total Amount</th>
+                <th>Status</th>
+                <th>Actions</th>
             </tr>
-        `;
-    });
+        </thead>
+        <tbody>`;
     
-    tbody.innerHTML = html || '<tr><td colspan="6" class="text-center" style="color: var(--text-muted); padding: 30px;">No quotations found.</td></tr>';
+    if (quotes.length === 0) {
+        html += '<tr><td colspan="6" class="text-center" style="color: var(--text-muted); padding: 30px;">No quotations found.</td></tr>';
+    } else {
+        quotes.forEach(q => {
+            const total = parseFloat(q.totalAmount);
+            const dateStr = new Date(q.date).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'});
+            
+            html += `
+                <tr>
+                    <td><strong style="color: #38bdf8;">${q.quotationNo}</strong></td>
+                    <td>${dateStr}</td>
+                    <td>${q.clientName}<br><span style="font-size: 11px; color: var(--text-muted);">${q.phone}</span></td>
+                    <td style="font-weight: 700; color: var(--text-main);">₹${total.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>
+                        <span class="status-badge" style="background: rgba(14, 165, 233, 0.08); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.15); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+                            ${q.status}
+                        </span>
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn-action" onclick="printQuotation(${q.id})" title="Print Quotation" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: #10b981; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print</button>
+                            <button class="btn-action" onclick="openQuotationModal('${q.quotationNo}')" title="Edit Quotation" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.15); color: #f59e0b; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg> Edit</button>
+                            <button class="btn-action" onclick="deleteQuotation(${q.id})" title="Delete Quotation" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: #ef4444; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-flex; align-items: center; gap: 4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete</button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    html += '</tbody></table>';
+    tbody.innerHTML = html;
 }
 
 function filterQuotations() {
@@ -3114,158 +3138,7 @@ function filterQuotations() {
     displayQuotations(filtered);
 }
 
-// Quotation Modal Logic
-function openQuotationModal(quoteNo = null) {
-    const modal = document.getElementById('quotationModal');
-    if (!modal) return;
-    
-    // Reset form
-    document.getElementById('quotationForm').reset();
-    document.getElementById('quotationId').value = '';
-    document.getElementById('qItemsTableBody').innerHTML = '';
-    document.getElementById('quotationModalTitle').textContent = 'Create Corporate Quotation';
-    document.getElementById('qDate').value = new Date().toISOString().split('T')[0];
-    
-    if (quoteNo) {
-        // Edit mode
-        const q = allQuotations.find(quote => quote.quotationNo === quoteNo);
-        if (q) {
-            document.getElementById('quotationModalTitle').textContent = 'Edit Quotation: ' + quoteNo;
-            document.getElementById('quotationId').value = q.quotationNo;
-            document.getElementById('qClientName').value = q.clientName;
-            document.getElementById('qClientPhone').value = q.phone;
-            document.getElementById('qClientEmail').value = q.email || '';
-            document.getElementById('qClientGst').value = q.gstNumber || '';
-            document.getElementById('qDate').value = q.date;
-            
-            // Try to load client address
-            fetch('api/get_clients.php')
-                .then(res => res.json())
-                .then(clients => {
-                    const c = clients.find(client => client.phone === q.phone);
-                    if (c && c.address) {
-                        document.getElementById('qClientAddress').value = c.address;
-                    }
-                });
-
-            // Populate items
-            if (q.items && Array.isArray(q.items)) {
-                q.items.forEach(item => {
-                    addQuotationItemRow(item.description, item.qty, item.rate);
-                });
-            }
-        }
-    } else {
-        // Add single empty row by default
-        addQuotationItemRow('', 1, 0);
-    }
-    
-    modal.classList.add('show');
-    calculateQuotationSummary();
-}
-
-function closeQuotationModal() {
-    const modal = document.getElementById('quotationModal');
-    if (modal) modal.classList.remove('show');
-}
-
-function addQuotationItemRow(desc = '', qty = 1, rate = 0) {
-    const tbody = document.getElementById('qItemsTableBody');
-    if (!tbody) return;
-    
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-        <td><input type="text" class="form-input q-item-desc" value="${desc}" placeholder="Item Description" required style="width: 100%;"></td>
-        <td style="width: 80px;"><input type="number" class="form-input q-item-qty" value="${qty}" min="1" required style="width: 100%; text-align: center;" oninput="calculateQuotationSummary()"></td>
-        <td style="width: 130px;"><input type="number" class="form-input q-item-rate" value="${rate}" step="0.01" min="0" required style="width: 100%;" oninput="calculateQuotationSummary()"></td>
-        <td style="width: 130px; font-weight: 700; color: #fff; vertical-align: middle;" class="q-item-amount">₹0.00</td>
-        <td style="width: 60px; text-align: center;"><button type="button" onclick="removeQuotationItemRow(this)" style="background: rgba(239,68,68,0.2); border: 1px solid rgba(239,68,68,0.4); color: #ef4444; border-radius: 4px; padding: 4px 8px; cursor: pointer;">&times;</button></td>
-    `;
-    tbody.appendChild(tr);
-    calculateQuotationSummary();
-}
-
-function removeQuotationItemRow(btn) {
-    const row = btn.closest('tr');
-    if (row) {
-        row.remove();
-        calculateQuotationSummary();
-    }
-}
-
-function calculateQuotationSummary() {
-    let subtotal = 0;
-    document.querySelectorAll('#qItemsTableBody tr').forEach(row => {
-        const qty = parseFloat(row.querySelector('.q-item-qty').value) || 0;
-        const rate = parseFloat(row.querySelector('.q-item-rate').value) || 0;
-        const amount = qty * rate;
-        subtotal += amount;
-        
-        row.querySelector('.q-item-amount').textContent = '₹' + amount.toLocaleString('en-IN', {minimumFractionDigits: 2});
-    });
-    
-    const gst = subtotal * 0.18;
-    const total = subtotal + gst;
-    
-    document.getElementById('qSubtotal').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
-    document.getElementById('qGst').textContent = '₹' + gst.toLocaleString('en-IN', {minimumFractionDigits: 2});
-    document.getElementById('qTotal').textContent = '₹' + total.toLocaleString('en-IN', {minimumFractionDigits: 2});
-}
-
-function saveQuotation(event) {
-    event.preventDefault();
-    
-    const items = [];
-    document.querySelectorAll('#qItemsTableBody tr').forEach(row => {
-        const desc = row.querySelector('.q-item-desc').value;
-        const qty = parseInt(row.querySelector('.q-item-qty').value) || 1;
-        const rate = parseFloat(row.querySelector('.q-item-rate').value) || 0;
-        items.push({
-            description: desc,
-            qty: qty,
-            rate: rate,
-            amount: qty * rate
-        });
-    });
-    
-    if (items.length === 0) {
-        alert('Please add at least one item to the quotation');
-        return;
-    }
-    
-    const subtotal = items.reduce((acc, it) => acc + it.amount, 0);
-    const totalAmount = subtotal * 1.18; // GST Inclusive Total
-    
-    const payload = {
-        quotationNo: document.getElementById('quotationId').value || null,
-        clientName: document.getElementById('qClientName').value,
-        phone: document.getElementById('qClientPhone').value,
-        email: document.getElementById('qClientEmail').value,
-        gstNumber: document.getElementById('qClientGst').value,
-        address: document.getElementById('qClientAddress').value,
-        date: document.getElementById('qDate').value,
-        items: items,
-        totalAmount: totalAmount,
-        status: 'sent'
-    };
-    
-    fetch('api/save_quotation.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert('Quotation saved successfully! Quotation Number: ' + data.quotationNo);
-            closeQuotationModal();
-            loadQuotations();
-        } else {
-            alert('Error: ' + (data.error || 'Failed to save quotation'));
-        }
-    })
-    .catch(err => console.error('Error saving quotation:', err));
-}
+// Old quotation modal functions removed - now using js/quotation_functions.js
 
 function deleteQuotation(id) {
     if (confirm('Are you sure you want to delete this quotation permanently?')) {

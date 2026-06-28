@@ -3,7 +3,7 @@ header('Content-Type: application/json');
 require_once 'config.php';
 
 try {
-    $result = $conn->query("SELECT `key`, `value` FROM settings");
+    $result = $conn->query("SELECT setting_key AS `key`, setting_value AS `value` FROM settings");
     $settings = [];
     while ($row = $result->fetch_assoc()) {
         $settings[$row['key']] = $row['value'];

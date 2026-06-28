@@ -1037,6 +1037,10 @@ function loadCustomersFromDB() {
     fetch('api/get_customers.php')
         .then(r => r.json())
         .then(data => {
+            if (!Array.isArray(data)) {
+                console.error('Expected array from get_customers.php, got:', data);
+                return;
+            }
             userDatabase = data.map(u => ({
                 name: u.name,
                 phone: u.phone,
@@ -1046,6 +1050,9 @@ function loadCustomersFromDB() {
                 lastInvoiceDate: u.lastInvoiceDate || 'N/A'
             }));
             displayUserInfo();
+        })
+        .catch(err => {
+            console.error('Error in loadCustomersFromDB:', err);
         });
 }
 
