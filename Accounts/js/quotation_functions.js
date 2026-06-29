@@ -38,6 +38,7 @@ function openQuotationModal(quoteNo = null) {
     if (!modal) return;
     
     // Reset Form Elements
+    document.getElementById('quotationId').value = '';
     document.getElementById('qClientPhone').value = '';
     document.getElementById('qClientName').value = '';
     document.getElementById('qClientEmail').value = '';
@@ -67,6 +68,7 @@ function openQuotationModal(quoteNo = null) {
     if (quoteNo && typeof allQuotations !== 'undefined') {
         const q = allQuotations.find(quote => quote.quotationNo === quoteNo);
         if (q) {
+            document.getElementById('quotationId').value = quoteNo;
             document.getElementById('quotationModalTitle').textContent = 'Edit Quotation: ' + quoteNo;
             document.getElementById('qClientPhone').value = q.phone || '';
             document.getElementById('qClientName').value = q.clientName || '';
@@ -221,14 +223,15 @@ function toggleScopeStepVisibility() {
         scopeBtn.style.display = includeScope ? 'inline-block' : 'none';
     }
     
-    // If scope panel is active and we just turned it off, switch to terms
+    // If scope panel is active and we just turned it off, switch to commercial
     const scopePanel = document.getElementById('step-scope');
     if (!includeScope && scopePanel && scopePanel.classList.contains('active')) {
-        switchQuotationTab('terms');
+        switchQuotationTab('commercial');
     } else {
         // Refresh the current active panel to update the next/prev buttons
         let activeTab = 'info';
-        ['info', 'commercial', 'scope', 'terms'].forEach(p => {
+        const activePanels = includeScope ? ['info', 'commercial', 'scope'] : ['info', 'commercial'];
+        activePanels.forEach(p => {
             const panel = document.getElementById('step-' + p);
             if (panel && panel.classList.contains('active')) {
                 activeTab = p;
@@ -241,7 +244,7 @@ function toggleScopeStepVisibility() {
 function switchQuotationTab(tabName) {
     const includeScope = document.getElementById('qIncludeScope') ? document.getElementById('qIncludeScope').checked : true;
     const panels = ['info', 'commercial', 'scope', 'terms'];
-    const activePanels = includeScope ? ['info', 'commercial', 'scope', 'terms'] : ['info', 'commercial', 'terms'];
+    const activePanels = includeScope ? ['info', 'commercial', 'scope'] : ['info', 'commercial'];
     
     // Set visibility of the scope tab button
     const scopeBtn = document.getElementById('tab-btn-scope');
@@ -250,7 +253,7 @@ function switchQuotationTab(tabName) {
     }
     
     if (!includeScope && tabName === 'scope') {
-        tabName = 'terms';
+        tabName = 'commercial';
     }
     
     panels.forEach(p => {
@@ -284,7 +287,7 @@ function switchQuotationTab(tabName) {
 
 function navigateQuotationStep(dir) {
     const includeScope = document.getElementById('qIncludeScope') ? document.getElementById('qIncludeScope').checked : true;
-    const activePanels = includeScope ? ['info', 'commercial', 'scope', 'terms'] : ['info', 'commercial', 'terms'];
+    const activePanels = includeScope ? ['info', 'commercial', 'scope'] : ['info', 'commercial'];
     
     let currentActiveTab = 'info';
     activePanels.forEach(p => {
@@ -377,7 +380,7 @@ function calculateQuotationSummaryNew() {
     const halfGstPercent = gstPercent / 2;
     const halfGstAmount = gst / 2;
     
-    document.getElementById('qSubtotalVal').textContent = '₹' + subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2});
+    document.getElementById('qSubtotalVal').textContent = '₹' + totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2});
     document.getElementById('qDiscountVal').textContent = '-₹' + discount.toLocaleString('en-IN', {minimumFractionDigits: 2});
     
     if (document.getElementById('qCgstLabel')) {
@@ -640,9 +643,10 @@ function updateQuotationPreview() {
                 <img src="assets/TRISHAKI LOGO TRANSPERANT BG.png" alt="Logo" class="preview-logo" onerror="this.src='https://via.placeholder.com/120x35?text=TriShaKi'">
                 <div class="preview-company-name">TRISHAKI TECHNOLOGIES PRIVATE LIMITED</div>
                 <div class="preview-company-details">
-                    F1, First Floor, Star Tower, RPD Circle, Tilakwadi, Belagavi, Karnataka - 590006<br>
-                    <strong>Phone:</strong> +91 9980681304 | <strong>Email:</strong> info@trishaki.com<br>
-                    <strong>GSTIN:</strong> 29AAGCT8028D1ZS
+                    F1, First Floor, Star Tower, RPD Circle,<br>
+                    Opposite Canara Bank, Tilakwadi,<br>
+                    Belagavi, Karnataka - 590006<br>
+                    <strong>Phone:</strong> +91 9980681304 | <strong>Email:</strong> info@trishaki.com
                 </div>
             </div>
             <div class="preview-title-area">
@@ -697,24 +701,16 @@ function updateQuotationPreview() {
         
         <div class="preview-summary-block">
             <table class="preview-summary-table">
-                <tr>
-                    <td>Subtotal (Tax Excl.):</td>
-                    <td style="text-align: right;">₹${subtotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                </tr>
                 ${discount > 0 ? `
+                <tr>
+                    <td>Total Amount:</td>
+                    <td style="text-align: right;">₹${totalAmt.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                </tr>
                 <tr>
                     <td>Discount:</td>
                     <td style="text-align: right; color: #ef4444;">-₹${discount.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                 </tr>
                 ` : ''}
-                <tr>
-                    <td>CGST (${gstPercent / 2}%):</td>
-                    <td style="text-align: right;">₹${(gst / 2).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                </tr>
-                <tr>
-                    <td>SGST (${gstPercent / 2}%):</td>
-                    <td style="text-align: right;">₹${(gst / 2).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
-                </tr>
                 <tr class="total-row">
                     <td>Grand Total:</td>
                     <td style="text-align: right;">₹${grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
@@ -803,7 +799,6 @@ function updateQuotationPreview() {
                     <div class="preview-module-item">
                         <div class="preview-module-name">
                             <span>${escapeHtml(mod.name)}</span>
-                            <span style="font-size: 9px; color: #4f46e5; background: #e0e7ff; padding: 2px 6px; border-radius: 10px;">${mod.features.length} Features</span>
                         </div>
                         ${mod.description ? `<div class="preview-module-desc">${escapeHtml(mod.description)}</div>` : ''}
                         <div class="preview-features-grid">
@@ -984,13 +979,19 @@ function rebuildScopeModulesArrayFromDOM() {
 }
 
 function rebuildTermsArrayFromDOM() {
+    const list = document.getElementById('qTermsList');
+    if (!list || list.offsetParent === null) {
+        return; // Keep existing quotationTerms
+    }
     const newTerms = [];
     document.querySelectorAll('#qTermsList .term-item').forEach(item => {
         const title = item.querySelector('.term-title-input').value;
         const content = item.querySelector('.term-textarea').value;
         newTerms.push({ title: title, content: content });
     });
-    quotationTerms = newTerms;
+    if (newTerms.length > 0) {
+        quotationTerms = newTerms;
+    }
     updateQuotationPreview();
 }
 

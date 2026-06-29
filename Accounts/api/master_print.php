@@ -212,11 +212,6 @@ if (!$result || $result->num_rows === 0) {
                             <td style="padding: 1px 0; border: none !important;">HDFC0010386</td>
                         </tr>
                         <tr>
-                            <td style="padding: 1px 0; border: none !important; font-weight: bold;">Branch</td>
-                            <td style="padding: 1px 0; border: none !important;">:</td>
-                            <td style="padding: 1px 0; border: none !important;">Bhagyanagar RPD Cross Belagavi Main</td>
-                        </tr>
-                        <tr>
                             <td colspan="3" style="padding: 3px 0 1px 0; border: none !important;"></td>
                         </tr>
                         <tr>

@@ -725,11 +725,6 @@ if ($type === 'gst') {
                                 <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
                                 <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">HDFC0010386</td>
                             </tr>
-                            <tr>
-                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Branch</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">Bhagyanagar RPD Cross Belagavi Main</td>
-                            </tr>
                         </table>
                     </div>
                 </div>

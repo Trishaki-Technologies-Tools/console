@@ -1965,7 +1965,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <button type="button" class="qb-tab-btn active" id="tab-btn-info" onclick="switchQuotationTab('info')">1. Client & Project</button>
                         <button type="button" class="qb-tab-btn" id="tab-btn-commercial" onclick="switchQuotationTab('commercial')">2. Commercial Details</button>
                         <button type="button" class="qb-tab-btn" id="tab-btn-scope" onclick="switchQuotationTab('scope')">3. Scope of Work</button>
-                        <button type="button" class="qb-tab-btn" id="tab-btn-terms" onclick="switchQuotationTab('terms')">4. Terms & Signatures</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-terms" onclick="switchQuotationTab('terms')" style="display: none;">4. Terms & Signatures</button>
                     </div>
                     
                     <div class="qb-tab-content">
@@ -2048,7 +2048,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                         <label class="form-label">Discount Amount (₹)</label>
                                         <input type="number" id="qDiscountInput" class="form-input" min="0" value="0" step="0.01" oninput="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff;">
                                     </div>
-                                    <div class="form-group">
+                                    <div class="form-group" style="display: none !important;">
                                         <label class="form-label">GST Percentage (%)</label>
                                         <select id="qGstRateInput" class="form-input" onchange="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff; height: 42px;">
                                             <option value="18" selected>18% (Standard GST)</option>
@@ -2060,18 +2060,18 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                 </div>
                                 <div style="display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right;">
                                     <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
-                                        <span>Subtotal:</span>
+                                        <span>Total Amount:</span>
                                         <strong id="qSubtotalVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>
                                     <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
                                         <span>Discount:</span>
                                         <strong id="qDiscountVal" style="color: #ef4444;">-₹0.00</strong>
                                     </div>
-                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                    <div style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
                                         <span id="qCgstLabel">CGST (9%):</span>
                                         <strong id="qCgstVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>
-                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 10px;">
+                                    <div style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 10px;">
                                         <span id="qSgstLabel">SGST (9%):</span>
                                         <strong id="qSgstVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>

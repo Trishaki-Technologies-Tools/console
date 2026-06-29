@@ -219,11 +219,6 @@ $html = "
                                         <td style='padding: 1px 0; border: none !important;'>:</td>
                                         <td style='padding: 1px 0; border: none !important;'>HDFC0010386</td>
                                     </tr>
-                                    <tr>
-                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>Branch</td>
-                                        <td style='padding: 1px 0; border: none !important;'>:</td>
-                                        <td style='padding: 1px 0; border: none !important;'>Bhagyanagar RPD Cross Belagavi Main</td>
-                                    </tr>
                                 </table>
                             </td>
                             <!-- Column 2: QR Code -->

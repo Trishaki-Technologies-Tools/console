@@ -121,6 +121,8 @@ try {
     <meta charset="UTF-8">
     <title>Quotation - <?php echo htmlspecialchars($quote['quotation_no']); ?></title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
         :root {
             --primary: #4f46e5;
             --text-dark: #0f172a;
@@ -131,12 +133,38 @@ try {
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; padding: 40px; color: var(--text-dark); -webkit-print-color-adjust: exact; }
 
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .invoice-card {
+                width: 100% !important;
+                min-height: 100% !important;
+                margin: 0 !important;
+                padding: 8mm 8mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                page-break-after: always;
+            }
+            .invoice-card.page-break {
+                page-break-before: always;
+            }
+        }
+
         .invoice-card {
             background: white;
             width: 210mm;
             min-height: 297mm;
             margin: 0 auto 30px auto;
-            padding: 15mm 20mm;
+            padding: 10mm 10mm;
             box-shadow: 0 10px 25px rgba(0,0,0,0.05);
             border: 1px solid var(--border);
             border-radius: 8px;
@@ -149,7 +177,6 @@ try {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #e2e8f0;
             padding-bottom: 10px;
             margin-bottom: 15px;
         }
@@ -160,48 +187,81 @@ try {
             gap: 15px;
         }
         .company-logo {
-            height: 55px;
+            height: 115px;
             width: auto;
             object-fit: contain;
         }
         .company-info h2 {
-            font-size: 13px;
+            font-size: 14pt;
             font-weight: 800;
-            color: var(--primary);
+            color: #000000;
             text-transform: uppercase;
             line-height: 1.2;
             margin-bottom: 2px;
         }
         .company-info p {
-            font-size: 9px;
+            font-size: 12pt;
             color: var(--text-grey);
             line-height: 1.35;
         }
         .company-info .company-contact {
-            font-size: 9px;
+            font-size: 12pt;
             margin-top: 2px;
             color: var(--text-dark);
         }
 
-        .quotation-title { text-align: right; }
-        .quotation-title h1 { font-size: 20px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; line-height: 1.1; }
-        .quote-meta { margin-top: 4px; font-size: 9px; color: var(--text-grey); text-align: right; line-height: 1.35; }
-        .quote-meta span { color: var(--text-dark); font-weight: 600; }
+        .quotation-title { text-align: right; flex-shrink: 0; }
+        .quotation-title h1 { font-size: 16pt; color: #000000; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; line-height: 1.1; }
+        .quote-meta { 
+            margin-top: 5px; 
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+        .meta-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            font-size: 8.5pt;
+            line-height: 1.35;
+            white-space: nowrap;
+        }
+        .meta-label {
+            color: var(--text-grey);
+            text-align: right;
+        }
+        .meta-colon {
+            color: var(--text-grey);
+            padding: 0 4px;
+        }
+        .meta-val {
+            color: var(--text-dark);
+            font-weight: 600;
+            text-align: right;
+            width: 100px;
+        }
 
         .addresses-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 15px;
         }
 
-        .address-box h3 { font-size: 9px; font-weight: 700; text-transform: uppercase; color: var(--text-grey); border-bottom: 1px solid var(--border); padding-bottom: 3px; margin-bottom: 6px; }
-        .address-box p { font-size: 10px; line-height: 1.35; color: #1e293b; }
-        .address-box strong { font-size: 11px; display: block; margin-bottom: 2px; color: #0f172a; }
+        .address-box {
+            border: 1px solid var(--border);
+            background: transparent;
+            padding: 10px 14px;
+        }
+        .address-box h3 { font-size: 14pt; font-weight: 700; text-transform: uppercase; color: var(--text-grey); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 8px; margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
+        .address-box p { font-size: 12pt; line-height: 1.6; color: #334155; margin: 0; }
+        .address-box > strong { font-size: 12pt; display: block; margin-bottom: 6px; color: #0f172a; }
+        .address-box p strong { display: inline; font-size: inherit; color: #0f172a; }
 
         table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1px solid var(--border); }
-        th { background: #f8fafc; color: var(--text-grey); font-weight: 700; text-transform: uppercase; font-size: 8.5px; padding: 6px 10px; text-align: left; border: 1px solid var(--border); border-bottom: 2px solid var(--border); }
-        td { padding: 6px 10px; font-size: 10px; border: 1px solid var(--border); color: #1e293b; }
+        th { background: #f8fafc; color: var(--text-grey); font-weight: 700; text-transform: uppercase; font-size: 14pt; padding: 6px 10px; text-align: left; border: 1px solid var(--border); border-bottom: 2px solid var(--border); }
+        td { padding: 6px 10px; font-size: 12pt; border: 1px solid var(--border); color: #1e293b; }
         
         .text-right { text-align: right; }
         .text-center { text-align: center; }
@@ -213,18 +273,18 @@ try {
         }
 
         .summary-table { width: 250px; margin-bottom: 0; border: 1px solid var(--border); border-collapse: collapse; }
-        .summary-table td { padding: 5px 8px; font-size: 10px; border: 1px solid var(--border); }
-        .summary-table tr.total-row td { font-size: 11px; font-weight: 800; color: var(--primary); background: #f8fafc; }
+        .summary-table td { padding: 5px 8px; font-size: 12pt; border: 1px solid var(--border); }
+        .summary-table tr.total-row td { font-size: 12pt; font-weight: 800; color: #000000; background: #f8fafc; }
 
         .terms-conditions {
             margin-top: 10px;
-            font-size: 9px;
+            font-size: 10pt;
             color: var(--text-grey);
-            line-height: 1.3;
+            line-height: 1.35;
             flex-grow: 1;
         }
-        .terms-conditions h4 { font-size: 10px; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
-        .term-section { display: flex; align-items: flex-start; margin-bottom: 4px; font-size: 9px; }
+        .terms-conditions h4 { font-size: 12pt; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
+        .term-section { display: flex; align-items: flex-start; margin-bottom: 4px; font-size: 10pt; }
         .term-section strong { min-width: 22px; flex-shrink: 0; color: var(--text-dark); font-weight: 700; }
 
         .signatures {
@@ -232,16 +292,15 @@ try {
             justify-content: space-between;
             margin-top: 15px;
             padding-top: 10px;
-            border-top: 1px solid #f1f5f9;
         }
         .sig-col { text-align: center; width: 170px; }
         .sig-line { border-top: 1px solid var(--text-dark); margin-top: 4px; margin-bottom: 3px; }
-        .sig-label { font-size: 8.5px; font-weight: 700; text-transform: uppercase; color: var(--text-grey); }
+        .sig-label { font-size: 12pt; font-weight: 700; text-transform: uppercase; color: var(--text-grey); }
 
         .scope-title {
-            font-size: 16px;
+            font-size: 14pt;
             font-weight: 800;
-            color: var(--primary);
+            color: #000000;
             border-bottom: 2px solid #e2e8f0;
             padding-bottom: 8px;
             margin-bottom: 15px;
@@ -254,7 +313,7 @@ try {
         }
 
         .module-name {
-            font-size: 12px;
+            font-size: 14pt;
             font-weight: 800;
             color: #0f172a;
             margin-bottom: 4px;
@@ -263,21 +322,20 @@ try {
         }
 
         .module-desc {
-            font-size: 11px;
+            font-size: 12pt;
             color: var(--text-grey);
             margin-bottom: 6px;
-            font-style: italic;
         }
 
         .features-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1fr;
             gap: 4px 15px;
             padding-left: 10px;
         }
 
         .feature-bullet {
-            font-size: 11px;
+            font-size: 12pt;
             color: #334155;
             position: relative;
             padding-left: 12px;
@@ -329,21 +387,49 @@ try {
     <div class="invoice-card">
         <div class="header-row">
             <div class="company-brand">
-                <img class="company-logo" src="../assets/TRISHAKI LOGO TRANSPERANT BG.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
+                <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
                 <div class="company-info">
-                    <h2><?php echo htmlspecialchars($companyName); ?></h2>
-                    <p><?php echo nl2br(htmlspecialchars($companyAddress)); ?></p>
+                    <h2>
+                        <?php 
+                        if (trim($companyName) === 'TRISHAKI TECHNOLOGIES PRIVATE LIMITED') {
+                            echo "TRISHAKI TECHNOLOGIES<br>PRIVATE LIMITED";
+                        } else {
+                            echo htmlspecialchars($companyName);
+                        }
+                        ?>
+                    </h2>
+                    <p>
+                        <?php 
+                        if (trim($companyAddress) === 'F1, First Floor, Star Tower, RPD Circle, Opposite Canara Bank, Tilakwadi, Belagavi, Karnataka - 590006') {
+                            echo "F1, First Floor, Star Tower, RPD Circle,<br>Opposite Canara Bank, Tilakwadi,<br>Belagavi, Karnataka - 590006";
+                        } else {
+                            echo nl2br(htmlspecialchars($companyAddress));
+                        }
+                        ?>
+                    </p>
                     <p class="company-contact">
-                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong> <?php echo htmlspecialchars($companyEmail); ?> | <strong>GSTIN:</strong> <?php echo htmlspecialchars($companyGst); ?>
+                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong> <?php echo htmlspecialchars($companyEmail); ?>
                     </p>
                 </div>
             </div>
             <div class="quotation-title">
                 <h1>Quotation</h1>
                 <div class="quote-meta">
-                    QUOTATION NO: <span><?php echo htmlspecialchars($quote['quotation_no']); ?></span><br>
-                    DATE: <span><?php echo date('d-M-Y', strtotime($quote['quotation_date'])); ?></span><br>
-                    VALID UNTIL: <span><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
+                    <div class="meta-row">
+                        <span class="meta-label">QUOTE NO</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo htmlspecialchars($quote['quotation_no']); ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">DATE</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'])); ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">VALID UNTIL</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -372,7 +458,7 @@ try {
                     <?php if (!empty($projectDesc)): ?>
                         <strong>Description:</strong> <?php echo htmlspecialchars($projectDesc); ?><br>
                     <?php endif; ?>
-                    All values listed below are in INR.
+                    <strong>All values listed below are in INR.</strong>
                 </p>
             </div>
         </div>
@@ -398,24 +484,16 @@ try {
 
         <div class="summary-block">
             <table class="summary-table">
-                <tr>
-                    <td>Subtotal (Tax Excl.):</td>
-                    <td class="text-right">₹<?php echo number_format($subtotal, 2); ?></td>
-                </tr>
                 <?php if ($discount > 0): ?>
+                <tr>
+                    <td>Total Amount:</td>
+                    <td class="text-right">₹<?php echo number_format($totalAmt, 2); ?></td>
+                </tr>
                 <tr>
                     <td>Discount:</td>
                     <td class="text-right" style="color: #ef4444;">-₹<?php echo number_format($discount, 2); ?></td>
                 </tr>
                 <?php endif; ?>
-                <tr>
-                    <td>CGST (<?php echo $halfGstPercent; ?>%):</td>
-                    <td class="text-right">₹<?php echo number_format($halfGstAmount, 2); ?></td>
-                </tr>
-                <tr>
-                    <td>SGST (<?php echo $halfGstPercent; ?>%):</td>
-                    <td class="text-right">₹<?php echo number_format($halfGstAmount, 2); ?></td>
-                </tr>
                 <tr class="total-row">
                     <td>Grand Total:</td>
                     <td class="text-right">₹<?php echo number_format($grandTotal, 2); ?></td>
@@ -436,45 +514,72 @@ try {
             <?php endforeach; ?>
         </div>
 
-         <div class="signatures">
-             <div class="sig-col">
-                 <div style="border: 1px dashed #cbd5e1; height: 35px; width: 100%; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 8px; border-radius: 4px; background: #fafafa; margin-bottom: 4px;">
-                     Client Seal / Signature Box
+                  <div class="signatures" style="height: 160px; margin-top: 25px;">
+              <div class="sig-col" style="position: relative; height: 160px;">
+                  <div style="position: absolute; bottom: 45px; left: 0; right: 0;">
+                      <div class="sig-line"></div>
+                      <span class="sig-label">Accepted By (Client)</span>
+                  </div>
+                  <div style="position: absolute; bottom: 22px; left: 0; right: 0; font-size: 12pt; color: #334155; font-weight: bold;"><?php echo htmlspecialchars($quote['client_name']); ?></div>
+              </div>
+             <div class="sig-col" style="position: relative; height: 160px;">
+                 <img src="../assets/ningaraj_sign_blue.png" alt="Company Sign" style="position: absolute; bottom: -50px; left: 50%; transform: translateX(-50%) rotate(5deg); height: 380px; max-width: 450px; object-fit: contain; pointer-events: none; z-index: 1;" onerror="this.style.display='none'">
+                 <div style="position: absolute; bottom: 45px; left: 0; right: 0; z-index: 2;">
+                     <div class="sig-line"></div>
+                     <span class="sig-label">Authorized Signatory</span>
                  </div>
-                 <div class="sig-line"></div>
-                 <span class="sig-label">Accepted By (Client)</span>
-                 <?php if (!empty($clientSignatureName)): ?>
-                     <div style="font-size: 9px; color: #334155; font-weight: bold; margin-top: 2px;"><?php echo htmlspecialchars($clientSignatureName); ?></div>
-                 <?php endif; ?>
-                 <?php if (!empty($clientSignatureDate)): ?>
-                     <div style="font-size: 8px; color: #64748b;">Date: <?php echo date('d-M-Y', strtotime($clientSignatureDate)); ?></div>
-                 <?php endif; ?>
-             </div>
-             <div class="sig-col" style="position: relative;">
-                 <div style="height: 35px; display: flex; align-items: flex-end; justify-content: center;">
-                     <img src="../assets/ningaraj_sign_blue.png" alt="Company Sign" style="height: 42px; max-width: 130px; object-fit: contain; margin-bottom: -5px; transform: rotate(-2deg);" onerror="this.style.display='none'">
-                 </div>
-                 <div class="sig-line"></div>
-                 <span class="sig-label">Prepared By (Authorized Signatory)</span>
-                 <div style="font-size: 8px; color: #64748b; font-weight: bold; text-transform: uppercase;">TriShaKi Technologies</div>
              </div>
          </div>
      </div>
-
-    <!-- Page 2: Scope of Work (Printable page break) -->
+ </div>
+ <!-- Page 2: Scope of Work (Printable page break) -->
     <?php if ($includeScope && !empty($scopeOfWork)): ?>
     <div class="invoice-card page-break">
         <div class="header-row">
             <div class="company-brand">
-                <img class="company-logo" src="../assets/TRISHAKI LOGO TRANSPERANT BG.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
+                <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
                 <div class="company-info">
-                    <h2><?php echo htmlspecialchars($companyName); ?></h2>
+                    <h2>
+                        <?php 
+                        if (trim($companyName) === 'TRISHAKI TECHNOLOGIES PRIVATE LIMITED') {
+                            echo "TRISHAKI TECHNOLOGIES<br>PRIVATE LIMITED";
+                        } else {
+                            echo htmlspecialchars($companyName);
+                        }
+                        ?>
+                    </h2>
+                    <p>
+                        <?php 
+                        if (trim($companyAddress) === 'F1, First Floor, Star Tower, RPD Circle, Opposite Canara Bank, Tilakwadi, Belagavi, Karnataka - 590006') {
+                            echo "F1, First Floor, Star Tower, RPD Circle,<br>Opposite Canara Bank, Tilakwadi,<br>Belagavi, Karnataka - 590006";
+                        } else {
+                            echo nl2br(htmlspecialchars($companyAddress));
+                        }
+                        ?>
+                    </p>
+                    <p class="company-contact">
+                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong> <?php echo htmlspecialchars($companyEmail); ?>
+                    </p>
                 </div>
             </div>
             <div class="quotation-title">
-                <h1>Project Scope</h1>
+                <h1>Quotation</h1>
                 <div class="quote-meta">
-                    PROJECT: <span><?php echo htmlspecialchars($projectName); ?></span>
+                    <div class="meta-row">
+                        <span class="meta-label">QUOTE NO</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo htmlspecialchars($quote['quotation_no']); ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">DATE</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'])); ?></span>
+                    </div>
+                    <div class="meta-row">
+                        <span class="meta-label">VALID UNTIL</span>
+                        <span class="meta-colon">:</span>
+                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -485,7 +590,6 @@ try {
             <div class="module-item">
                 <div class="module-name">
                     <span><?php echo htmlspecialchars($mod['module_name']); ?></span>
-                    <span style="font-size: 8px; color: #4f46e5; background: #e0e7ff; padding: 2px 6px; border-radius: 10px; font-weight: 700;"><?php echo count($mod['features'] ?? []); ?> Features</span>
                 </div>
                 <?php if (!empty($mod['description'])): ?>
                     <div class="module-desc"><?php echo htmlspecialchars($mod['description']); ?></div>

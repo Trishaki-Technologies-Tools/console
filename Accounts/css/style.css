@@ -1380,14 +1380,14 @@ tr:last-child td:last-child {
 }
 
 .preview-company-name {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 800;
-    color: #4f46e5;
+    color: #000000;
     text-transform: uppercase;
 }
 
 .preview-company-details {
-    font-size: 10px;
+    font-size: 12.5px;
     color: #475569;
     line-height: 1.4;
 }
@@ -1397,15 +1397,15 @@ tr:last-child td:last-child {
 }
 
 .preview-title-area h1 {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 800;
-    color: #4f46e5;
+    color: #000000;
     letter-spacing: 0.5px;
     margin-bottom: 6px;
 }
 
 .preview-meta {
-    font-size: 10px;
+    font-size: 11px;
     color: #475569;
     line-height: 1.4;
 }
@@ -1423,7 +1423,7 @@ tr:last-child td:last-child {
 }
 
 .preview-address-box h3 {
-    font-size: 10px;
+    font-size: 11px;
     text-transform: uppercase;
     color: #475569;
     border-bottom: 1px solid #e2e8f0;
@@ -1433,14 +1433,14 @@ tr:last-child td:last-child {
 }
 
 .preview-address-box p {
-    font-size: 11px;
+    font-size: 12.5px;
     color: #1e293b;
     line-height: 1.4;
 }
 
 .preview-address-box strong {
     color: #0f172a;
-    font-size: 12px;
+    font-size: 13.5px;
 }
 
 .preview-table {
@@ -1452,7 +1452,7 @@ tr:last-child td:last-child {
 .preview-table th {
     background: #f8fafc;
     color: #475569;
-    font-size: 9px;
+    font-size: 11px;
     font-weight: 700;
     text-transform: uppercase;
     padding: 8px 12px;
@@ -1462,7 +1462,7 @@ tr:last-child td:last-child {
 
 .preview-table td {
     padding: 8px 12px;
-    font-size: 11px;
+    font-size: 12.5px;
     border-bottom: 1px solid #e2e8f0;
     color: #1e293b;
 }
@@ -1479,28 +1479,28 @@ tr:last-child td:last-child {
 
 .preview-summary-table td {
     padding: 4px 8px;
-    font-size: 11px;
+    font-size: 12.5px;
     border: none;
 }
 
 .preview-summary-table tr.total-row td {
     font-weight: 800;
-    font-size: 13px;
-    color: #4f46e5;
+    font-size: 13.5px;
+    color: #000000;
     border-top: 2px solid #cbd5e1;
     padding-top: 6px;
 }
 
 .preview-terms {
     margin-top: 15px;
-    font-size: 10px;
+    font-size: 11.5px;
     color: #475569;
     line-height: 1.4;
     flex-grow: 1;
 }
 
 .preview-terms h4 {
-    font-size: 11px;
+    font-size: 12.5px;
     font-weight: 700;
     color: #0f172a;
     margin-bottom: 4px;
@@ -1564,7 +1564,6 @@ tr:last-child td:last-child {
     font-size: 11px;
     color: #475569;
     margin-bottom: 6px;
-    font-style: italic;
 }
 
 .preview-features-grid {
