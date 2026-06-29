@@ -61,7 +61,7 @@ try {
         $terms = $itemsDecoded['terms'] ?? [];
         $clientSignatureName = $itemsDecoded['client_signature_name'] ?? '';
         $clientSignatureDate = $itemsDecoded['client_signature_date'] ?? '';
-        $includeScope = isset($itemsDecoded['include_scope']) ? (bool)$itemsDecoded['include_scope'] : true;
+        $includeScope = isset($itemsDecoded['include_scope']) ? (bool) $itemsDecoded['include_scope'] : true;
     } else {
         // Legacy flat format
         $projectName = 'Project Proposal';
@@ -76,27 +76,17 @@ try {
         $clientSignatureDate = '';
     }
 
-    // Check for legacy terms or empty terms
-    $isLegacyTerms = false;
-    foreach ($terms as $t) {
-        $titleLower = strtolower($t['title'] ?? '');
-        if (strpos($titleLower, 'payment') !== false || strpos($titleLower, 'timeline') !== false || strpos($titleLower, 'validity') !== false) {
-            $isLegacyTerms = true;
-            break;
-        }
-    }
-    if (empty($terms) || count($terms) < 6 || $isLegacyTerms) {
+    // Always use system-defined default terms (terms are not client-customised)
+    {
         $terms = [
             ['title' => '1', 'content' => 'This quotation is valid for 15 days from the date of issue.'],
-            ['title' => '2', 'content' => 'Project will commence upon receipt of the agreed advance payment.'],
-            ['title' => '3', 'content' => 'This quotation covers only the scope of work mentioned herein.'],
-            ['title' => '4', 'content' => 'Additional features or changes requested after approval will be quoted separately.'],
-            ['title' => '5', 'content' => 'The client shall provide all required content and approvals on time.'],
-            ['title' => '6', 'content' => 'Delays in client approvals may extend the project timeline.'],
-            ['title' => '7', 'content' => 'Third-party charges (if applicable) shall be borne by the client unless otherwise specified.'],
-            ['title' => '8', 'content' => 'Project ownership will be transferred upon receipt of full payment.'],
-            ['title' => '9', 'content' => 'Advance payment is non-refundable once the project has commenced.'],
-            ['title' => '10', 'content' => 'By signing this quotation, the client agrees to the above Terms & Conditions']
+            ['title' => '2', 'content' => 'The project will commence upon receipt of 30% advance payment of the total quoted amount.'],
+            ['title' => '3', 'content' => 'The quotation includes only the scope of work mentioned below.'],
+            ['title' => '4', 'content' => 'Any additional features or changes will be charged separately.'],
+            ['title' => '5', 'content' => 'The client is responsible for providing the required content and timely approvals.'],
+            ['title' => '6', 'content' => 'Third-party charges (hosting, domain, APIs, etc.), if applicable, will be borne by the client.'],
+            ['title' => '7', 'content' => 'Project ownership will be transferred after full payment is received.'],
+            ['title' => '8', 'content' => 'Advance payment is non-refundable once the project has commenced.'],
         ];
     }
 
@@ -117,21 +107,33 @@ try {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <title>Quotation - <?php echo htmlspecialchars($quote['quotation_no']); ?></title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
         :root {
             --primary: #4f46e5;
-            --text-dark: #0f172a;
-            --text-grey: #475569;
+            --text-dark: #000000;
+            --text-grey: #000000;
             --border: #cbd5e1;
         }
 
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: #f8fafc; padding: 40px; color: var(--text-dark); -webkit-print-color-adjust: exact; }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', system-ui, sans-serif;
+            background: #f8fafc;
+            padding: 40px;
+            color: var(--text-dark);
+            -webkit-print-color-adjust: exact;
+        }
 
         @page {
             size: A4;
@@ -144,6 +146,7 @@ try {
                 padding: 0 !important;
                 margin: 0 !important;
             }
+
             .invoice-card {
                 width: 100% !important;
                 min-height: 100% !important;
@@ -154,6 +157,7 @@ try {
                 border-radius: 0 !important;
                 page-break-after: always;
             }
+
             .invoice-card.page-break {
                 page-break-before: always;
             }
@@ -165,7 +169,7 @@ try {
             min-height: 297mm;
             margin: 0 auto 30px auto;
             padding: 10mm 10mm;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
             border: 1px solid var(--border);
             border-radius: 8px;
             display: flex;
@@ -186,11 +190,13 @@ try {
             align-items: center;
             gap: 15px;
         }
+
         .company-logo {
             height: 115px;
             width: auto;
             object-fit: contain;
         }
+
         .company-info h2 {
             font-size: 14pt;
             font-weight: 800;
@@ -199,26 +205,41 @@ try {
             line-height: 1.2;
             margin-bottom: 2px;
         }
+
         .company-info p {
-            font-size: 12pt;
-            color: var(--text-grey);
+            font-size: 11pt;
+            color: #000000;
             line-height: 1.35;
         }
+
         .company-info .company-contact {
-            font-size: 12pt;
+            font-size: 11pt;
             margin-top: 2px;
             color: var(--text-dark);
         }
 
-        .quotation-title { text-align: right; flex-shrink: 0; }
-        .quotation-title h1 { font-size: 16pt; color: #000000; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 800; line-height: 1.1; }
-        .quote-meta { 
-            margin-top: 5px; 
+        .quotation-title {
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .quotation-title h1 {
+            font-size: 16pt;
+            color: #000000;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .quote-meta {
+            margin-top: 5px;
             display: flex;
             flex-direction: column;
             align-items: flex-end;
             gap: 2px;
         }
+
         .meta-row {
             display: flex;
             justify-content: flex-end;
@@ -227,14 +248,17 @@ try {
             line-height: 1.35;
             white-space: nowrap;
         }
+
         .meta-label {
-            color: var(--text-grey);
+            color: #000000;
             text-align: right;
         }
+
         .meta-colon {
-            color: var(--text-grey);
+            color: #000000;
             padding: 0 4px;
         }
+
         .meta-val {
             color: var(--text-dark);
             font-weight: 600;
@@ -254,17 +278,74 @@ try {
             background: transparent;
             padding: 10px 14px;
         }
-        .address-box h3 { font-size: 14pt; font-weight: 700; text-transform: uppercase; color: var(--text-grey); border-bottom: 1px solid var(--border); padding-bottom: 4px; margin-bottom: 8px; margin-left: -14px; margin-right: -14px; padding-left: 14px; padding-right: 14px; }
-        .address-box p { font-size: 12pt; line-height: 1.6; color: #334155; margin: 0; }
-        .address-box > strong { font-size: 12pt; display: block; margin-bottom: 6px; color: #0f172a; }
-        .address-box p strong { display: inline; font-size: inherit; color: #0f172a; }
 
-        table { width: 100%; border-collapse: collapse; margin-bottom: 12px; border: 1px solid var(--border); }
-        th { background: #f8fafc; color: var(--text-grey); font-weight: 700; text-transform: uppercase; font-size: 14pt; padding: 6px 10px; text-align: left; border: 1px solid var(--border); border-bottom: 2px solid var(--border); }
-        td { padding: 6px 10px; font-size: 12pt; border: 1px solid var(--border); color: #1e293b; }
-        
-        .text-right { text-align: right; }
-        .text-center { text-align: center; }
+        .address-box h3 {
+            font-size: 14pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #000000;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+            margin-left: -14px;
+            margin-right: -14px;
+            padding-left: 14px;
+            padding-right: 14px;
+        }
+
+        .address-box p {
+            font-size: 11pt;
+            line-height: 1.6;
+            color: #000000;
+            margin: 0;
+        }
+
+        .address-box>strong {
+            font-size: 11pt;
+            display: block;
+            margin-bottom: 6px;
+            color: #000000;
+        }
+
+        .address-box p strong {
+            display: inline;
+            font-size: inherit;
+            color: #000000;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            border: 1px solid var(--border);
+        }
+
+        th {
+            background: #f8fafc;
+            color: #000000;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 14pt;
+            padding: 6px 10px;
+            text-align: left;
+            border: 1px solid var(--border);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 6px 10px;
+            font-size: 11pt;
+            border: 1px solid var(--border);
+            color: #000000;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .text-center {
+            text-align: center;
+        }
 
         .summary-block {
             display: flex;
@@ -272,30 +353,83 @@ try {
             margin-bottom: 12px;
         }
 
-        .summary-table { width: 250px; margin-bottom: 0; border: 1px solid var(--border); border-collapse: collapse; }
-        .summary-table td { padding: 5px 8px; font-size: 12pt; border: 1px solid var(--border); }
-        .summary-table tr.total-row td { font-size: 12pt; font-weight: 800; color: #000000; background: #f8fafc; }
+        .summary-table {
+            width: 250px;
+            margin-bottom: 0;
+            border: 1px solid var(--border);
+            border-collapse: collapse;
+        }
+
+        .summary-table td {
+            padding: 5px 8px;
+            font-size: 11pt;
+            border: 1px solid var(--border);
+        }
+
+        .summary-table tr.total-row td {
+            font-size: 11pt;
+            font-weight: 800;
+            color: #000000;
+            background: #f8fafc;
+        }
 
         .terms-conditions {
-            margin-top: 10px;
-            font-size: 10pt;
-            color: var(--text-grey);
-            line-height: 1.35;
+            margin-top: 8px;
+            font-size: 9pt;
+            color: #000000;
+            line-height: 1.3;
             flex-grow: 1;
         }
-        .terms-conditions h4 { font-size: 12pt; font-weight: 700; color: var(--text-dark); margin-bottom: 4px; border-bottom: 1px solid var(--border); padding-bottom: 2px; }
-        .term-section { display: flex; align-items: flex-start; margin-bottom: 4px; font-size: 10pt; }
-        .term-section strong { min-width: 22px; flex-shrink: 0; color: var(--text-dark); font-weight: 700; }
+
+        .terms-conditions h4 {
+            font-size: 11pt;
+            font-weight: 700;
+            color: #000000;
+            margin-bottom: 3px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 2px;
+        }
+
+        .term-section {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 2px;
+            font-size: 9pt;
+        }
+
+        .term-section strong {
+            min-width: 20px;
+            flex-shrink: 0;
+            color: #000000;
+            font-weight: 700;
+        }
 
         .signatures {
             display: flex;
             justify-content: space-between;
-            margin-top: 15px;
-            padding-top: 10px;
+            margin-top: 10px;
+            padding-top: 5px;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
-        .sig-col { text-align: center; width: 170px; }
-        .sig-line { border-top: 1px solid var(--text-dark); margin-top: 4px; margin-bottom: 3px; }
-        .sig-label { font-size: 12pt; font-weight: 700; text-transform: uppercase; color: var(--text-grey); }
+
+        .sig-col {
+            text-align: center;
+            width: 250px;
+        }
+
+        .sig-line {
+            border-top: 1px solid var(--text-dark);
+            margin-top: 4px;
+            margin-bottom: 3px;
+        }
+
+        .sig-label {
+            font-size: 11pt;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #000000;
+        }
 
         .scope-title {
             font-size: 14pt;
@@ -315,15 +449,15 @@ try {
         .module-name {
             font-size: 14pt;
             font-weight: 800;
-            color: #0f172a;
+            color: #000000;
             margin-bottom: 4px;
             display: flex;
             justify-content: space-between;
         }
 
         .module-desc {
-            font-size: 12pt;
-            color: var(--text-grey);
+            font-size: 11pt;
+            color: #000000;
             margin-bottom: 6px;
         }
 
@@ -335,15 +469,15 @@ try {
         }
 
         .feature-bullet {
-            font-size: 12pt;
-            color: #334155;
+            font-size: 11pt;
+            color: #000000;
             position: relative;
             padding-left: 12px;
         }
 
         .feature-bullet::before {
             content: "•";
-            color: var(--primary);
+            color: #000000;
             font-weight: 800;
             position: absolute;
             left: 0;
@@ -373,13 +507,35 @@ try {
                 size: A4;
                 margin: 10mm;
             }
-            body { background: white; padding: 0; margin: 0; }
-            .invoice-card { box-shadow: none; border: none; padding: 4mm 0; width: 100%; margin: 0; min-height: auto; }
-            .print-button { display: none; }
-            .page-break { page-break-before: always; break-before: page; margin-top: 0; }
+
+            body {
+                background: white;
+                padding: 0;
+                margin: 0;
+            }
+
+            .invoice-card {
+                box-shadow: none;
+                border: none;
+                padding: 4mm 0;
+                width: 100%;
+                margin: 0;
+                min-height: auto;
+            }
+
+            .print-button {
+                display: none;
+            }
+
+            .page-break {
+                page-break-before: always;
+                break-before: page;
+                margin-top: 0;
+            }
         }
     </style>
 </head>
+
 <body>
     <button class="print-button" onclick="window.print()">🖨️ Print Quotation</button>
 
@@ -387,10 +543,11 @@ try {
     <div class="invoice-card">
         <div class="header-row">
             <div class="company-brand">
-                <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
+                <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo"
+                    onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
                 <div class="company-info">
                     <h2>
-                        <?php 
+                        <?php
                         if (trim($companyName) === 'TRISHAKI TECHNOLOGIES PRIVATE LIMITED') {
                             echo "TRISHAKI TECHNOLOGIES<br>PRIVATE LIMITED";
                         } else {
@@ -399,7 +556,7 @@ try {
                         ?>
                     </h2>
                     <p>
-                        <?php 
+                        <?php
                         if (trim($companyAddress) === 'F1, First Floor, Star Tower, RPD Circle, Opposite Canara Bank, Tilakwadi, Belagavi, Karnataka - 590006') {
                             echo "F1, First Floor, Star Tower, RPD Circle,<br>Opposite Canara Bank, Tilakwadi,<br>Belagavi, Karnataka - 590006";
                         } else {
@@ -408,7 +565,8 @@ try {
                         ?>
                     </p>
                     <p class="company-contact">
-                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong> <?php echo htmlspecialchars($companyEmail); ?>
+                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong>
+                        <?php echo htmlspecialchars($companyEmail); ?>
                     </p>
                 </div>
             </div>
@@ -428,7 +586,8 @@ try {
                     <div class="meta-row">
                         <span class="meta-label">VALID UNTIL</span>
                         <span class="meta-colon">:</span>
-                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
+                        <span
+                            class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
                     </div>
                 </div>
             </div>
@@ -472,12 +631,13 @@ try {
                 </tr>
             </thead>
             <tbody>
-                <?php $i = 1; foreach ($commercialItems as $item): ?>
-                <tr>
-                    <td class="text-center"><?php echo $i++; ?></td>
-                    <td><?php echo htmlspecialchars($item['description'] ?? 'N/A'); ?></td>
-                    <td class="text-right">₹<?php echo number_format(floatval($item['rate'] ?? 0), 2); ?></td>
-                </tr>
+                <?php $i = 1;
+                foreach ($commercialItems as $item): ?>
+                    <tr>
+                        <td class="text-center"><?php echo $i++; ?></td>
+                        <td><?php echo htmlspecialchars($item['description'] ?? 'N/A'); ?></td>
+                        <td class="text-right">₹<?php echo number_format(floatval($item['rate'] ?? 0), 2); ?></td>
+                    </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
@@ -485,14 +645,14 @@ try {
         <div class="summary-block">
             <table class="summary-table">
                 <?php if ($discount > 0): ?>
-                <tr>
-                    <td>Total Amount:</td>
-                    <td class="text-right">₹<?php echo number_format($totalAmt, 2); ?></td>
-                </tr>
-                <tr>
-                    <td>Discount:</td>
-                    <td class="text-right" style="color: #ef4444;">-₹<?php echo number_format($discount, 2); ?></td>
-                </tr>
+                    <tr>
+                        <td>Total Amount:</td>
+                        <td class="text-right">₹<?php echo number_format($totalAmt, 2); ?></td>
+                    </tr>
+                    <tr>
+                        <td>Discount:</td>
+                        <td class="text-right" style="color: #ef4444;">-₹<?php echo number_format($discount, 2); ?></td>
+                    </tr>
                 <?php endif; ?>
                 <tr class="total-row">
                     <td>Grand Total:</td>
@@ -501,108 +661,121 @@ try {
             </table>
         </div>
 
-        <div class="terms-conditions">
-            <h4>Terms & Conditions</h4>
-            <?php foreach ($terms as $t): ?>
-                <div class="term-section">
-                    <?php if (preg_match('/^\d+$/', $t['title'])): ?>
-                        <strong><?php echo htmlspecialchars($t['title']); ?>.</strong> <?php echo htmlspecialchars($t['content']); ?>
-                    <?php else: ?>
-                        <strong><?php echo htmlspecialchars($t['title']); ?>:</strong> <?php echo htmlspecialchars($t['content']); ?>
+        <div style="page-break-inside: avoid; break-inside: avoid;">
+            <div class="terms-conditions">
+                <h4>Terms & Conditions</h4>
+                <?php foreach ($terms as $t): ?>
+                    <div class="term-section">
+                        <?php if (preg_match('/^\d+$/', $t['title'])): ?>
+                            <strong><?php echo htmlspecialchars($t['title']); ?>.</strong>
+                            <?php echo htmlspecialchars($t['content']); ?>
+                        <?php else: ?>
+                            <strong><?php echo htmlspecialchars($t['title']); ?>:</strong>
+                            <?php echo htmlspecialchars($t['content']); ?>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="signatures"
+                style="margin-top: 8px; display: flex; justify-content: space-between; align-items: flex-start;">
+
+                <div class="sig-col">
+                    <div style="height: 65px;"></div>
+                    <div class="sig-line"></div>
+                    <span class="sig-label">Accepted By (Client)</span>
+                    <div
+                        style="font-size: 11pt; color: #334155; font-weight: bold; margin-top: 5px; white-space: nowrap;">
+                        <?php echo htmlspecialchars($quote['client_name']); ?></div>
+                </div>
+
+                <div class="sig-col" style="position: relative;">
+                    <img src="../assets/ningaraj_sign_blue.png" alt="Company Sign"
+                        style="position: absolute; bottom: -120px; left: 50%; transform: translateX(-50%) rotate(5deg); height: 380px; max-width: 450px; object-fit: contain; pointer-events: none; z-index: 1;"
+                        onerror="this.style.display='none'">
+                    <div style="height: 65px;"></div>
+                    <div class="sig-line" style="position: relative; z-index: 2;"></div>
+                    <span class="sig-label" style="position: relative; z-index: 2;">Authorized Signatory</span>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    </div>
+    <!-- Page 2: Scope of Work (Printable page break) -->
+    <?php if ($includeScope && !empty($scopeOfWork)): ?>
+        <div class="invoice-card page-break">
+            <div class="header-row">
+                <div class="company-brand">
+                    <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo"
+                        onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
+                    <div class="company-info">
+                        <h2>
+                            <?php
+                            if (trim($companyName) === 'TRISHAKI TECHNOLOGIES PRIVATE LIMITED') {
+                                echo "TRISHAKI TECHNOLOGIES<br>PRIVATE LIMITED";
+                            } else {
+                                echo htmlspecialchars($companyName);
+                            }
+                            ?>
+                        </h2>
+                        <p>
+                            <?php
+                            if (trim($companyAddress) === 'F1, First Floor, Star Tower, RPD Circle, Opposite Canara Bank, Tilakwadi, Belagavi, Karnataka - 590006') {
+                                echo "F1, First Floor, Star Tower, RPD Circle,<br>Opposite Canara Bank, Tilakwadi,<br>Belagavi, Karnataka - 590006";
+                            } else {
+                                echo nl2br(htmlspecialchars($companyAddress));
+                            }
+                            ?>
+                        </p>
+                        <p class="company-contact">
+                            <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong>
+                            <?php echo htmlspecialchars($companyEmail); ?>
+                        </p>
+                    </div>
+                </div>
+                <div class="quotation-title">
+                    <h1>Quotation</h1>
+                    <div class="quote-meta">
+                        <div class="meta-row">
+                            <span class="meta-label">QUOTE NO</span>
+                            <span class="meta-colon">:</span>
+                            <span class="meta-val"><?php echo htmlspecialchars($quote['quotation_no']); ?></span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">DATE</span>
+                            <span class="meta-colon">:</span>
+                            <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'])); ?></span>
+                        </div>
+                        <div class="meta-row">
+                            <span class="meta-label">VALID UNTIL</span>
+                            <span class="meta-colon">:</span>
+                            <span
+                                class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="scope-title">Scope of Work & Features List</div>
+
+            <?php foreach ($scopeOfWork as $mod): ?>
+                <div class="module-item">
+                    <div class="module-name">
+                        <span><?php echo htmlspecialchars($mod['module_name']); ?></span>
+                    </div>
+                    <?php if (!empty($mod['description'])): ?>
+                        <div class="module-desc"><?php echo htmlspecialchars($mod['description']); ?></div>
                     <?php endif; ?>
+                    <div class="features-grid">
+                        <?php foreach (($mod['features'] ?? []) as $feat): ?>
+                            <div class="feature-bullet"><?php echo htmlspecialchars($feat); ?></div>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             <?php endforeach; ?>
         </div>
-
-                  <div class="signatures" style="height: 160px; margin-top: 25px;">
-              <div class="sig-col" style="position: relative; height: 160px;">
-                  <div style="position: absolute; bottom: 45px; left: 0; right: 0;">
-                      <div class="sig-line"></div>
-                      <span class="sig-label">Accepted By (Client)</span>
-                  </div>
-                  <div style="position: absolute; bottom: 22px; left: 0; right: 0; font-size: 12pt; color: #334155; font-weight: bold;"><?php echo htmlspecialchars($quote['client_name']); ?></div>
-              </div>
-             <div class="sig-col" style="position: relative; height: 160px;">
-                 <img src="../assets/ningaraj_sign_blue.png" alt="Company Sign" style="position: absolute; bottom: -50px; left: 50%; transform: translateX(-50%) rotate(5deg); height: 380px; max-width: 450px; object-fit: contain; pointer-events: none; z-index: 1;" onerror="this.style.display='none'">
-                 <div style="position: absolute; bottom: 45px; left: 0; right: 0; z-index: 2;">
-                     <div class="sig-line"></div>
-                     <span class="sig-label">Authorized Signatory</span>
-                 </div>
-             </div>
-         </div>
-     </div>
- </div>
- <!-- Page 2: Scope of Work (Printable page break) -->
-    <?php if ($includeScope && !empty($scopeOfWork)): ?>
-    <div class="invoice-card page-break">
-        <div class="header-row">
-            <div class="company-brand">
-                <img class="company-logo" src="../assets/trishaki_round_logo_no_border.png" alt="Company Logo" onerror="this.src='https://via.placeholder.com/150x50/f8fafc/4f46e5?text=TriShaKi'">
-                <div class="company-info">
-                    <h2>
-                        <?php 
-                        if (trim($companyName) === 'TRISHAKI TECHNOLOGIES PRIVATE LIMITED') {
-                            echo "TRISHAKI TECHNOLOGIES<br>PRIVATE LIMITED";
-                        } else {
-                            echo htmlspecialchars($companyName);
-                        }
-                        ?>
-                    </h2>
-                    <p>
-                        <?php 
-                        if (trim($companyAddress) === 'F1, First Floor, Star Tower, RPD Circle, Opposite Canara Bank, Tilakwadi, Belagavi, Karnataka - 590006') {
-                            echo "F1, First Floor, Star Tower, RPD Circle,<br>Opposite Canara Bank, Tilakwadi,<br>Belagavi, Karnataka - 590006";
-                        } else {
-                            echo nl2br(htmlspecialchars($companyAddress));
-                        }
-                        ?>
-                    </p>
-                    <p class="company-contact">
-                        <strong>Phone:</strong> <?php echo htmlspecialchars($companyPhone); ?> | <strong>Email:</strong> <?php echo htmlspecialchars($companyEmail); ?>
-                    </p>
-                </div>
-            </div>
-            <div class="quotation-title">
-                <h1>Quotation</h1>
-                <div class="quote-meta">
-                    <div class="meta-row">
-                        <span class="meta-label">QUOTE NO</span>
-                        <span class="meta-colon">:</span>
-                        <span class="meta-val"><?php echo htmlspecialchars($quote['quotation_no']); ?></span>
-                    </div>
-                    <div class="meta-row">
-                        <span class="meta-label">DATE</span>
-                        <span class="meta-colon">:</span>
-                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'])); ?></span>
-                    </div>
-                    <div class="meta-row">
-                        <span class="meta-label">VALID UNTIL</span>
-                        <span class="meta-colon">:</span>
-                        <span class="meta-val"><?php echo date('d-M-Y', strtotime($quote['quotation_date'] . ' + 15 days')); ?></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="scope-title">Scope of Work & Features List</div>
-
-        <?php foreach ($scopeOfWork as $mod): ?>
-            <div class="module-item">
-                <div class="module-name">
-                    <span><?php echo htmlspecialchars($mod['module_name']); ?></span>
-                </div>
-                <?php if (!empty($mod['description'])): ?>
-                    <div class="module-desc"><?php echo htmlspecialchars($mod['description']); ?></div>
-                <?php endif; ?>
-                <div class="features-grid">
-                    <?php foreach (($mod['features'] ?? []) as $feat): ?>
-                        <div class="feature-bullet"><?php echo htmlspecialchars($feat); ?></div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
-        <?php endforeach; ?>
-    </div>
     <?php endif; ?>
 </body>
-</html>
 
+</html>

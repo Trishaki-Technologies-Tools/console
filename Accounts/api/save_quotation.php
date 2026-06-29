@@ -68,7 +68,7 @@ try {
         $stmt->bind_param("s", $pattern);
         $stmt->execute();
         $row = $stmt->get_result()->fetch_assoc();
-        $nextNumber = $row['count'] + 1;
+        $nextNumber = $row['count'] + 101;
         $quotationNo = 'QT-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
         $stmt = $conn->prepare("INSERT INTO quotations (quotation_no, client_id, items, total_amount, quotation_date, status) VALUES (?, ?, ?, ?, ?, ?)");
