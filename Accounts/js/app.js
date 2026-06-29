@@ -1814,7 +1814,7 @@ function displaySalaryLogs(logs) {
             <td style="font-weight: 600;">₹${amount.toFixed(2)}</td>
             <td><span class="badge ${statusClass}">${log.status || 'Paid'}</span></td>
             <td>
-                <button class="btn-action btn-edit-small" onclick="viewSalaryPayslip('${log.employee_name}', '${log.month}', '${log.payment_date}', ${amount}, '${log.payment_mode || ''}')" title="View Slip" style="background:#e0f2fe; color:#0284c7;">🧾</button>
+                <button class="btn-action btn-edit-small" onclick="viewSalaryPayslip(${log.id})" title="View Slip" style="background:#e0f2fe; color:#0284c7;">🧾</button>
                 <button class="btn-action btn-edit-small" onclick="openEditSalaryModal(${log.id}, '${log.employee_name}', '${log.role || ''}', '${log.month}', ${amount}, '${log.payment_date}', '${log.payment_mode || ''}', '${log.status || 'Paid'}')" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                 <button class="btn-action btn-delete-small" onclick="deleteSalaryLog(${log.id})" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
             </td>
@@ -1906,7 +1906,9 @@ function submitSalary(event) {
                     closeAddSalaryModal();
                     loadSalaryLogs();
                     // Show payslip
-                    showPayslipReceipt(empName, month, paymentDate, parseFloat(amount), paymentMode);
+                    if (data.id) {
+                        viewSalaryPayslip(data.id);
+                    }
                 } else {
                     alert('Error: ' + (data.error || 'Failed to add salary record'));
                 }
@@ -1937,70 +1939,9 @@ function deleteSalaryLog(id) {
     }
 }
 
-// Show payslip receipt in a modal after salary is paid
-function showPayslipReceipt(empName, month, paymentDate, amount, paymentMode) {
-    const monthLabel = month ? new Date(month + '-01').toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }) : '';
-    const dateLabel = paymentDate ? new Date(paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const receiptNo = 'SAL-' + Date.now().toString().slice(-6);
-
-    const html = `
-        <div id="payslipPrintArea" style="font-family: 'Segoe UI', sans-serif; max-width: 520px; margin: 0 auto; border: 2px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
-            <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); color: white; padding: 24px; text-align: center;">
-                <div style="font-size: 22px; font-weight: 700; letter-spacing: 1px;">SALARY PAYMENT RECEIPT</div>
-                <div style="font-size: 13px; margin-top: 4px; opacity: 0.85;">Receipt No: ${receiptNo}</div>
-            </div>
-            <div style="padding: 24px; background: #fff;">
-                <table style="width: 100%; border-collapse: collapse;">
-                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 12px 0; color: #64748b; font-size: 13px;">Employee Name</td>
-                        <td style="padding: 12px 0; font-weight: 600; text-align: right;">${empName}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 12px 0; color: #64748b; font-size: 13px;">Salary Month</td>
-                        <td style="padding: 12px 0; font-weight: 600; text-align: right;">${monthLabel}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 12px 0; color: #64748b; font-size: 13px;">Payment Date</td>
-                        <td style="padding: 12px 0; font-weight: 600; text-align: right;">${dateLabel}</td>
-                    </tr>
-                    <tr style="border-bottom: 1px solid #f1f5f9;">
-                        <td style="padding: 12px 0; color: #64748b; font-size: 13px;">Payment Mode</td>
-                        <td style="padding: 12px 0; font-weight: 600; text-align: right;">${paymentMode}</td>
-                    </tr>
-                    <tr>
-                        <td style="padding: 16px 0 8px; color: #1e293b; font-size: 15px; font-weight: 600;">Net Amount Paid</td>
-                        <td style="padding: 16px 0 8px; font-size: 20px; font-weight: 700; color: #10b981; text-align: right;">₹${amount.toFixed(2)}</td>
-                    </tr>
-                </table>
-                <div style="margin-top: 20px; padding: 12px 16px; background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; font-size: 13px; color: #166534;">
-                    ✅ Salary paid successfully and recorded in the system.
-                </div>
-            </div>
-        </div>`;
-
-    document.getElementById('payslipViewContent').innerHTML = html;
-    document.getElementById('payslipViewModal').classList.add('show');
-}
-
-function closePayslipViewModal() {
-    document.getElementById('payslipViewModal').classList.remove('show');
-}
-
-function printPayslipModal() {
-    const content = document.getElementById('payslipPrintArea').innerHTML;
-    const win = window.open('', '_blank');
-    win.document.write(`<!DOCTYPE html><html><head><title>Salary Receipt</title>
-    <style>body{font-family:'Segoe UI',sans-serif;margin:0;padding:20px;} @media print{body{padding:0;}}</style>
-    </head><body>${content}</body></html>`);
-    win.document.close();
-    win.focus();
-    win.print();
-    win.close();
-}
-
-// Add payslip view button to salary logs table
-function viewSalaryPayslip(empName, month, paymentDate, amount, paymentMode) {
-    showPayslipReceipt(empName, month, paymentDate, amount, paymentMode);
+// Open A4 Payslip in new tab
+function viewSalaryPayslip(id) {
+    window.open('api/print_payslip.php?id=' + id, '_blank');
 }
 
 // Window click to close modal needs update

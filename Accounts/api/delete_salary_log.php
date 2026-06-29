@@ -10,7 +10,7 @@ if (isset($_GET['id'])) {
 
         // 1. Get salary log details to find linked expense
         $getStmt = $conn->prepare("
-            SELECT s.amount, s.payment_date, e.name AS employee_name, e.role 
+            SELECT s.amount, s.payment_date, e.name AS employee_name, e.designation AS role 
             FROM salary_logs s 
             JOIN employees e ON s.employee_id = e.id 
             WHERE s.id = ?

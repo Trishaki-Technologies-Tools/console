@@ -29,10 +29,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cr = $conn->query("SHOW COLUMNS FROM employees");
     while ($c = $cr->fetch_assoc()) $eCols[] = $c['Field'];
 
-    if (in_array('role', $eCols) && in_array('status', $eCols)) {
-        $stmt = $conn->prepare("INSERT INTO employees (name, role, status) VALUES (?, '', 'Active')");
-    } elseif (in_array('role', $eCols)) {
-        $stmt = $conn->prepare("INSERT INTO employees (name, role) VALUES (?, '')");
+    if (in_array('designation', $eCols) && in_array('status', $eCols)) {
+        $stmt = $conn->prepare("INSERT INTO employees (name, designation, status) VALUES (?, '', 'active')");
+    } elseif (in_array('designation', $eCols)) {
+        $stmt = $conn->prepare("INSERT INTO employees (name, designation) VALUES (?, '')");
     } elseif (in_array('status', $eCols)) {
         $stmt = $conn->prepare("INSERT INTO employees (name, status) VALUES (?, 'Active')");
     } else {

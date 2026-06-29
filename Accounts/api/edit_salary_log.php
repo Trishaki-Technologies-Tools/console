@@ -10,8 +10,8 @@ function getEmployeeId($conn, $name, $role, $salary) {
     if ($res->num_rows > 0) {
         return $res->fetch_assoc()['id'];
     } else {
-        $stmt2 = $conn->prepare("INSERT INTO employees (name, role, salary) VALUES (?, ?, ?)");
-        $stmt2->bind_param("ssd", $name, $role, $salary);
+        $stmt2 = $conn->prepare("INSERT INTO employees (name, designation) VALUES (?, ?)");
+        $stmt2->bind_param("ss", $name, $role);
         $stmt2->execute();
         return $conn->insert_id;
     }
@@ -61,7 +61,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // 1. Get old salary log and employee details
         $getStmt = $conn->prepare("
-            SELECT s.amount, s.payment_date, e.name AS employee_name, e.role 
+            SELECT s.amount, s.payment_date, e.name AS employee_name, e.designation AS role 
             FROM salary_logs s 
             JOIN employees e ON s.employee_id = e.id 
             WHERE s.id = ?

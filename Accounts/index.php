@@ -1248,21 +1248,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
         </div>
     </div>
 
-    <!-- Payslip View Modal -->
-    <div id="payslipViewModal" class="modal">
-        <div class="modal-content wide">
-            <div class="modal-header">
-                <h3>Salary Payment Receipt</h3>
-                <button class="modal-close" onclick="closePayslipViewModal()">&times;</button>
-            </div>
-            <div class="modal-body" id="payslipViewContent" style="padding: 20px;">
-            </div>
-            <div class="modal-actions" style="padding: 0 20px 20px;">
-                <button class="btn-cancel" onclick="closePayslipViewModal()">Close</button>
-                <button class="btn-primary" onclick="printPayslipModal()">🖨️ Print</button>
-            </div>
-        </div>
-    </div>
+
 
     <!-- Edit Salary Modal -->
     <div id="editSalaryModal" class="modal">

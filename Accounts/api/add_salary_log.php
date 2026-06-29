@@ -10,8 +10,8 @@ function getEmployeeId($conn, $name, $role, $salary) {
     if ($res->num_rows > 0) {
         return $res->fetch_assoc()['id'];
     } else {
-        $stmt2 = $conn->prepare("INSERT INTO employees (name, role, salary) VALUES (?, ?, ?)");
-        $stmt2->bind_param("ssd", $name, $role, $salary);
+        $stmt2 = $conn->prepare("INSERT INTO employees (name, designation) VALUES (?, ?)");
+        $stmt2->bind_param("ss", $name, $role);
         $stmt2->execute();
         return $conn->insert_id;
     }
@@ -169,7 +169,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            echo json_encode(['success' => true, 'message' => 'Salary log added and synced to expenses successfully']);
+            echo json_encode(['success' => true, 'id' => $salaryLogId, 'message' => 'Salary log added and synced to expenses successfully']);
         } else {
             throw new Exception("Execute failed: " . $stmt->error);
         }
