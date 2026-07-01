@@ -644,8 +644,7 @@ function updateQuotationPreview() {
                 <h3>Project Overview</h3>
                 <p>
                     <strong>Project:</strong> ${escapeHtml(projectName)}<br>
-                    <strong>Description:</strong> ${escapeHtml(projectDesc || 'N/A')}<br>
-                    All values listed below are in INR.
+                    <strong>Description:</strong> ${escapeHtml(projectDesc || 'N/A')}
                 </p>
             </div>
         </div>

@@ -613,11 +613,10 @@ try {
             <div class="address-box">
                 <h3>Project Overview</h3>
                 <p>
-                    <strong>Project:</strong> <?php echo htmlspecialchars($projectName); ?><br>
+                    <strong>Project:</strong> <?php echo htmlspecialchars($projectName); ?>
                     <?php if (!empty($projectDesc)): ?>
-                        <strong>Description:</strong> <?php echo htmlspecialchars($projectDesc); ?><br>
+                        <br><strong>Description:</strong> <?php echo htmlspecialchars($projectDesc); ?>
                     <?php endif; ?>
-                    <strong>All values listed below are in INR.</strong>
                 </p>
             </div>
         </div>
