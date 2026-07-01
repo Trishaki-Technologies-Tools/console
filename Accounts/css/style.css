@@ -1061,9 +1061,9 @@ tr:last-child td:last-child {
    Quotation Builder Fullscreen Layout
    ========================================== */
 .modal-content.fullscreen {
-    max-width: 98vw;
-    width: 98vw;
-    height: 95vh;
+    max-width: 900px;
+    width: 90%;
+    height: 90vh;
     padding: 0;
     display: flex !important;
     flex-direction: column;
@@ -1074,16 +1074,15 @@ tr:last-child td:last-child {
 
 .qb-container {
     display: flex;
-    height: calc(95vh - 65px);
+    height: calc(90vh - 65px);
     overflow: hidden;
     width: 100%;
 }
 
 .qb-editor {
-    width: 50%;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    border-right: 1px solid var(--border-light);
     background: #f8fafc;
 }
 
@@ -1136,14 +1135,7 @@ tr:last-child td:last-child {
 }
 
 .qb-preview {
-    width: 50%;
-    background: #475569;
-    padding: 30px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 30px;
+    display: none;
 }
 
 /* Live A4 Sheet Preview */

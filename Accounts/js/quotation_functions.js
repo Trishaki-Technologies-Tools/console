@@ -3,19 +3,17 @@
 // ==========================================
 
 let currentQuotationStep = 1;
-const totalQuotationSteps = 4;
+const totalQuotationSteps = 3;
 let quotationScopeModules = [];
 let quotationTerms = [
     { title: '1', content: 'This quotation is valid for 15 days from the date of issue.' },
-    { title: '2', content: 'Project will commence upon receipt of the agreed advance payment.' },
-    { title: '3', content: 'This quotation covers only the scope of work mentioned herein.' },
-    { title: '4', content: 'Additional features or changes requested after approval will be quoted separately.' },
-    { title: '5', content: 'The client shall provide all required content and approvals on time.' },
-    { title: '6', content: 'Delays in client approvals may extend the project timeline.' },
-    { title: '7', content: 'Third-party charges (if applicable) shall be borne by the client unless otherwise specified.' },
-    { title: '8', content: 'Project ownership will be transferred upon receipt of full payment.' },
-    { title: '9', content: 'Advance payment is non-refundable once the project has commenced.' },
-    { title: '10', content: 'By signing this quotation, the client agrees to the above Terms & Conditions' }
+    { title: '2', content: 'The project will commence upon receipt of 30% advance payment of the total quoted amount.' },
+    { title: '3', content: 'The quotation includes only the scope of work mentioned below.' },
+    { title: '4', content: 'Any additional features or changes will be charged separately.' },
+    { title: '5', content: 'The client is responsible for providing the required content and timely approvals.' },
+    { title: '6', content: 'Third-party charges (hosting, domain, APIs, etc.), if applicable, will be borne by the client.' },
+    { title: '7', content: 'Project ownership will be transferred after full payment is received.' },
+    { title: '8', content: 'Advance payment is non-refundable once the project has commenced.' }
 ];
 
 // Presets for Quick Add
@@ -52,8 +50,10 @@ function openQuotationModal(quoteNo = null) {
     document.getElementById('qDiscountInput').value = '0';
     document.getElementById('qGstRateInput').value = '18';
     
-    document.getElementById('qClientSignName').value = '';
-    document.getElementById('qClientSignDate').value = '';
+    const clientSignNameEl = document.getElementById('qClientSignName');
+    const clientSignDateEl = document.getElementById('qClientSignDate');
+    if (clientSignNameEl) clientSignNameEl.value = '';
+    if (clientSignDateEl) clientSignDateEl.value = '';
     
     const includeScopeCheckbox = document.getElementById('qIncludeScope');
     if (includeScopeCheckbox) {
@@ -119,49 +119,23 @@ function openQuotationModal(quoteNo = null) {
                     }));
                 }
                 
-                // Populate terms
-                if (data.terms && Array.isArray(data.terms)) {
-                    let isLegacy = false;
-                    data.terms.forEach(t => {
-                        const titleLower = (t.title || '').toLowerCase();
-                        if (titleLower.includes('payment') || titleLower.includes('timeline') || titleLower.includes('validity')) {
-                            isLegacy = true;
-                        }
-                    });
-                    if (isLegacy || data.terms.length < 6) {
-                        quotationTerms = [
-                            { title: '1', content: 'This quotation is valid for 15 days from the date of issue.' },
-                            { title: '2', content: 'Project will commence upon receipt of the agreed advance payment.' },
-                            { title: '3', content: 'This quotation covers only the scope of work mentioned herein.' },
-                            { title: '4', content: 'Additional features or changes requested after approval will be quoted separately.' },
-                            { title: '5', content: 'The client shall provide all required content and approvals on time.' },
-                            { title: '6', content: 'Delays in client approvals may extend the project timeline.' },
-                            { title: '7', content: 'Third-party charges (if applicable) shall be borne by the client unless otherwise specified.' },
-                            { title: '8', content: 'Project ownership will be transferred upon receipt of full payment.' },
-                            { title: '9', content: 'Advance payment is non-refundable once the project has commenced.' },
-                            { title: '10', content: 'By signing this quotation, the client agrees to the above Terms & Conditions' }
-                        ];
-                    } else {
-                        quotationTerms = data.terms.map(t => ({ title: t.title, content: t.content }));
-                    }
-                } else {
-                    quotationTerms = [
-                        { title: '1', content: 'This quotation is valid for 15 days from the date of issue.' },
-                        { title: '2', content: 'Project will commence upon receipt of the agreed advance payment.' },
-                        { title: '3', content: 'This quotation covers only the scope of work mentioned herein.' },
-                        { title: '4', content: 'Additional features or changes requested after approval will be quoted separately.' },
-                        { title: '5', content: 'The client shall provide all required content and approvals on time.' },
-                        { title: '6', content: 'Delays in client approvals may extend the project timeline.' },
-                        { title: '7', content: 'Third-party charges (if applicable) shall be borne by the client unless otherwise specified.' },
-                        { title: '8', content: 'Project ownership will be transferred upon receipt of full payment.' },
-                        { title: '9', content: 'Advance payment is non-refundable once the project has commenced.' },
-                        { title: '10', content: 'By signing this quotation, the client agrees to the above Terms & Conditions' }
-                    ];
-                }
+                // Populate terms (always use defaults)
+                quotationTerms = [
+                    { title: '1', content: 'This quotation is valid for 15 days from the date of issue.' },
+                    { title: '2', content: 'The project will commence upon receipt of 30% advance payment of the total quoted amount.' },
+                    { title: '3', content: 'The quotation includes only the scope of work mentioned below.' },
+                    { title: '4', content: 'Any additional features or changes will be charged separately.' },
+                    { title: '5', content: 'The client is responsible for providing the required content and timely approvals.' },
+                    { title: '6', content: 'Third-party charges (hosting, domain, APIs, etc.), if applicable, will be borne by the client.' },
+                    { title: '7', content: 'Project ownership will be transferred after full payment is received.' },
+                    { title: '8', content: 'Advance payment is non-refundable once the project has commenced.' }
+                ];
                 
-                // Populate client sign
-                document.getElementById('qClientSignName').value = data.client_signature_name || '';
-                document.getElementById('qClientSignDate').value = data.client_signature_date || '';
+                // Populate client sign (safe-guarded in case elements are removed)
+                const clientSignNameEl = document.getElementById('qClientSignName');
+                const clientSignDateEl = document.getElementById('qClientSignDate');
+                if (clientSignNameEl) clientSignNameEl.value = data.client_signature_name || '';
+                if (clientSignDateEl) clientSignDateEl.value = data.client_signature_date || '';
                 
             } else {
                 // Legacy flat items format
@@ -181,15 +155,13 @@ function openQuotationModal(quoteNo = null) {
         // Default terms preset
         quotationTerms = [
             { title: '1', content: 'This quotation is valid for 15 days from the date of issue.' },
-            { title: '2', content: 'Project will commence upon receipt of the agreed advance payment.' },
-            { title: '3', content: 'This quotation covers only the scope of work mentioned herein.' },
-            { title: '4', content: 'Additional features or changes requested after approval will be quoted separately.' },
-            { title: '5', content: 'The client shall provide all required content and approvals on time.' },
-            { title: '6', content: 'Delays in client approvals may extend the project timeline.' },
-            { title: '7', content: 'Third-party charges (if applicable) shall be borne by the client unless otherwise specified.' },
-            { title: '8', content: 'Project ownership will be transferred upon receipt of full payment.' },
-            { title: '9', content: 'Advance payment is non-refundable once the project has commenced.' },
-            { title: '10', content: 'By signing this quotation, the client agrees to the above Terms & Conditions' }
+            { title: '2', content: 'The project will commence upon receipt of 30% advance payment of the total quoted amount.' },
+            { title: '3', content: 'The quotation includes only the scope of work mentioned below.' },
+            { title: '4', content: 'Any additional features or changes will be charged separately.' },
+            { title: '5', content: 'The client is responsible for providing the required content and timely approvals.' },
+            { title: '6', content: 'Third-party charges (hosting, domain, APIs, etc.), if applicable, will be borne by the client.' },
+            { title: '7', content: 'Project ownership will be transferred after full payment is received.' },
+            { title: '8', content: 'Advance payment is non-refundable once the project has commenced.' }
         ];
     }
     
@@ -608,9 +580,7 @@ function updateTermContent(idx, val) {
 
 // 7. Live Preview Generator
 function updateQuotationPreview() {
-    const dateVal = document.getElementById('qDate').value;
-    const formattedDate = dateVal ? new Date(dateVal).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
-    const validUntilDate = dateVal ? new Date(new Date(dateVal).getTime() + (15 * 24 * 60 * 60 * 1000)).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '';
+    return; // Disabled preview to prevent performance slowdown
     
     const clientName = document.getElementById('qClientName').value || 'Client Name';
     const clientPhone = document.getElementById('qClientPhone').value || 'Phone Number';
@@ -743,9 +713,9 @@ function updateQuotationPreview() {
                     Client Seal / Signature Box
                 </div>
                 <div class="preview-sig-line"></div>
-                <span class="preview-sig-label">Accepted By (Client)</span>
-                ${document.getElementById('qClientSignName').value ? `<div style="font-size: 9px; color: #334155; font-weight: bold;">${escapeHtml(document.getElementById('qClientSignName').value)}</div>` : ''}
-                ${document.getElementById('qClientSignDate').value ? `<div style="font-size: 8px; color: #64748b;">Date: ${escapeHtml(document.getElementById('qClientSignDate').value)}</div>` : ''}
+                <span class="preview-sig-label">Accepted By</span>
+                ${(document.getElementById('qClientSignName') && document.getElementById('qClientSignName').value) ? `<div style="font-size: 9px; color: #334155; font-weight: bold;">${escapeHtml(document.getElementById('qClientSignName').value)}</div>` : ''}
+                ${(document.getElementById('qClientSignDate') && document.getElementById('qClientSignDate').value) ? `<div style="font-size: 8px; color: #64748b;">Date: ${escapeHtml(document.getElementById('qClientSignDate').value)}</div>` : ''}
             </div>
             
             <div class="preview-sig-col" style="position: relative;">
@@ -1039,8 +1009,8 @@ function saveQuotationNew(statusType = 'draft') {
             features: m.features
         })),
         terms: quotationTerms,
-        client_signature_name: document.getElementById('qClientSignName').value,
-        client_signature_date: document.getElementById('qClientSignDate').value
+        client_signature_name: document.getElementById('qClientSignName') ? document.getElementById('qClientSignName').value : '',
+        client_signature_date: document.getElementById('qClientSignDate') ? document.getElementById('qClientSignDate').value : ''
     };
     
     // Save/Update quotation

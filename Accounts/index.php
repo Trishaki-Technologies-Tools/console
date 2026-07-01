@@ -175,7 +175,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>TriShaKi Technologies - Finance Dashboard</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=2">
     <style>
         .dropdown-option {
             transition: background-color 0.2s ease, color 0.2s ease;
@@ -1951,7 +1951,6 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <button type="button" class="qb-tab-btn active" id="tab-btn-info" onclick="switchQuotationTab('info')">1. Client & Project</button>
                         <button type="button" class="qb-tab-btn" id="tab-btn-commercial" onclick="switchQuotationTab('commercial')">2. Commercial Details</button>
                         <button type="button" class="qb-tab-btn" id="tab-btn-scope" onclick="switchQuotationTab('scope')">3. Scope of Work</button>
-                        <button type="button" class="qb-tab-btn" id="tab-btn-terms" onclick="switchQuotationTab('terms')" style="display: none;">4. Terms & Signatures</button>
                     </div>
                     
                     <div class="qb-tab-content">
@@ -2080,30 +2079,6 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                 <!-- Modules will be populated here -->
                             </div>
                         </div>
-                        
-                        <!-- Step 4: Terms & Signatures -->
-                        <div id="step-terms" class="qb-step-panel">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 style="margin: 0; color: var(--text-main); font-size: 15px;">Terms & Conditions</h4>
-                                <button type="button" class="btn-secondary" onclick="addTermRow()" style="padding: 6px 12px; font-size: 12px;">+ Add Section</button>
-                            </div>
-                            
-                            <div id="qTermsList" class="sortable-list" style="margin-bottom: 25px;">
-                                <!-- Terms populated here -->
-                            </div>
-                            
-                            <h4 style="margin-top: 20px; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Client Acceptance Signature Box</h4>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
-                                <div class="form-group">
-                                    <label class="form-label">Client Signatory Name</label>
-                                    <input type="text" id="qClientSignName" class="form-input" placeholder="e.g. John Doe" oninput="updateQuotationPreview()" style="color: var(--text-main); background: #fff;">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Signature Date</label>
-                                    <input type="date" id="qClientSignDate" class="form-input" oninput="updateQuotationPreview()" style="color: var(--text-main); background: #fff;">
-                                </div>
-                            </div>
-                        </div>
                     </div>
                     
                     <div class="modal-actions" style="padding: 15px 24px; border-top: 1px solid var(--border-light); background: #ffffff; margin-top: 0; display: flex; justify-content: space-between; align-items: center;">
@@ -2118,19 +2093,6 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         </div>
                     </div>
                 </div>
-                
-                <!-- Right Panel: Live Document Preview -->
-                <div class="qb-preview">
-                    <!-- Page 1 Preview -->
-                    <div class="qb-paper" id="previewPage1">
-                        <!-- Dynamically filled by updateQuotationPreview() -->
-                    </div>
-                    
-                    <!-- Page 2 Preview -->
-                    <div class="qb-paper" id="previewPage2">
-                        <!-- Dynamically filled by updateQuotationPreview() -->
-                    </div>
-                </div>
             </div>
         </div>
     </div>
@@ -2138,7 +2100,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
     <script src="js/app.js"></script>
     <script src="js/invoice_functions.js"></script>
-    <script src="js/quotation_functions.js"></script>
+    <script src="js/quotation_functions.js?v=2"></script>
     <script>
         function toggleInvoiceDropdown(event) {
             event.preventDefault();

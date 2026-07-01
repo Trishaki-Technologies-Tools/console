@@ -683,7 +683,7 @@ try {
                 <div class="sig-col">
                     <div style="height: 65px;"></div>
                     <div class="sig-line"></div>
-                    <span class="sig-label">Accepted By (Client)</span>
+                    <span class="sig-label">Accepted By</span>
                     <div
                         style="font-size: 11pt; color: #334155; font-weight: bold; margin-top: 5px; white-space: nowrap;">
                         <?php echo htmlspecialchars($quote['client_name']); ?></div>
