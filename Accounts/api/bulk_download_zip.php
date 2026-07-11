@@ -151,7 +151,6 @@ while ($inv = $result->fetch_assoc()) {
                     <div style='font-size: 8px; color: #666;'>INVOICE INFO:</div>
                     <div style='font-size: 11px; margin-top: 5px;'><strong>Invoice No:</strong> $invoiceNo</div>
                     <div style='font-size: 11px;'><strong>Date:</strong> ".date('d-M-Y', strtotime($date))."</div>
-                    <div style='font-size: 11px;'><strong>Term:</strong> ".($items[0]['paymentMode'] ?? 'Online')."</div>
                 </div>
             </div>
             <table class='invoice-table'>
@@ -162,16 +161,9 @@ while ($inv = $result->fetch_assoc()) {
                 <div class='amount-in-words'><div style='font-size: 8px; color: #666;'>AMOUNT IN WORDS:</div><div style='font-size: 10px; margin-top: 5px; font-style: italic;'>$amountInWords</div></div>
                 <div class='summary-table'>
                     <table style='width:100%; font-size: 10px; border-collapse: collapse;'>
-                        ".($balanceDue <= 0.01 ? "
                         <tr><td style='padding: 2px; font-weight: bold;'>Total Amount:</td><td style='text-align:right; font-weight: bold;'>₹".number_format($originalTotalPayable, 2)."</td></tr>
-                        <tr><td style='padding: 2px; font-weight: bold;'>Amount Paid:</td><td style='text-align:right; font-weight: bold;'>₹".number_format($cumulativeTotalPaid, 2)."</td></tr>
-                        <tr style='background:#000; color:#fff;'><td style='padding: 3px;'><strong>Balance Due:</strong></td><td style='text-align:right;'><strong>₹0.00</strong></td></tr>
-                        " : "
-                        <tr><td style='padding: 2px;'>Total Amount:</td><td style='text-align:right;'>₹".number_format($originalTotalPayable, 2)."</td></tr>
-                        <tr style='border-top:1px solid #000;'><td style='padding: 3px;'><strong>Current Payment Received:</strong></td><td style='text-align:right;'><strong>₹".number_format($paidThisInstallment, 2)."</strong></td></tr>
-                        <tr style='background:#f2f2f2;'><td style='padding: 3px;'><strong>Total Paid Till Date:</strong></td><td style='text-align:right;'><strong>₹".number_format($cumulativeTotalPaid, 2)."</strong></td></tr>
-                        <tr style='background:#000; color:#fff;'><td style='padding: 3px;'><strong>Balance Due:</strong></td><td style='text-align:right;'><strong>₹".number_format($balanceDue, 2)."</strong></td></tr>
-                        ")."
+                        <tr><td style='padding: 2px;'>Payment Made:</td><td style='text-align:right; font-weight: bold; color:#059669;'>₹".number_format($cumulativeTotalPaid, 2)."</td></tr>
+                        <tr style='border-top: 1px solid #ddd;'><td style='padding: 2px; font-weight: bold;'>Balance Due:</td><td style='text-align:right; font-weight: bold; color: ".($balanceDue > 0.01 ? '#dc2626' : '#1e293b').";'>₹".number_format($balanceDue, 2)."</td></tr>
                     </table>
                 </div>
             </div>

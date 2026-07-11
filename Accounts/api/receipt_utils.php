@@ -1,24 +1,24 @@
 <?php
-// Shared Utilities for Invoice Generation
+// Shared Utilities for Receipt Generation
 
-function generateInvoiceNumber($conn, $customerId, $type, $continueFrom, $items) {
+function generateReceiptNumber($conn, $clientId, $type, $continueFrom, $items) {
     $year = date('Y');
     
-    // Find the maximum invoice number suffix for the current year to prevent duplicate entry errors
+    // Find the maximum receipt number suffix for the current year to prevent duplicate entry errors
     $stmt = $conn->prepare("
-        SELECT invoice_no 
-        FROM invoices 
-        WHERE invoice_no LIKE ?
+        SELECT receipt_no 
+        FROM receipts 
+        WHERE receipt_no LIKE ?
     ");
-    $pattern = "TSK-$year-%";
+    $pattern = "RECP-$year-%";
     $stmt->bind_param("s", $pattern);
     $stmt->execute();
     $result = $stmt->get_result();
     
     $maxNum = 0;
     while ($row = $result->fetch_assoc()) {
-        $invNo = $row['invoice_no'];
-        if (preg_match('/^TSK-\d{4}-(\d+)/', $invNo, $matches)) {
+        $recNo = $row['receipt_no'];
+        if (preg_match('/^RECP-\d{4}-(\d+)/', $recNo, $matches)) {
             $num = intval($matches[1]);
             if ($num > $maxNum) {
                 $maxNum = $num;
@@ -27,8 +27,9 @@ function generateInvoiceNumber($conn, $customerId, $type, $continueFrom, $items)
     }
     
     $nextNumber = $maxNum + 1;
-    return 'TSK-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
+    return 'RECP-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 }
+
 if (!function_exists('numberToWords')) {
     function numberToWords($number) {
         if ($number === null || $number === '') return '';

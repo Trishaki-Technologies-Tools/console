@@ -205,6 +205,48 @@ try {
         $stmt->execute();
     }
     
+    // Automatically generate/update receipt if there is an amount paid
+    if ($currentPaid > 0) {
+        require_once 'receipt_utils.php';
+        
+        $receiptItems = json_encode([[
+            'description' => "Payment for Invoice #$invoiceNo",
+            'amount' => $currentPaid,
+            'paidAmt' => $currentPaid,
+            'paymentMode' => $paidItems[0]['paymentMode'] ?? 'Online',
+            'date' => $invoiceDate
+        ]]);
+        
+        $rStatus = ($currentPaid >= $originalTotalPayable - 0.01) ? 'paid' : 'partially_paid';
+        
+        if ($isEditMode) {
+            // Check if there is an existing receipt for this invoice
+            $chk = $conn->prepare("SELECT id FROM receipts WHERE invoice_no = ? ORDER BY id ASC LIMIT 1");
+            $chk->bind_param("s", $invoiceNo);
+            $chk->execute();
+            $chkRes = $chk->get_result();
+            if ($chkRes->num_rows > 0) {
+                $existingRec = $chkRes->fetch_assoc();
+                // Update first receipt
+                $stmtRec = $conn->prepare("UPDATE receipts SET client_id = ?, type = ?, items = ?, original_total_payable = ?, cumulative_total_paid = ?, receipt_date = ?, status = ? WHERE id = ?");
+                $stmtRec->bind_param("issddssi", $clientId, $type, $receiptItems, $originalTotalPayable, $currentPaid, $invoiceDate, $rStatus, $existingRec['id']);
+                $stmtRec->execute();
+            } else {
+                // Create a new one
+                $receiptNo = generateReceiptNumber($conn, $clientId, $type, null, $receiptItems);
+                $stmtRec = $conn->prepare("INSERT INTO receipts (receipt_no, client_id, invoice_no, type, items, original_total_payable, cumulative_total_paid, receipt_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                $stmtRec->bind_param("sisssddss", $receiptNo, $clientId, $invoiceNo, $type, $receiptItems, $originalTotalPayable, $currentPaid, $invoiceDate, $rStatus);
+                $stmtRec->execute();
+            }
+        } else {
+            // New invoice, insert receipt
+            $receiptNo = generateReceiptNumber($conn, $clientId, $type, null, $receiptItems);
+            $stmtRec = $conn->prepare("INSERT INTO receipts (receipt_no, client_id, invoice_no, type, items, original_total_payable, cumulative_total_paid, receipt_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmtRec->bind_param("sisssddss", $receiptNo, $clientId, $invoiceNo, $type, $receiptItems, $originalTotalPayable, $currentPaid, $invoiceDate, $rStatus);
+            $stmtRec->execute();
+        }
+    }
+    
     // Commit transaction
     $conn->commit();
     

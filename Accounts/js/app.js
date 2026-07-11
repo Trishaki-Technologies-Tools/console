@@ -87,6 +87,9 @@ function switchPage(pageId, title = null) {
     if (pageId === 'invoices') {
         if (typeof loadInvoicesFromDB === 'function') loadInvoicesFromDB();
     }
+    if (pageId === 'receipts') {
+        if (typeof loadReceiptsFromDB === 'function') loadReceiptsFromDB();
+    }
     if (pageId === 'voucher') {
         if (typeof loadVouchers === 'function') loadVouchers();
     }

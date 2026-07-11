@@ -51,6 +51,9 @@ function displayInvoices() {
                     <button class="btn-action" onclick="viewInvoiceByNo('${invoice.invoiceNo}')" title="View Invoice" style="background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                         👁️
                     </button>
+                    <button class="btn-action" onclick="downloadInvoiceByNo('${invoice.invoiceNo}')" title="Download PDF" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                        📥
+                    </button>
                     <button class="btn-action" onclick="editInvoiceByNo('${invoice.invoiceNo}')" title="Edit Data" style="background: #64748b; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
                         ✏️
                     </button>
@@ -90,6 +93,34 @@ function displayInvoices() {
         if (pending > 0) totPend += pending;
     });
 
+    // Calculate Cash vs Online breakdown from Receipts
+    let totCash = 0;
+    let totOnline = 0;
+    if (typeof generatedReceipts !== 'undefined' && Array.isArray(generatedReceipts)) {
+        generatedReceipts.forEach(rec => {
+            try {
+                const items = JSON.parse(rec.items || '[]');
+                if (Array.isArray(items)) {
+                    let receiptPaid = 0;
+                    let mode = 'online';
+                    items.forEach(item => {
+                        receiptPaid += parseFloat(item.paidAmt || item.amount || 0);
+                        if (item.paymentMode) {
+                            mode = item.paymentMode.toLowerCase();
+                        }
+                    });
+                    if (mode === 'cash') {
+                        totCash += receiptPaid;
+                    } else {
+                        totOnline += receiptPaid;
+                    }
+                }
+            } catch (e) {
+                console.error("Error parsing items for receipt", rec.receiptNo, e);
+            }
+        });
+    }
+
     if (document.getElementById('total-invoice-count')) {
         document.getElementById('total-invoice-count').innerText = totInvoices;
     }
@@ -110,15 +141,41 @@ function displayInvoices() {
         paidEl.innerText = '₹' + totColl.toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
 
+    const cashEl = document.getElementById('total-invoice-cash');
+    if (cashEl) {
+        cashEl.innerText = '₹' + totCash.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+
+    const onlineEl = document.getElementById('total-invoice-online');
+    if (onlineEl) {
+        onlineEl.innerText = '₹' + totOnline.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+    
+    const pendingEl = document.getElementById('total-invoice-pending');
+    if (pendingEl) {
+        pendingEl.innerText = '₹' + totPend.toLocaleString('en-IN', { minimumFractionDigits: 2 });
+    }
+
     // Also support legacy/alternative IDs if they exist
     const collectedEl = document.getElementById('total-invoice-collected');
     if (collectedEl) {
         collectedEl.innerText = '₹' + totColl.toLocaleString('en-IN', { minimumFractionDigits: 2 });
     }
-    const pendingEl = document.getElementById('total-invoice-pending');
-    if (pendingEl) {
-        pendingEl.innerText = '₹' + totPend.toLocaleString('en-IN', { minimumFractionDigits: 2 });
-    }
+}
+
+// Search Invoices
+function searchInvoices() {
+    const query = document.getElementById('invoice-search').value.toLowerCase();
+    const rows = document.querySelectorAll('#invoice-list tbody tr');
+    
+    rows.forEach(row => {
+        const text = row.textContent.toLowerCase();
+        if (text.includes(query)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
 }
 
 // View/Generate Invoice by No
@@ -524,9 +581,12 @@ function showInvoiceTypeSelection() {
 
 function selectInvoiceType(type) {
     document.getElementById('invoiceTypeSelectionDiv').style.display = 'none';
+    const today = new Date().toISOString().split('T')[0];
     if (type === 'non-gst') {
+        document.getElementById('nonGstPaymentDate').value = today;
         document.getElementById('nonGstInvoiceModal').classList.add('show');
     } else if (type === 'gst') {
+        document.getElementById('gstPaymentDate').value = today;
         document.getElementById('gstInvoiceModal').classList.add('show');
     }
 }
@@ -1018,19 +1078,22 @@ function saveInvoice(invoiceData) {
     });
 }
 
-// Data Loading
 function loadInvoicesFromDB() {
-    fetch('api/get_invoices.php')
-        .then(r => r.json())
-        .then(data => {
-            generatedInvoices = Array.isArray(data) ? data : [];
-            displayInvoices();
-        })
-        .catch(err => {
-            console.error('Error loading invoices:', err);
-            generatedInvoices = [];
-            displayInvoices();
-        });
+    Promise.all([
+        fetch('api/get_invoices.php').then(r => r.json()),
+        fetch('api/get_receipts.php').then(r => r.json())
+    ])
+    .then(([invData, recData]) => {
+        generatedInvoices = Array.isArray(invData) ? invData : [];
+        generatedReceipts = Array.isArray(recData) ? recData : [];
+        displayInvoices();
+    })
+    .catch(err => {
+        console.error('Error loading invoices and receipts:', err);
+        generatedInvoices = [];
+        generatedReceipts = [];
+        displayInvoices();
+    });
 }
 
 function loadCustomersFromDB() {

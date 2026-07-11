@@ -1,57 +1,99 @@
 <?php
 /**
- * Master PDF Generator - 100% Visual Fidelity with Screenshot 2
+ * Master PDF Generator for Receipts
  */
 
 ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 require_once 'config.php';
-require_once 'invoice_utils.php';
+require_once 'receipt_utils.php';
 require_once '../vendor/autoload.php';
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
-$invoiceNo = $_GET['invoiceNo'] ?? '';
-if (!$invoiceNo) die("Invoice number required.");
+$receiptNo = $_GET['receiptNo'] ?? '';
+if (!$receiptNo) die("Receipt number required.");
 
 // 1. Fetch Data
 $stmt = $conn->prepare("
-    SELECT i.*, c.name as billToName, c.phone, c.email, c.gst_number as gstNumber 
-    FROM invoices i JOIN clients c ON i.client_id = c.id 
-    WHERE i.invoice_no = ?
+    SELECT r.*, c.name as billToName, c.phone, c.email, c.gst_number as gstNumber 
+    FROM receipts r JOIN clients c ON r.client_id = c.id 
+    WHERE r.receipt_no = ?
 ");
-$stmt->bind_param("s", $invoiceNo);
+$stmt->bind_param("s", $receiptNo);
 $stmt->execute();
-$inv = $stmt->get_result()->fetch_assoc();
-if (!$inv) die("Invoice not found.");
-$inv['address'] = '';
+$rec = $stmt->get_result()->fetch_assoc();
+if (!$rec) die("Receipt not found.");
+$rec['address'] = '';
 
-$items = json_decode($inv['items'], true);
-$type = $inv['type'];
+$items = json_decode($rec['items'], true);
+$type = $rec['type'];
+
+// Calculate how much was paid on this receipt from receipt items
+$paidThisInstallment = 0;
+$receiptPaymentMode = 'Online';
+if (is_array($items)) {
+    foreach ($items as $item) {
+        $paidThisInstallment += floatval($item['paidAmt'] ?? $item['amount'] ?? $item['totalInclTax'] ?? 0);
+        if (!empty($item['paymentMode'])) {
+            $receiptPaymentMode = $item['paymentMode'];
+        }
+    }
+}
+
+$invoiceNo = $rec['invoice_no'] ?? '';
+$dbOriginalTotal = floatval($rec['original_total_payable']);
+$dbCumulativePaid = floatval($rec['cumulative_total_paid']);
+
+if (!empty($invoiceNo) && isset($conn)) {
+    $invStmt = $conn->prepare("SELECT original_total_payable, cumulative_total_paid, items FROM invoices WHERE invoice_no = ?");
+    if ($invStmt) {
+        $invStmt->bind_param("s", $invoiceNo);
+        $invStmt->execute();
+        $invRes = $invStmt->get_result();
+        if ($invRow = $invRes->fetch_assoc()) {
+            $dbOriginalTotal = floatval($invRow['original_total_payable']);
+            $dbCumulativePaid = floatval($invRow['cumulative_total_paid']);
+            // Override receipt items with parent invoice items to match description
+            if (!empty($invRow['items'])) {
+                $invoiceItems = json_decode($invRow['items'], true);
+                if (is_array($invoiceItems) && !empty($invoiceItems)) {
+                    $items = $invoiceItems;
+                }
+            }
+        }
+    }
+}
 
 // 2. Pre-Calculate Values
 $calcOriginalTotal = 0;
+if (is_array($items)) {
+    foreach ($items as $item) {
+        $calcOriginalTotal += floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
+    }
+}
+
+$originalTotal = ($dbOriginalTotal > 0) ? $dbOriginalTotal : (($calcOriginalTotal > 0) ? $calcOriginalTotal : 5000.00);
+$cumulativePaid = $dbCumulativePaid;
+$previouslyPaid = $cumulativePaid - $paidThisInstallment;
+$balanceDue = $originalTotal - $cumulativePaid;
+
 $itemsHtml = "";
 if (is_array($items)) {
     foreach ($items as $i => $item) {
         $itemAmt = floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
-        $calcOriginalTotal += $itemAmt;
+        $itemPaidAmt = ($originalTotal > 0) ? (($itemAmt / $originalTotal) * $paidThisInstallment) : $itemAmt;
         $itemsHtml .= "
         <tr>
             <td class='text-center' style='white-space: nowrap;'>".($i+1)."</td>
             <td class='bold'>".htmlspecialchars($item['description'])."</td>
-            <td class='text-right bold'>₹".number_format($itemAmt, 2)."</td>
+            <td class='text-right bold'>₹".number_format($itemPaidAmt, 2)."</td>
         </tr>";
     }
 }
-$originalTotal = ($calcOriginalTotal > 0) ? $calcOriginalTotal : floatval($inv['original_total_payable']);
-$cumulativePaid = floatval($inv['cumulative_total_paid']);
-$paidThisInstallment = floatval($items[0]['paidAmt'] ?? 0);
-$previouslyPaid = $cumulativePaid - $paidThisInstallment;
-$balanceDue = $originalTotal - $cumulativePaid;
-$amountInWords = numberToWords($originalTotal) . ' Rupees Only';
+$amountInWords = numberToWords($paidThisInstallment) . ' Rupees Only';
 $rowHeight = count($items) === 1 ? '320px' : 'auto';
 
 // 3. Assets
@@ -72,7 +114,7 @@ $options->set('isHtml5ParserEnabled', true);
 $options->set('isRemoteEnabled', true);
 $options->set('defaultFont', 'DejaVu Sans'); // Better support for Rupee symbol
 
-// 5. Build HTML (Matching Screenshot 2 Exactly)
+// 5. Build HTML
 $html = "
 <!DOCTYPE html>
 <html>
@@ -116,7 +158,7 @@ $html = "
     <div class='container'>
         <table class='master-table'>
             <!-- Header Label -->
-            <tr><td colspan='2' class='header-label text-center'>".($type === 'gst' ? 'TAX INVOICE' : 'INVOICE')."</td></tr>
+            <tr><td colspan='2' class='header-label text-center'>".($type === 'gst' ? 'TAX PAYMENT RECEIPT' : 'PAYMENT RECEIPT')."</td></tr>
             
             <!-- Logo & Company -->
             <tr>
@@ -134,17 +176,19 @@ $html = "
             <!-- Billing Info -->
             <tr>
                 <td class='cell'>
-                    <div class='section-title uppercase'>BILL TO:</div>
-                    <div class='bill-name'>{$inv['billToName']}</div>
-                    <div style='font-size:10px;'>Phone: {$inv['phone']}</div>
-                    ".(!empty($inv['email']) ? "<div style='font-size:10px;'>Email: {$inv['email']}</div>" : "")."
-                    ".(!empty($inv['address']) ? "<div style='font-size:10px;'>Address: {$inv['address']}</div>" : "")."
+                    <div class='section-title uppercase'>RECEIVED FROM:</div>
+                    <div class='bill-name'>{$rec['billToName']}</div>
+                    <div style='font-size:10px;'>Phone: {$rec['phone']}</div>
+                    ".(!empty($rec['email']) ? "<div style='font-size:10px;'>Email: {$rec['email']}</div>" : "")."
+                    ".(!empty($rec['address']) ? "<div style='font-size:10px;'>Address: {$rec['address']}</div>" : "")."
                 </td>
                 <td class='cell'>
-                    <div class='section-title uppercase'>INVOICE INFORMATION:</div>
+                    <div class='section-title uppercase'>RECEIPT INFORMATION:</div>
                     <table style='width:100%; font-size: 11px; border-collapse: collapse;'>
-                        <tr><td class='bold'>Invoice No:</td><td class='text-right'>{$inv['invoice_no']}</td></tr>
-                        <tr><td class='bold'>Invoice Date:</td><td class='text-right'>".date('d-M-Y', strtotime($inv['invoice_date']))."</td></tr>
+                        <tr><td class='bold'>Receipt No:</td><td class='text-right'>{$rec['receipt_no']}</td></tr>
+                        ".(!empty($rec['invoice_no']) ? "<tr><td class='bold'>Invoice No:</td><td class='text-right'>{$rec['invoice_no']}</td></tr>" : "")."
+                        <tr><td class='bold'>Receipt Date:</td><td class='text-right'>".date('d-M-Y', strtotime($rec['receipt_date']))."</td></tr>
+                        <tr><td class='bold'>Payment Mode:</td><td class='text-right'>{$receiptPaymentMode}</td></tr>
                     </table>
                 </td>
             </tr>
@@ -157,7 +201,7 @@ $html = "
                             <tr>
                                 <th style='width: 10%; text-align: center; white-space: nowrap;'>Sl No</th>
                                 <th style='width: 70%;'>DESCRIPTION</th>
-                                <th style='width: 20%; text-align: right;'>CHARGES</th>
+                                <th style='width: 20%; text-align: right;'>AMOUNT</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -175,53 +219,39 @@ $html = "
                 </td>
                 <td class='cell' style='padding: 0;'>
                     <table class='totals-table'>
-                        <tr><td class='bold'>Total Amount:</td><td class='text-right bold'>₹".number_format($originalTotal, 2)."</td></tr>
-                        <tr><td>Payment Made:</td><td class='text-right bold' style='color:#059669;'>₹".number_format($cumulativePaid, 2)."</td></tr>
-                        <tr style='border-top: 1px solid #000;'><td class='bold'>Balance Due:</td><td class='text-right bold' style='color: ".($balanceDue > 0.01 ? '#dc2626' : '#000').";'>₹".number_format($balanceDue, 2)."</td></tr>
+                        <tr><td class='bold'>Amount Received:</td><td class='text-right bold green' style='font-size: 11px;'>₹".number_format($paidThisInstallment, 2)."</td></tr>
                     </table>
                 </td>
             </tr>
             
-            <!-- Footer: 3-column: Bank Details | QR Code | Signature -->
+            <!-- Footer: 2-column: Outstanding Summary | Signature -->
             <tr>
                 <td colspan='2' style='padding: 0; border: 0.8pt solid #000;'>
                     <table style='width: 100%; border-collapse: collapse; table-layout: fixed;'>
                         <tr>
-                            <!-- Column 1: Bank Details -->
-                            <td style='width: 55%; border: none; padding: 8px 10px; vertical-align: top; font-size: 8.5px; line-height: 1.5; color: #444;'>
-                                <div class='section-title uppercase' style='margin-bottom: 5px;'>BANK DETAILS:</div>
+                            <!-- Column 1: Outstanding Summary -->
+                            <td style='width: 70%; border: none; padding: 8px 10px; vertical-align: top; font-size: 8.5px; line-height: 1.5; color: #444;'>
+                                <div class='section-title uppercase' style='margin-bottom: 5px;'>OUTSTANDING SUMMARY:</div>
                                 <table style='width: 100%; border: none !important; border-collapse: collapse; font-size: 8.5px; line-height: 1.5;'>
                                     <tr>
-                                        <td style='width: 90px; padding: 1px 0; border: none !important; font-weight: bold;'>Bank Name</td>
+                                        <td style='width: 110px; padding: 1px 0; border: none !important; font-weight: bold;'>Total Amount</td>
                                         <td style='width: 8px; padding: 1px 0; border: none !important;'>:</td>
-                                        <td style='padding: 1px 0; border: none !important;'>HDFC Bank</td>
+                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>₹".number_format($originalTotal, 2)."</td>
                                     </tr>
                                     <tr>
-                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>Account Name</td>
+                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>Paid Till Date</td>
                                         <td style='padding: 1px 0; border: none !important;'>:</td>
-                                        <td style='padding: 1px 0; border: none !important;'>TriShaKi Technologies Private Limited</td>
+                                        <td style='padding: 1px 0; border: none !important; color: #10b981; font-weight: bold;'>₹".number_format($cumulativePaid, 2)."</td>
                                     </tr>
                                     <tr>
-                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>Account Number</td>
+                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>Balance Due</td>
                                         <td style='padding: 1px 0; border: none !important;'>:</td>
-                                        <td style='padding: 1px 0; border: none !important;'>50200118025265</td>
-                                    </tr>
-                                    <tr>
-                                        <td style='padding: 1px 0; border: none !important; font-weight: bold;'>IFSC Code</td>
-                                        <td style='padding: 1px 0; border: none !important;'>:</td>
-                                        <td style='padding: 1px 0; border: none !important;'>HDFC0010386</td>
+                                        <td style='padding: 1px 0; border: none !important; color: ".($balanceDue > 0.01 ? '#ef4444' : '#444')."; font-weight: bold;'>₹".number_format($balanceDue, 2)."</td>
                                     </tr>
                                 </table>
                             </td>
-                            <!-- Column 2: QR Code -->
-                            <td style='width: 20%; border: none; padding: 8px 6px; vertical-align: middle; text-align: center; font-size: 8px;'>
-                                ".(!empty($qrCode) ? "
-                                <div style='font-size: 7.5px; font-weight: bold; color: #333; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;'>Scan to Pay</div>
-                                <img src='$qrCode' style='width: 80px; height: 80px; border: 0.8pt solid #ccc; display: block; margin: 0 auto;'>
-                                " : "<div style='color:#999;font-size:7px;'>QR Not Available</div>")."
-                            </td>
-                            <!-- Column 3: Signature -->
-                            <td style='width: 25%; border: none; border-left: 1pt solid #000; padding: 8px 10px; vertical-align: bottom; text-align: center;'>
+                            <!-- Column 2: Signature -->
+                            <td style='width: 30%; border: none; border-left: 1pt solid #000; padding: 8px 10px; vertical-align: bottom; text-align: center;'>
                                 <div style='height: 90px; overflow: hidden; margin-bottom: 4px; display: block; text-align: center;'>
                                     <img src='$sign' style='width: 320px; margin-top: -80px; margin-left: -30px; transform: rotate(5deg);'>
                                 </div>
@@ -236,8 +266,8 @@ $html = "
             <!-- Terms -->
             <tr>
                 <td colspan='2' class='cell' style='font-size: 8.5px; font-style: italic; border-top: none; padding: 5px 10px; color: #555;'>
-                    * This is a computer-generated invoice and does not require a physical signature.<br>
-                    * Terms: Fees once paid are non-refundable. Please keep this invoice for your records.
+                    * This is a computer-generated receipt and does not require a physical signature.<br>
+                    * Terms: Fees once paid are non-refundable. Please keep this receipt for your records.
                 </td>
             </tr>
         </table>
@@ -245,14 +275,15 @@ $html = "
 </body>
 </html>";
 
-// 6. Render Fast
+// 6. Render
 $dompdf = new Dompdf($options);
 $dompdf->setPaper('A4', 'portrait');
 $dompdf->loadHtml($html);
 $dompdf->render();
 
-$filename = "Invoice_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $invoiceNo) . ".pdf";
+$filename = "Receipt_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $receiptNo) . ".pdf";
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 echo $dompdf->output();
 exit;
+?>

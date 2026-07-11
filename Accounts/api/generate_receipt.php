@@ -1,5 +1,7 @@
 <?php
-// Get invoice parameters (check if already set by bulk_print_invoices.php first)
+require_once __DIR__ . '/config.php';
+
+// Get receipt parameters
 $type = isset($type) ? $type : (isset($_GET['type']) ? $_GET['type'] : 'non-gst');
 $billToName = isset($billToName) ? $billToName : (isset($_GET['billToName']) ? htmlspecialchars($_GET['billToName']) : 'N/A');
 $phone = isset($phone) ? $phone : (isset($_GET['phone']) ? htmlspecialchars($_GET['phone']) : 'N/A');
@@ -7,7 +9,8 @@ $email = isset($email) ? $email : (isset($_GET['email']) ? htmlspecialchars($_GE
 $gstNumber = isset($gstNumber) ? $gstNumber : (isset($_GET['gstNumber']) ? htmlspecialchars($_GET['gstNumber']) : '');
 $address = isset($address) ? $address : (isset($_GET['address']) ? htmlspecialchars($_GET['address']) : '');
 $date = isset($date) ? $date : (isset($_GET['date']) ? $_GET['date'] : date('Y-m-d'));
-$invoiceNo = isset($invoiceNo) ? $invoiceNo : (isset($_GET['invoiceNo']) ? htmlspecialchars($_GET['invoiceNo']) : 'TSK-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT));
+$receiptNo = isset($receiptNo) ? $receiptNo : (isset($_GET['receiptNo']) ? htmlspecialchars($_GET['receiptNo']) : 'RECP-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT));
+$invoiceNo = isset($invoiceNo) ? $invoiceNo : (isset($_GET['invoice_no']) ? htmlspecialchars($_GET['invoice_no']) : '');
 $originalTotalPayable = isset($originalTotalPayable) ? $originalTotalPayable : (isset($_GET['originalTotalPayable']) ? floatval($_GET['originalTotalPayable']) : null);
 $cumulativeTotalPaid = isset($cumulativeTotalPaid) ? $cumulativeTotalPaid : (isset($_GET['cumulativeTotalPaid']) ? floatval($_GET['cumulativeTotalPaid']) : null);
 
@@ -23,7 +26,7 @@ if (empty($items)) {
     $items = [
         [
             'description' => 'Course Fee Payment',
-            'amount' => 5000.00, // Fixed 5000 as requested
+            'amount' => 5000.00,
             'totalInclTax' => 5000.00,
             'paidAmt' => 5000.00,
             'paymentMode' => 'Cash',
@@ -32,25 +35,55 @@ if (empty($items)) {
     ];
 }
 
-$isContinuation = (strpos($invoiceNo, '/P') !== false);
-// Calculate total amount from items if not provided or zero, or if it is NOT a continuation
-if (!$isContinuation) {
-    $calcTotal = 0;
+// Extract current paid amount and payment mode from receipt items before they are overwritten
+$receiptPaidCurr = 0;
+$receiptPaymentMode = 'Online';
+if (is_array($items)) {
     foreach ($items as $item) {
-        if ($type === 'gst') {
-            $calcTotal += floatval($item['totalInclTax'] ?? $item['amount'] ?? 0);
-        } else {
-            $calcTotal += floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
+        $receiptPaidCurr += floatval($item['paidAmt'] ?? $item['amount'] ?? $item['totalInclTax'] ?? 0);
+        if (!empty($item['paymentMode'])) {
+            $receiptPaymentMode = $item['paymentMode'];
         }
-    }
-    $originalTotalPayable = $calcTotal > 0 ? $calcTotal : 5000.00;
-} else {
-    if (!$originalTotalPayable || $originalTotalPayable <= 0) {
-        $originalTotalPayable = 5000.00;
     }
 }
 
-// Robust Date handling: Use payment date from first item if main date is missing or invalid
+// Fetch parent invoice info from database if invoice_no is set
+if (!empty($invoiceNo) && isset($conn)) {
+    $invStmt = $conn->prepare("SELECT original_total_payable, cumulative_total_paid, items FROM invoices WHERE invoice_no = ?");
+    if ($invStmt) {
+        $invStmt->bind_param("s", $invoiceNo);
+        $invStmt->execute();
+        $invRes = $invStmt->get_result();
+        if ($invRow = $invRes->fetch_assoc()) {
+            $originalTotalPayable = floatval($invRow['original_total_payable']);
+            $cumulativeTotalPaid = floatval($invRow['cumulative_total_paid']);
+            // Override receipt items with parent invoice items to match description
+            if (!empty($invRow['items'])) {
+                $invoiceItems = json_decode($invRow['items'], true);
+                if (is_array($invoiceItems) && !empty($invoiceItems)) {
+                    $items = $invoiceItems;
+                }
+            }
+        }
+    }
+}
+
+$isContinuation = (strpos($receiptNo, '/P') !== false);
+// Calculate total amount from items if not provided or zero
+$calcTotal = 0;
+foreach ($items as $item) {
+    if ($type === 'gst') {
+        $calcTotal += floatval($item['totalInclTax'] ?? $item['amount'] ?? 0);
+    } else {
+        $calcTotal += floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
+    }
+}
+
+if (empty($originalTotalPayable) || $originalTotalPayable <= 0) {
+    $originalTotalPayable = $calcTotal > 0 ? $calcTotal : 5000.00;
+}
+
+// Robust Date handling
 if (empty($date) || $date === 'undefined' || strtotime($date) === false) {
     if (!empty($items) && isset($items[0]['date']) && strtotime($items[0]['date']) !== false) {
         $date = $items[0]['date'];
@@ -61,13 +94,12 @@ if (empty($date) || $date === 'undefined' || strtotime($date) === false) {
 
 // Calculate totals
 $totalAmount = 0;
-$totalPaidCurr = 0; // Current payment total
+$totalPaidCurr = 0;
 $totalGst = 0;
 $grandTotal = 0;
 $hasDue = false;
 $hasDescColumn = false;
 
-// Check if any item has Desc.% checked (for GST invoices)
 if ($type === 'gst') {
     foreach ($items as $item) {
         if (isset($item['hasDesc']) && $item['hasDesc']) {
@@ -78,7 +110,6 @@ if ($type === 'gst') {
 }
 
 if ($type === 'gst') {
-    // For GST invoices
     foreach ($items as $item) {
         $totalInclTax = floatval($item['totalInclTax'] ?? $item['amount'] ?? $item['paidAmt'] ?? 0);
         $paidAmt = floatval($item['paidAmt'] ?? $totalInclTax);
@@ -88,25 +119,26 @@ if ($type === 'gst') {
         $totalGst += floatval($item['gst'] ?? 0);
         $totalAmount += floatval($item['charges'] ?? ($totalInclTax / 1.18));
     }
-    $sgst = $totalGst / 2; // 9%
-    $cgst = $totalGst / 2; // 9%
+    $sgst = $totalGst / 2;
+    $cgst = $totalGst / 2;
     
-    // Part payment logic
+    if ($receiptPaidCurr > 0) {
+        $totalPaidCurr = $receiptPaidCurr;
+    }
+    
     if ($cumulativeTotalPaid !== null) {
-        $cumulativeGrandTotal = $originalTotalPayable;
-        $cumulativePaid = floatval($cumulativeTotalPaid); // use DB value directly
+        $cumulativeGrandTotal = ($originalTotalPayable !== null && $originalTotalPayable > 0) ? $originalTotalPayable : $grandTotal;
+        $cumulativePaid = floatval($cumulativeTotalPaid);
         $dueAmount = $cumulativeGrandTotal - $cumulativePaid;
         $hasDue = $dueAmount > 0;
     } else {
-        $cumulativeGrandTotal = $isContinuation ? $originalTotalPayable : $grandTotal;
+        $cumulativeGrandTotal = ($originalTotalPayable !== null && $originalTotalPayable > 0) ? $originalTotalPayable : $grandTotal;
         $cumulativePaid = $totalPaidCurr;
         $dueAmount = $cumulativeGrandTotal - $totalPaidCurr;
         $hasDue = $dueAmount > 0;
     }
 } else {
-    // For non-GST invoices
     foreach ($items as $item) {
-        // Fix for "undefined array key amount"
         $itemAmt = floatval($item['amount'] ?? $item['totalInclTax'] ?? $item['paidAmt'] ?? 0);
         $paidAmt = floatval($item['paidAmt'] ?? $itemAmt);
         
@@ -115,14 +147,17 @@ if ($type === 'gst') {
     }
     $grandTotal = $totalAmount;
     
-    // Part payment logic
+    if ($receiptPaidCurr > 0) {
+        $totalPaidCurr = $receiptPaidCurr;
+    }
+    
     if ($cumulativeTotalPaid !== null) {
-        $cumulativeGrandTotal = $originalTotalPayable;
-        $cumulativePaid = floatval($cumulativeTotalPaid); // use DB value directly
+        $cumulativeGrandTotal = ($originalTotalPayable !== null && $originalTotalPayable > 0) ? $originalTotalPayable : $grandTotal;
+        $cumulativePaid = floatval($cumulativeTotalPaid);
         $dueAmount = $cumulativeGrandTotal - $cumulativePaid;
         $hasDue = $dueAmount > 0;
     } else {
-        $cumulativeGrandTotal = $isContinuation ? $originalTotalPayable : $grandTotal;
+        $cumulativeGrandTotal = ($originalTotalPayable !== null && $originalTotalPayable > 0) ? $originalTotalPayable : $grandTotal;
         $cumulativePaid = $totalPaidCurr;
         $dueAmount = $cumulativeGrandTotal - $totalPaidCurr;
         $hasDue = $dueAmount > 0;
@@ -135,70 +170,57 @@ if ($type === 'gst') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice - <?php echo $invoiceNo; ?></title>
+    <title>Receipt - <?php echo $receiptNo; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <?php endif; ?>
     <?php
-    // Function to convert number to words
     if (!function_exists('numberToWords')) {
     function numberToWords($number) {
         $number = (int)$number;
-        
         $ones = array(
             0 => '', 1 => 'One', 2 => 'Two', 3 => 'Three', 4 => 'Four', 5 => 'Five',
             6 => 'Six', 7 => 'Seven', 8 => 'Eight', 9 => 'Nine', 10 => 'Ten',
             11 => 'Eleven', 12 => 'Twelve', 13 => 'Thirteen', 14 => 'Fourteen', 15 => 'Fifteen',
             16 => 'Sixteen', 17 => 'Seventeen', 18 => 'Eighteen', 19 => 'Nineteen'
         );
-        
         $tens = array(
             2 => 'Twenty', 3 => 'Thirty', 4 => 'Forty', 5 => 'Fifty',
             6 => 'Sixty', 7 => 'Seventy', 8 => 'Eighty', 9 => 'Ninety'
         );
-        
         if ($number == 0) return 'Zero';
-        
         $words = '';
-        
-        if ($number >= 10000000) { // Crores
+        if ($number >= 10000000) {
             $crores = (int)($number / 10000000);
             $words .= numberToWords($crores) . ' Crore ';
             $number %= 10000000;
         }
-        
-        if ($number >= 100000) { // Lakhs
+        if ($number >= 100000) {
             $lakhs = (int)($number / 100000);
             $words .= numberToWords($lakhs) . ' Lakh ';
             $number %= 100000;
         }
-        
-        if ($number >= 1000) { // Thousands
+        if ($number >= 1000) {
             $thousands = (int)($number / 1000);
             $words .= numberToWords($thousands) . ' Thousand ';
             $number %= 1000;
         }
-        
-        if ($number >= 100) { // Hundreds
+        if ($number >= 100) {
             $hundreds = (int)($number / 100);
             $words .= $ones[$hundreds] . ' Hundred ';
             $number %= 100;
         }
-        
         if ($number >= 20) {
             $words .= $tens[(int)($number / 10)] . ' ';
             $number %= 10;
         }
-        
         if ($number > 0) {
             $words .= $ones[$number] . ' ';
         }
-        
         return trim($words);
     }
     }
     
-    // Calculate total charges for words (Charges Inc of Tax = total paid amount for the current invoice)
-    $totalChargesForWords = $type === 'gst' ? $grandTotal : $grandTotal;
+    $totalChargesForWords = $totalPaidCurr;
     $amountInWords = numberToWords($totalChargesForWords) . ' Rupees Only';
     ?>
 <?php if (!isset($bulkPrintMode)): ?>
@@ -232,7 +254,7 @@ if ($type === 'gst') {
             print-color-adjust: exact;
         }
 
-        .invoice-container {
+        .receipt-container {
             width: 210mm;
             height: 297mm;
             margin: 20px auto;
@@ -242,14 +264,14 @@ if ($type === 'gst') {
             padding: 8mm;
         }
 
-        .invoice-inner {
+        .receipt-inner {
             border: 1px solid var(--primary-black);
             height: 100%;
             display: flex;
             flex-direction: column;
         }
 
-        .tax-invoice-label {
+        .tax-receipt-label {
             text-align: center;
             font-size: 14px;
             font-weight: 800;
@@ -311,7 +333,7 @@ if ($type === 'gst') {
             border-right: 1px solid var(--primary-black);
         }
 
-        .invoice-info-box {
+        .receipt-info-box {
             width: 50%;
             padding: 4mm;
         }
@@ -346,12 +368,12 @@ if ($type === 'gst') {
             flex-grow: 1;
         }
 
-        .invoice-table {
+        .receipt-table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        .invoice-table th {
+        .receipt-table th {
             background: var(--bg-grey);
             border-bottom: 1px solid var(--primary-black);
             border-right: 1px solid var(--primary-black);
@@ -362,11 +384,11 @@ if ($type === 'gst') {
             text-transform: uppercase;
         }
 
-        .invoice-table th:last-child {
+        .receipt-table th:last-child {
             border-right: none;
         }
 
-        .invoice-table td {
+        .receipt-table td {
             padding: 10px;
             border-bottom: 1px solid var(--primary-black);
             border-right: 1px solid var(--primary-black);
@@ -374,7 +396,7 @@ if ($type === 'gst') {
             vertical-align: top;
         }
 
-        .invoice-table td:last-child {
+        .receipt-table td:last-child {
             border-right: none;
         }
 
@@ -520,7 +542,7 @@ if ($type === 'gst') {
                 background: white;
             }
 
-            .invoice-container {
+            .receipt-container {
                 margin: 0;
                 box-shadow: none;
                 width: 100%;
@@ -534,12 +556,12 @@ if ($type === 'gst') {
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="window.print()">🖨️ PRINT INVOICE</button>
+    <button class="print-btn" onclick="window.print()">🖨️ PRINT RECEIPT</button>
 <?php endif; ?>
 
-    <div class="invoice-container">
-        <div class="invoice-inner">
-            <div class="tax-invoice-label"><?php echo $type === 'gst' ? 'TAX INVOICE' : 'INVOICE'; ?></div>
+    <div class="receipt-container">
+        <div class="receipt-inner">
+            <div class="tax-receipt-label"><?php echo $type === 'gst' ? 'TAX PAYMENT RECEIPT' : 'PAYMENT RECEIPT'; ?></div>
 
             <div class="header-section">
                 <div class="header-left">
@@ -559,7 +581,7 @@ if ($type === 'gst') {
 
             <div class="billing-section">
                 <div class="bill-to-box">
-                    <div class="section-title">Bill To:</div>
+                    <div class="section-title">Received From:</div>
                     <div class="billing-content">
                         <div class="name"><?php echo $billToName; ?></div>
                         <div><strong>Phone:</strong> <?php echo $phone; ?></div>
@@ -574,33 +596,36 @@ if ($type === 'gst') {
                         <?php endif; ?>
                     </div>
                 </div>
-                <div class="invoice-info-box">
-                    <div class="section-title">Invoice Information:</div>
+                <div class="receipt-info-box">
+                    <div class="section-title">Receipt Information:</div>
                     <div class="billing-content">
-                        <div><strong>Invoice No:</strong> <?php echo $invoiceNo; ?></div>
-                        <div><strong>Invoice Date:</strong> <?php 
+                        <div><strong>Receipt No:</strong> <?php echo $receiptNo; ?></div>
+                        <?php if (!empty($invoiceNo)): ?>
+                        <div><strong>Invoice No:</strong> <?php echo htmlspecialchars($invoiceNo); ?></div>
+                        <?php endif; ?>
+                        <div><strong>Receipt Date:</strong> <?php 
                             $tempTs = strtotime($date);
-                            // Avoid 30-Nov--0001 or Jan 1970 on invalid data
                             if (!$tempTs || $tempTs < 0) $tempTs = time();
                             echo date('d-M-Y', $tempTs); 
                         ?></div>
+                        <div><strong>Payment Mode:</strong> <?php echo htmlspecialchars($receiptPaymentMode); ?></div>
                     </div>
                 </div>
             </div>
 
             <div class="table-section">
-                <table class="invoice-table">
+                <table class="receipt-table">
                     <thead>
                         <tr>
                             <th width="10%" style="white-space: nowrap;">Sl No</th>
                             <th width="<?php echo $type === 'gst' ? ($hasDescColumn ? '66%' : '76%') : '76%'; ?>">Description</th>
                             <?php if ($type === 'gst'): ?>
-                            <th width="<?php echo $hasDescColumn ? '15%' : '14%'; ?>" style="text-align: right; white-space: nowrap;">Charges (Exc. of Tax)</th>
+                            <th width="<?php echo $hasDescColumn ? '15%' : '14%'; ?>" style="text-align: right; white-space: nowrap;">Amount (Exc. of Tax)</th>
                             <?php if ($hasDescColumn): ?>
                             <th width="9%" style="text-align: center;">Desc.%</th>
                             <?php endif; ?>
                             <?php else: ?>
-                            <th width="14%" style="text-align: right;">Charges</th>
+                            <th width="14%" style="text-align: right;">Amount</th>
                             <?php endif; ?>
                         </tr>
                     </thead>
@@ -611,9 +636,9 @@ if ($type === 'gst') {
                             <td><strong><?php echo htmlspecialchars($item['description']); ?></strong></td>
                             <?php if ($type === 'gst'): ?>
                             <?php 
-                                // Show FULL item charge (incl tax) then find Exc. of Tax
                                 $rowTotalItem = floatval($item['totalInclTax'] ?? $item['amount'] ?? 5000);
-                                $chargesExcTax = $rowTotalItem / 1.18;
+                                $itemPaidAmt = ($originalTotalPayable > 0) ? (($rowTotalItem / $originalTotalPayable) * $totalPaidCurr) : $rowTotalItem;
+                                $chargesExcTax = $itemPaidAmt / 1.18;
                             ?>
                             <td style="text-align: right; font-weight: 700;">₹<?php echo number_format($chargesExcTax, 2); ?></td>
                             <?php if ($hasDescColumn): ?>
@@ -621,16 +646,15 @@ if ($type === 'gst') {
                             <?php endif; ?>
                             <?php else: ?>
                             <?php 
-                                // Show FULL item charge
                                 $rowTotalItem = floatval($item['amount'] ?? $item['totalInclTax'] ?? 5000);
+                                $itemPaidAmt = ($originalTotalPayable > 0) ? (($rowTotalItem / $originalTotalPayable) * $totalPaidCurr) : $rowTotalItem;
                             ?>
-                            <td style="text-align: right; font-weight: 700;">₹<?php echo number_format($rowTotalItem, 2); ?></td>
+                            <td style="text-align: right; font-weight: 700;">₹<?php echo number_format($itemPaidAmt, 2); ?></td>
                             <?php endif; ?>
                         </tr>
                         <?php endforeach; ?>
                         
                         <?php if ($type === 'gst'): ?>
-                        <!-- SGST Row -->
                         <tr>
                             <td style="border-right: 1px solid var(--primary-black);"></td>
                             <td style="text-align: right; padding-right: 10px; border-right: none;"><strong>State Tax (SGST) 9%</strong></td>
@@ -639,7 +663,6 @@ if ($type === 'gst') {
                             <td style="border-right: none;"></td>
                             <?php endif; ?>
                         </tr>
-                        <!-- CGST Row -->
                         <tr>
                             <td style="border-right: 1px solid var(--primary-black);"></td>
                             <td style="text-align: right; padding-right: 10px; border-right: none;"><strong>Central Tax (CGST) 9%</strong></td>
@@ -659,64 +682,37 @@ if ($type === 'gst') {
                     <div class="amount-in-words-text"><?php echo $amountInWords; ?></div>
                 </div>
                 <table class="summary-table">
-                    <tr style="background: #f2f2f2;">
-                        <td class="summary-label" style="font-size: 12px; font-weight: 800;">Total Amount:</td>
-                        <td class="summary-value" style="font-size: 13px; font-weight: 800;">₹<?php echo number_format($cumulativeGrandTotal, 2); ?></td>
-                    </tr>
                     <tr>
-                        <td class="summary-label">Payment Made:</td>
-                        <td class="summary-value" style="font-weight: 700; color: #059669;">₹<?php echo number_format($cumulativePaid, 2); ?></td>
-                    </tr>
-                    <tr style="border-top: 1px solid #ddd;">
-                        <td class="summary-label">Balance Due:</td>
-                        <td class="summary-value" style="font-weight: 700; color: <?php echo $dueAmount > 0.01 ? '#dc2626' : '#1e293b'; ?>;">₹<?php echo number_format($dueAmount, 2); ?></td>
+                        <td class="summary-label" style="font-size: 12px; font-weight: 800;">Amount Received:</td>
+                        <td class="summary-value" style="font-size: 13px; font-weight: 800; color: #059669;">₹<?php echo number_format($totalPaidCurr, 2); ?></td>
                     </tr>
                 </table>
             </div>
 
-            <?php if ($hasDue): ?>
-            <?php endif; ?>
-
             <div class="footer-boxes" style="display: flex; border-top: 1px solid #000;">
-                <!-- Column 1: Bank Details -->
-                <div class="bank-details" style="flex: 2.5; padding: 10px 12px;">
-                    <div class="section-title" style="font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; color: #555;">Bank Details:</div>
+                <div class="outstanding-summary" style="flex: 3; padding: 10px 12px;">
+                    <div class="section-title" style="font-size: 10px; font-weight: bold; text-transform: uppercase; margin-bottom: 6px; color: #555;">Outstanding Summary:</div>
                     <div class="footer-content">
                         <table style="width: 100%; border: none !important; border-collapse: collapse; font-size: 11px; line-height: 1.6;">
                             <tr>
-                                <td style="width: 110px; padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Bank Name</td>
+                                <td style="width: 130px; padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Total Amount</td>
                                 <td style="width: 15px; padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">HDFC Bank</td>
+                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark); font-weight: bold;">₹<?php echo number_format($cumulativeGrandTotal, 2); ?></td>
                             </tr>
                             <tr>
-                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Account Name</td>
+                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Paid Till Date</td>
                                 <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">TriShaKi Technologies Private Limited</td>
+                                <td style="padding: 2px 0; border: none !important; color: #059669; font-weight: bold;">₹<?php echo number_format($cumulativePaid, 2); ?></td>
                             </tr>
                             <tr>
-                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Account Number</td>
+                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">Balance Due</td>
                                 <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">50200118025265</td>
-                            </tr>
-                            <tr>
-                                <td style="padding: 2px 0; border: none !important; font-weight: bold; color: var(--text-dark);">IFSC Code</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">:</td>
-                                <td style="padding: 2px 0; border: none !important; color: var(--text-dark);">HDFC0010386</td>
+                                <td style="padding: 2px 0; border: none !important; color: <?php echo ($dueAmount > 0.01) ? '#dc2626' : 'var(--text-dark)'; ?>; font-weight: bold;">₹<?php echo number_format($dueAmount, 2); ?></td>
                             </tr>
                         </table>
                     </div>
                 </div>
-                <!-- Column 2: QR Code -->
-                <div style="flex: 1; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <?php if (file_exists('../assets/image.png')): ?>
-                    <div style="font-size: 10px; font-weight: bold; color: #333; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px;">Scan to Pay</div>
-                    <img src="../assets/image.png" alt="UPI QR Code" style="width: 110px; height: 110px; border: 1px solid #ddd; border-radius: 4px; display: block;">
-                    <?php else: ?>
-                    <div style="color: #999; font-size: 10px;">QR Not Available</div>
-                    <?php endif; ?>
-                </div>
-                <!-- Column 3: Signature -->
-                <div class="signature-box" style="flex: 1.2; border-left: 1px solid #000; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; text-align: center;">
+                <div class="signature-box" style="flex: 1.5; border-left: 1px solid #000; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; text-align: center;">
                     <?php if (file_exists('../assets/ningaraj_sign_blue.png')): ?>
                     <div class="sig-wrap" style="height: 110px; overflow: hidden; margin-bottom: 6px; width: 100%;">
                         <img src="../assets/ningaraj_sign_blue.png" alt="Signature" class="seal-img">
@@ -735,8 +731,8 @@ if ($type === 'gst') {
 
             <div class="terms-section">
                 <div class="terms-text">
-                    * This is a computer-generated invoice and does not require a physical signature.<br>
-                    * Terms: Fees once paid are non-refundable. Please keep this invoice for your records.
+                    * This is a computer-generated receipt and does not require a physical signature.<br>
+                    * Terms: Fees once paid are non-refundable. Please keep this receipt for your records.
                 </div>
             </div>
         </div>
