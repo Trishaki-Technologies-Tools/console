@@ -41,22 +41,21 @@ try {
     
     error_log("view_invoice.php - Found invoice: {$invoice['invoice_no']} for client: {$invoice['billToName']}");
     
-    // Redirect to generate_invoice.php with all parameters
-    $params = http_build_query([
-        'type' => $invoice['type'],
-        'billToName' => $invoice['billToName'],
-        'phone' => $invoice['phone'],
-        'email' => $invoice['email'],
-        'gstNumber' => $invoice['gstNumber'],
-        'address' => '',
-        'invoiceNo' => $invoice['invoice_no'],
-        'items' => $invoice['items'],
-        'date' => $invoice['invoice_date'],
-        'originalTotalPayable' => $invoice['original_total_payable'],
-        'cumulativeTotalPaid' => $invoice['cumulative_total_paid']
-    ]);
+    // Populate $_GET parameters so that generate_invoice.php can read them directly
+    $_GET['type'] = $invoice['type'];
+    $_GET['billToName'] = $invoice['billToName'];
+    $_GET['phone'] = $invoice['phone'];
+    $_GET['email'] = $invoice['email'];
+    $_GET['gstNumber'] = $invoice['gstNumber'];
+    $_GET['address'] = '';
+    $_GET['invoiceNo'] = $invoice['invoice_no'];
+    $_GET['items'] = $invoice['items'];
+    $_GET['date'] = $invoice['invoice_date'];
+    $_GET['originalTotalPayable'] = $invoice['original_total_payable'];
+    $_GET['cumulativeTotalPaid'] = $invoice['cumulative_total_paid'];
     
-    header("Location: generate_invoice.php?$params");
+    // Render generate_invoice.php inline to mask the URL
+    include 'generate_invoice.php';
     exit;
     
 } catch (Exception $e) {

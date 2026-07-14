@@ -50,6 +50,9 @@ function displayReceipts() {
                     <button class="btn-action" onclick="viewReceiptByNo('${receipt.receiptNo}')" title="View Receipt" style="background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                         👁️
                     </button>
+                    <button class="btn-action" onclick="copyReceiptLink('${receipt.receiptNo}')" title="Copy Shareable Link" style="background: #a855f7; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                        🔗
+                    </button>
                     <button class="btn-action" onclick="downloadReceiptByNo('${receipt.receiptNo}')" title="Download PDF" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                         📥
                     </button>
@@ -1270,3 +1273,24 @@ function submitReceiptPayment(event) {
         alert('Failed to save receipt payment.');
     });
 }
+
+// Copy shareable receipt link to clipboard
+function copyReceiptLink(receiptNo) {
+    if (!receiptNo) return;
+    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_receipt.php?receiptNo=' + encodeURIComponent(receiptNo);
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Shareable receipt link copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        // Fallback
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert('Shareable receipt link copied to clipboard!');
+    });
+}
+
+

@@ -42,23 +42,22 @@ try {
     
     error_log("view_receipt.php - Found receipt: {$receipt['receipt_no']} for client: {$receipt['billToName']}");
     
-    // Redirect to generate_receipt.php with all parameters
-    $params = http_build_query([
-        'type' => $receipt['type'],
-        'billToName' => $receipt['billToName'],
-        'phone' => $receipt['phone'],
-        'email' => $receipt['email'],
-        'gstNumber' => $receipt['gstNumber'],
-        'address' => '',
-        'receiptNo' => $receipt['receipt_no'],
-        'invoice_no' => $receipt['invoice_no'] ?? '',
-        'items' => $receipt['items'],
-        'date' => $receipt['receipt_date'],
-        'originalTotalPayable' => $receipt['original_total_payable'],
-        'cumulativeTotalPaid' => $receipt['cumulative_total_paid']
-    ]);
+    // Populate $_GET parameters so that generate_receipt.php can read them directly
+    $_GET['type'] = $receipt['type'];
+    $_GET['billToName'] = $receipt['billToName'];
+    $_GET['phone'] = $receipt['phone'];
+    $_GET['email'] = $receipt['email'];
+    $_GET['gstNumber'] = $receipt['gstNumber'];
+    $_GET['address'] = '';
+    $_GET['receiptNo'] = $receipt['receipt_no'];
+    $_GET['invoice_no'] = $receipt['invoice_no'] ?? '';
+    $_GET['items'] = $receipt['items'];
+    $_GET['date'] = $receipt['receipt_date'];
+    $_GET['originalTotalPayable'] = $receipt['original_total_payable'];
+    $_GET['cumulativeTotalPaid'] = $receipt['cumulative_total_paid'];
     
-    header("Location: generate_receipt.php?$params");
+    // Render generate_receipt.php inline to mask the URL
+    include 'generate_receipt.php';
     exit;
     
 } catch (Exception $e) {

@@ -51,6 +51,9 @@ function displayInvoices() {
                     <button class="btn-action" onclick="viewInvoiceByNo('${invoice.invoiceNo}')" title="View Invoice" style="background: #0ea5e9; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                         👁️
                     </button>
+                    <button class="btn-action" onclick="copyInvoiceLink('${invoice.invoiceNo}')" title="Copy Shareable Link" style="background: #a855f7; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                        🔗
+                    </button>
                     <button class="btn-action" onclick="downloadInvoiceByNo('${invoice.invoiceNo}')" title="Download PDF" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
                         📥
                     </button>
@@ -1383,3 +1386,23 @@ function deleteInvoiceByNo(invoiceNo) {
 function downloadInvoiceByNo(invoiceNo) {
     window.open('api/download_invoice_pdf.php?invoiceNo=' + encodeURIComponent(invoiceNo), '_blank');
 }
+
+// Copy shareable invoice link to clipboard
+function copyInvoiceLink(invoiceNo) {
+    if (!invoiceNo) return;
+    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_invoice.php?invoiceNo=' + encodeURIComponent(invoiceNo);
+    navigator.clipboard.writeText(url).then(() => {
+        alert('Shareable invoice link copied to clipboard!');
+    }).catch(err => {
+        console.error('Failed to copy text: ', err);
+        // Fallback
+        const el = document.createElement('textarea');
+        el.value = url;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        alert('Shareable invoice link copied to clipboard!');
+    });
+}
+
