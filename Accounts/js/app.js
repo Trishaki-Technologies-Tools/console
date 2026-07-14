@@ -4,17 +4,17 @@ if (window.location.protocol === 'file:') {
 }
 
 // ── Custom Popup Utilities ──
-function showConfirmPopup(title, message, onConfirm) {
+function showConfirmPopup(title, message, onConfirm, confirmText = 'Delete', confirmClass = 'danger', icon = '⚠️') {
     const overlay = document.createElement('div');
     overlay.className = 'popup-overlay';
     overlay.innerHTML = `
         <div class="popup-box">
-            <div class="popup-icon">⚠️</div>
+            <div class="popup-icon">${icon}</div>
             <div class="popup-title">${title}</div>
             <div class="popup-msg">${message}</div>
             <div class="popup-actions">
                 <button class="popup-btn cancel" id="popupCancel">Cancel</button>
-                <button class="popup-btn danger" id="popupConfirm">Delete</button>
+                <button class="popup-btn ${confirmClass}" id="popupConfirm">${confirmText}</button>
             </div>
         </div>`;
     document.body.appendChild(overlay);
@@ -406,6 +406,8 @@ function updateIncomeStats(incomes) {
     if (monthCountEl) monthCountEl.textContent = monthCount;
 }
 
+let generatedExpenses = [];
+
 // Load expenses
 function loadExpenses() {
     const filter = document.getElementById('expense-filter') ? document.getElementById('expense-filter').value : 'all';
@@ -416,6 +418,7 @@ function loadExpenses() {
         .then(text => {
             try {
                 const data = JSON.parse(text);
+                generatedExpenses = data;
                 displayExpenses(data);
             } catch (e) {
                 console.error('Expenses Error:', text);
@@ -464,6 +467,8 @@ function displayExpenses(expenses) {
             <td>${expense.payment_mode || 'Cash'}</td>
             <td style="font-weight: 600; color: #ef4444;">₹${parseFloat(expense.amount).toFixed(2)}</td>
             <td>
+                <button class="btn-action btn-view" onclick="viewExpenseById(${expense.id})" title="View Shareable Page"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="btn-action btn-copy-link" onclick="copyExpenseLink(${expense.id})" title="Copy Shareable Link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
                 <button class="btn-action btn-edit" onclick="editExpense(${expense.id})" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                 <button class="btn-action btn-delete-small" onclick="deleteExpense(${expense.id})" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
             </td>
@@ -1002,6 +1007,18 @@ function addExpenseWithDate(description, amount, category, paymentMode, date) {
                 loadDashboardData();
                 loadReports();
                 if (typeof loadTransactions === 'function') loadTransactions();
+                
+                // Prompt to copy shareable link
+                showConfirmPopup(
+                    'Expense Added',
+                    'Expense added successfully. Would you like to copy the shareable link for CS/CA?',
+                    () => {
+                        copyExpenseLink(data.expense_id, data.token);
+                    },
+                    'Copy Link',
+                    'ok',
+                    '🔗'
+                );
             } else {
                 showAlertPopup('Error', data.error || 'Failed to add expense', 'error');
             }
@@ -2923,6 +2940,14 @@ function displayFilteredTxns(list) {
         const deleteFunc = isIncome ? `deleteIncome(${item.id})` : `deleteExpense(${item.id})`;
         const editFunc = isIncome ? `editIncome(${item.id})` : `editExpense(${item.id})`;
         
+        let shareButtonsHtml = '';
+        if (!isIncome) {
+            shareButtonsHtml = `
+                <button class="btn-action btn-view" onclick="viewExpenseById(${item.id})" title="View Shareable Page"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg></button>
+                <button class="btn-action btn-copy-link" onclick="copyExpenseLink(${item.id})" title="Copy Shareable Link"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg></button>
+            `;
+        }
+        
         const attachmentHtml = item.attachment 
             ? `<a href="${item.attachment}" target="_blank" class="attachment-badge show-attachment-link" style="color: #6366f1; text-decoration: underline; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:inline-block; vertical-align:middle;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg> View
@@ -2938,6 +2963,7 @@ function displayFilteredTxns(list) {
             <td>${attachmentHtml}</td>
             <td style="font-weight: 700; color: ${color}">₹${parseFloat(item.amount).toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
             <td>
+                ${shareButtonsHtml}
                 <button class="btn-action btn-edit" onclick="${editFunc}" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
                 <button class="btn-action btn-delete-small" onclick="${deleteFunc}" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
             </td>
@@ -3209,6 +3235,46 @@ function saveGlobalSettings(event) {
         }
     })
     .catch(err => console.error('Error saving settings:', err));
+}
+
+// View/Generate Expense by ID
+function viewExpenseById(id, customToken = null) {
+    if (!id) return;
+    const token = customToken || 
+                  (generatedExpenses.find(exp => Number(exp.id) === Number(id))?.token) ||
+                  (allExpensesData.find(exp => Number(exp.id) === Number(id))?.token);
+    if (token) {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'expense/' + token;
+        window.open(url, '_blank');
+    } else {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_expense.php?id=' + encodeURIComponent(id);
+        window.open(url, '_blank');
+    }
+}
+
+// Copy Expense Shareable Link
+function copyExpenseLink(id, customToken = null) {
+    if (!id) return;
+    const token = customToken || 
+                  (generatedExpenses.find(exp => Number(exp.id) === Number(id))?.token) ||
+                  (allExpensesData.find(exp => Number(exp.id) === Number(id))?.token);
+    if (token) {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'expense/' + token;
+        navigator.clipboard.writeText(url).then(() => {
+            showAlertPopup('Success', 'Expense shareable link copied to clipboard!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy link. Here it is: ' + url);
+        });
+    } else {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_expense.php?id=' + encodeURIComponent(id);
+        navigator.clipboard.writeText(url).then(() => {
+            showAlertPopup('Success', 'Expense link copied to clipboard!', 'success');
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy link. Here it is: ' + url);
+        });
+    }
 }
 
 

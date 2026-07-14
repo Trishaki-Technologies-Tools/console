@@ -2977,7 +2977,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     </div>
 
 
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=4"></script>
     <script src="js/invoice_functions.js"></script>
     <script src="js/receipt_functions.js"></script>
     <script src="js/quotation_functions.js?v=2"></script>

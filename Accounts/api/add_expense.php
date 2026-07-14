@@ -95,7 +95,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->query($updateQuery);
         }
         
-        echo json_encode(['success' => true]);
+        echo json_encode([
+            'success' => true,
+            'expense_id' => $expense_id,
+            'token' => encryptToken("EXP-" . $expense_id)
+        ]);
     } else {
         echo json_encode(['success' => false, 'error' => $conn->error]);
     }

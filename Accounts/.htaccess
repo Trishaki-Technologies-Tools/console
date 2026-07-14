@@ -8,4 +8,7 @@ RewriteRule ^invoice/([a-zA-Z0-9_-]+)$ api/view_invoice.php?token=$1 [QSA,L]
 
 # 2. Rule for Receipts (with /receipt/<token>)
 RewriteRule ^receipt/([a-zA-Z0-9_-]+)$ api/view_receipt.php?token=$1 [QSA,L]
+
+# 3. Rule for Expenses (with /expense/<token>)
+RewriteRule ^expense/([a-zA-Z0-9_-]+)$ api/view_expense.php?token=$1 [QSA,L]
 </IfModule>

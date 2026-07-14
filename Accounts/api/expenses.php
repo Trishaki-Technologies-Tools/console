@@ -14,6 +14,7 @@ $result = $conn->query($query);
 $expenses = [];
 if ($result && $result->num_rows > 0) {
     while($row = $result->fetch_assoc()) {
+        $row['token'] = encryptToken("EXP-" . $row['id']);
         $expenses[] = $row;
     }
 }
