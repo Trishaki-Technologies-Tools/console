@@ -34,4 +34,24 @@ try {
 
 // Set charset
 $conn->set_charset("utf8");
+
+// Encryption helpers for URLs
+define('ENCRYPTION_KEY', 'TrishakiAccountsSecureKey2026!');
+
+function encryptToken($string) {
+    $cipher = "AES-128-ECB";
+    $encrypted = openssl_encrypt($string, $cipher, ENCRYPTION_KEY);
+    return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($encrypted));
+}
+
+function decryptToken($token) {
+    $cipher = "AES-128-ECB";
+    $data = str_replace(['-', '_'], ['+', '/'], $token);
+    $mod4 = strlen($data) % 4;
+    if ($mod4) {
+        $data .= substr('====', $mod4);
+    }
+    $decoded = base64_decode($data);
+    return openssl_decrypt($decoded, $cipher, ENCRYPTION_KEY);
+}
 ?>

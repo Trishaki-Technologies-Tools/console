@@ -253,6 +253,7 @@ try {
     echo json_encode([
         'success' => true,
         'invoiceNo' => $invoiceNo,
+        'token' => encryptToken($invoiceNo),
         'clientId' => $clientId
     ]);
     

@@ -30,6 +30,7 @@ try {
         $receipts[] = [
             'id' => $row['id'],
             'receiptNo' => $row['receipt_no'],
+            'token' => encryptToken($row['receipt_no']),
             'type' => $row['type'],
             'items' => $row['items'],
             'originalTotalPayable' => $row['original_total_payable'],

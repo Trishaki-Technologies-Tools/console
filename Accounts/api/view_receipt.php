@@ -1,13 +1,18 @@
 <?php
 require_once 'config.php';
 
+$token = $_GET['token'] ?? '';
 $receiptNo = $_GET['receiptNo'] ?? '';
 
+if ($token) {
+    $receiptNo = decryptToken($token);
+}
+
 // Debug logging
-error_log("view_receipt.php - Requested receipt: $receiptNo");
+error_log("view_receipt.php - Requested token: $token, receipt: $receiptNo");
 
 if (!$receiptNo) {
-    die('Receipt number required');
+    die('Receipt identifier required or invalid link');
 }
 
 try {

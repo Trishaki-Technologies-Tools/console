@@ -1,13 +1,18 @@
 <?php
 require_once 'config.php';
 
+$token = $_GET['token'] ?? '';
 $invoiceNo = $_GET['invoiceNo'] ?? '';
 
+if ($token) {
+    $invoiceNo = decryptToken($token);
+}
+
 // Debug logging
-error_log("view_invoice.php - Requested invoice: $invoiceNo");
+error_log("view_invoice.php - Requested token: $token, invoice: $invoiceNo");
 
 if (!$invoiceNo) {
-    die('Invoice number required');
+    die('Invoice identifier required or invalid link');
 }
 
 try {

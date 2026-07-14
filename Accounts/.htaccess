@@ -1,1 +1,12 @@
 DirectoryIndex index.php
+
+<IfModule mod_rewrite.c>
+RewriteEngine On
+
+# 1. Rule for Receipts starting with TSK-REC- or RECP-
+RewriteRule ^(TSK-REC-[a-zA-Z0-9-/]+)$ api/view_receipt.php?receiptNo=$1 [QSA,L]
+RewriteRule ^(RECP-[a-zA-Z0-9-/]+)$ api/view_receipt.php?receiptNo=$1 [QSA,L]
+
+# 2. Rule for Invoices starting with TSK-
+RewriteRule ^(TSK-[a-zA-Z0-9-/]+)$ api/view_invoice.php?invoiceNo=$1 [QSA,L]
+</IfModule>

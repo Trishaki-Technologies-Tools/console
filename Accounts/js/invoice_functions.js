@@ -182,10 +182,16 @@ function searchInvoices() {
 }
 
 // View/Generate Invoice by No
-function viewInvoiceByNo(invoiceNo) {
+function viewInvoiceByNo(invoiceNo, customToken = null) {
     if (!invoiceNo) return;
-    const url = `api/view_invoice.php?invoiceNo=${encodeURIComponent(invoiceNo)}&t=${Date.now()}`;
-    window.open(url, '_blank');
+    const token = customToken || (generatedInvoices.find(inv => inv.invoiceNo === invoiceNo)?.token);
+    if (token) {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'invoice/' + token;
+        window.open(url, '_blank');
+    } else {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_invoice.php?invoiceNo=' + encodeURIComponent(invoiceNo);
+        window.open(url, '_blank');
+    }
 }
 
 // Edit invoice by number
@@ -1074,7 +1080,7 @@ function saveInvoice(invoiceData) {
         if (data.success) {
             loadInvoicesFromDB();
             loadCustomersFromDB();
-            viewInvoiceByNo(data.invoiceNo);
+            viewInvoiceByNo(data.invoiceNo, data.token);
         } else {
             alert('Error: ' + data.error);
         }
@@ -1390,7 +1396,12 @@ function downloadInvoiceByNo(invoiceNo) {
 // Copy shareable invoice link to clipboard
 function copyInvoiceLink(invoiceNo) {
     if (!invoiceNo) return;
-    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_invoice.php?invoiceNo=' + encodeURIComponent(invoiceNo);
+    const invoice = generatedInvoices.find(inv => inv.invoiceNo === invoiceNo);
+    if (!invoice || !invoice.token) {
+        alert('Could not find secure token for this invoice.');
+        return;
+    }
+    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'invoice/' + invoice.token;
     navigator.clipboard.writeText(url).then(() => {
         alert('Shareable invoice link copied to clipboard!');
     }).catch(err => {

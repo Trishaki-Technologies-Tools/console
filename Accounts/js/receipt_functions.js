@@ -117,10 +117,16 @@ function displayReceipts() {
 }
 
 // View/Generate Receipt by No
-function viewReceiptByNo(receiptNo) {
+function viewReceiptByNo(receiptNo, customToken = null) {
     if (!receiptNo) return;
-    const url = `api/view_receipt.php?receiptNo=${encodeURIComponent(receiptNo)}&t=${Date.now()}`;
-    window.open(url, '_blank');
+    const token = customToken || (generatedReceipts.find(rec => rec.receiptNo === receiptNo)?.token);
+    if (token) {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'receipt/' + token;
+        window.open(url, '_blank');
+    } else {
+        const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_receipt.php?receiptNo=' + encodeURIComponent(receiptNo);
+        window.open(url, '_blank');
+    }
 }
 
 // Edit receipt by number
@@ -1009,7 +1015,7 @@ function saveReceipt(receiptData) {
         if (data.success) {
             loadReceiptsFromDB();
             if (typeof loadCustomersFromDB === 'function') loadCustomersFromDB();
-            viewReceiptByNo(data.receiptNo);
+            viewReceiptByNo(data.receiptNo, data.token);
         } else {
             alert('Error: ' + data.error);
         }
@@ -1277,7 +1283,12 @@ function submitReceiptPayment(event) {
 // Copy shareable receipt link to clipboard
 function copyReceiptLink(receiptNo) {
     if (!receiptNo) return;
-    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'api/view_receipt.php?receiptNo=' + encodeURIComponent(receiptNo);
+    const receipt = generatedReceipts.find(rec => rec.receiptNo === receiptNo);
+    if (!receipt || !receipt.token) {
+        alert('Could not find secure token for this receipt.');
+        return;
+    }
+    const url = window.location.origin + window.location.pathname.replace('index.php', '') + 'receipt/' + receipt.token;
     navigator.clipboard.writeText(url).then(() => {
         alert('Shareable receipt link copied to clipboard!');
     }).catch(err => {

@@ -326,6 +326,7 @@ try {
     echo json_encode([
         'success' => true,
         'receiptNo' => $receiptNo,
+        'token' => encryptToken($receiptNo),
         'clientId' => $clientId
     ]);
     
