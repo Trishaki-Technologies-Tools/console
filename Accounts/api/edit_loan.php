@@ -65,6 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $stmt->close();
+            log_action($conn, 'EDIT', 'loans', $id, "Updated loan: $creditor_name (Principal: ₹$principal_amount)");
             $conn->commit();
             
             // 4. Update Reports

@@ -205,6 +205,29 @@ try {
         $stmt->execute();
     }
     
+    if ($isEditMode) {
+        log_action($conn, 'EDIT', 'invoices', $existingInvoiceId, "Edited invoice: $invoiceNo for $billToName");
+    } else {
+        $newInvoiceId = $conn->insert_id;
+        log_action($conn, 'ADD', 'invoices', $newInvoiceId, "Generated invoice: $invoiceNo for $billToName");
+    }
+    
+    // Sync with transactions ledger
+    $targetInvId = $isEditMode ? $existingInvoiceId : $newInvoiceId;
+    
+    // Clear old transactions for this invoice instance
+    $delStmt = $conn->prepare("DELETE FROM transactions WHERE reference_table = 'invoices' AND reference_id = ?");
+    $delStmt->bind_param("i", $targetInvId);
+    $delStmt->execute();
+    
+    // Insert new transaction if there is a payment
+    if ($currentPaid > 0) {
+        $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description) VALUES ('income', ?, ?, ?, 'invoices', ?)");
+        $desc = "Invoice Payment: " . $invoiceNo . " (" . $billToName . ")";
+        $tStmt->bind_param("dsis", $currentPaid, $invoiceDate, $targetInvId, $desc);
+        $tStmt->execute();
+    }
+    
     // Commit transaction
     $conn->commit();
     

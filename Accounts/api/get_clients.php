@@ -11,6 +11,7 @@ try {
             c.email,
             c.gst_number,
             c.address,
+            c.client_type,
             COUNT(i.id) as invoice_count,
             MAX(i.created_at) as last_invoice_date
         FROM clients c
@@ -31,6 +32,7 @@ try {
             'email' => $row['email'] ?: 'N/A',
             'gstNumber' => $row['gst_number'] ?: 'Not Applicable',
             'address' => $row['address'] ?: '',
+            'client_type' => $row['client_type'] ?: 'Client',
             'invoiceCount' => $row['invoice_count'],
             'lastInvoiceDate' => $row['last_invoice_date']
         ];

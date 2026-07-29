@@ -37,8 +37,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = floatval($_POST['amount']);
     $category_name = $_POST['category'] ?? 'Other';
     $payment_mode_name = $_POST['payment_mode'] ?? 'Cash';
-    $date = $_POST['date'] ?? date('Y-m-d');
+    $date = !empty($_POST['date']) ? $_POST['date'] : date('Y-m-d');
     $date_db = date('Y-m-d', strtotime($date));
+    $has_time = isset($_POST['has_time']) && $_POST['has_time'] === '1';
+    $created_at = $has_time ? date('Y-m-d H:i:s', strtotime($date)) : date('Y-m-d 00:00:00', strtotime($date));
     
     // File upload
     $attachment_path = null;
@@ -59,15 +61,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $category_id = getCategoryId($conn, $category_name);
     $payment_mode_id = getPaymentModeId($conn, $payment_mode_name);
     
-    $stmt = $conn->prepare("INSERT INTO incomes (description, amount, date, category_id, payment_mode_id, attachment) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("sdsiis", $description, $amount, $date_db, $category_id, $payment_mode_id, $attachment_path);
+    $stmt = $conn->prepare("INSERT INTO incomes (description, amount, date, category_id, payment_mode_id, attachment, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("sdsiiss", $description, $amount, $date_db, $category_id, $payment_mode_id, $attachment_path, $created_at);
     
     if ($stmt->execute()) {
         $income_id = $conn->insert_id;
         
+        log_action($conn, 'ADD', 'incomes', $income_id, "Added income: $description (₹$amount)");
+        
         // Log to transactions table
-        $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description) VALUES ('income', ?, ?, ?, 'incomes', ?)");
-        $tStmt->bind_param("dsis", $amount, $date, $income_id, $description);
+        $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description, created_at) VALUES ('income', ?, ?, ?, 'incomes', ?, ?)");
+        $tStmt->bind_param("dsiss", $amount, $date_db, $income_id, $description, $created_at);
         $tStmt->execute();
         
         // Update the month's report based on the income date

@@ -145,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            log_action($conn, 'ADD', 'salary_logs', $salaryLogId, "Added salary log for $employee_name: ₹$amount ($month)");
             $conn->commit();
 
             // Update Reports (Same logic as add_expense.php)

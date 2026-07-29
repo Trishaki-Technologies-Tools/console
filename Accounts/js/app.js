@@ -73,6 +73,12 @@ function switchPage(pageId, title = null) {
         document.getElementById('page-title').textContent = title;
     }
 
+    // Hide Financial Year dropdown on Transactions page since it has its own FY filters
+    const fyDropdown = document.getElementById('financialYear');
+    if (fyDropdown) {
+        fyDropdown.style.display = (pageId === 'transactions') ? 'none' : 'block';
+    }
+
     // Save to memory
     localStorage.setItem('activeAccountsPage', pageId);
 
@@ -131,6 +137,7 @@ function initApp() {
     switchPage(savedPage);
     
     if (typeof setInitialDates === 'function') setInitialDates();
+    initTimeCheckboxes();
 
     setInterval(removeBadgeElements, 1000); 
     
@@ -143,6 +150,62 @@ function initApp() {
     });
 
     observer.observe(document.body, { childList: true, subtree: true });
+}
+
+function formatTransactionDate(dateStr, createdAtStr) {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    const dateFormatted = d.toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'});
+    if (createdAtStr) {
+        const parts = createdAtStr.split(' ');
+        if (parts.length > 1) {
+            const timePart = parts[1];
+            if (timePart && timePart !== '00:00:00' && timePart !== '00:00') {
+                const timeParts = timePart.split(':');
+                let hours = parseInt(timeParts[0], 10);
+                const minutes = timeParts[1];
+                const ampm = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12;
+                hours = hours ? hours : 12;
+                const hoursStr = String(hours).padStart(2, '0');
+                return `${dateFormatted} <span style="font-size: 11px; color: var(--text-muted); margin-left: 4px;">${hoursStr}:${minutes} ${ampm}</span>`;
+            }
+        }
+    }
+    return dateFormatted;
+}
+
+function initTimeCheckboxes() {
+    const setups = [
+        { chkId: 'incomeHasTime', dateId: 'incomeDate' },
+        { chkId: 'expenseHasTime', dateId: 'expenseDate' },
+        { chkId: 'editIncomeHasTime', dateId: 'editIncomeDate' },
+        { chkId: 'editExpenseHasTime', dateId: 'editExpenseDate' }
+    ];
+
+    setups.forEach(setup => {
+        const checkbox = document.getElementById(setup.chkId);
+        const dateInput = document.getElementById(setup.dateId);
+        if (checkbox && dateInput) {
+            checkbox.addEventListener('change', function() {
+                const currentValue = dateInput.value;
+                if (this.checked) {
+                    dateInput.type = 'datetime-local';
+                    if (currentValue && !currentValue.includes('T')) {
+                        const now = new Date();
+                        const hours = String(now.getHours()).padStart(2, '0');
+                        const minutes = String(now.getMinutes()).padStart(2, '0');
+                        dateInput.value = `${currentValue}T${hours}:${minutes}`;
+                    }
+                } else {
+                    dateInput.type = 'date';
+                    if (currentValue && currentValue.includes('T')) {
+                        dateInput.value = currentValue.split('T')[0];
+                    }
+                }
+            });
+        }
+    });
 }
 
 // Ensure init runs AFTER all scripts are loaded
@@ -330,7 +393,7 @@ function displayIncomes(incomes) {
         return;
     }
 
-    let html = `<table>
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
         <thead>
             <tr>
                 <th>S.No</th>
@@ -351,7 +414,7 @@ function displayIncomes(incomes) {
         }
         html += `<tr>
             <td>${index + 1}</td>
-            <td>${income.date}</td>
+            <td>${formatTransactionDate(income.date, income.created_at)}</td>
             <td>${income.description}${attachmentHtml}</td>
             <td><span class="category-badge">${income.category || 'Other'}</span></td>
             <td>${income.payment_mode || 'Cash'}</td>
@@ -434,7 +497,7 @@ function displayExpenses(expenses) {
         return;
     }
 
-    let html = `<table>
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
         <thead>
             <tr>
                 <th>S.No</th>
@@ -455,7 +518,7 @@ function displayExpenses(expenses) {
         }
         html += `<tr>
             <td>${index + 1}</td>
-            <td>${expense.date}</td>
+            <td>${formatTransactionDate(expense.date, expense.created_at)}</td>
             <td>${expense.description}${attachmentHtml}</td>
             <td><span class="category-badge">${expense.category || 'Other'}</span></td>
             <td>${expense.payment_mode || 'Cash'}</td>
@@ -600,14 +663,18 @@ function populateIncomeCategoryDropdown(categories) {
 
 // Open add income modal
 function openAddIncomeModal() {
-    // Set default date-time to now in local timezone
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('incomeDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    const chk = document.getElementById('incomeHasTime');
+    const dateInput = document.getElementById('incomeDate');
+    if (chk) chk.checked = false;
+    if (dateInput) {
+        dateInput.type = 'date';
+        dateInput.value = `${year}-${month}-${day}`;
+    }
 
     // Load categories
     fetch('api/income_categories.php')
@@ -650,6 +717,8 @@ function addIncomeWithDate(description, amount, category, paymentMode, date) {
     formData.append('category', category);
     formData.append('payment_mode', paymentMode);
     formData.append('date', date);
+    const hasTime = document.getElementById('incomeHasTime')?.checked ? '1' : '0';
+    formData.append('has_time', hasTime);
 
     const attachmentInput = document.getElementById('incomeAttachment');
     if (attachmentInput && attachmentInput.files.length > 0) {
@@ -715,18 +784,23 @@ function editIncome(id) {
             document.getElementById('editIncomeId').value = income.id;
             
             // Format datetime local
+            let hasTime = false;
             let datetimeVal = income.date;
             if (income.created_at) {
                 const timePart = income.created_at.split(' ')[1];
-                if (timePart) {
+                if (timePart && timePart !== '00:00:00' && timePart !== '00:00') {
                     datetimeVal += 'T' + timePart.substring(0, 5);
-                } else {
-                    datetimeVal += 'T12:00';
+                    hasTime = true;
                 }
-            } else {
-                datetimeVal += 'T12:00';
             }
-            document.getElementById('editIncomeDate').value = datetimeVal;
+            
+            const chk = document.getElementById('editIncomeHasTime');
+            const dateInput = document.getElementById('editIncomeDate');
+            if (chk) chk.checked = hasTime;
+            if (dateInput) {
+                dateInput.type = hasTime ? 'datetime-local' : 'date';
+                dateInput.value = hasTime ? datetimeVal : income.date;
+            }
             
             document.getElementById('editIncomeDescription').value = income.description;
             document.getElementById('editIncomeAmount').value = income.amount;
@@ -786,6 +860,8 @@ function submitEditIncome(event) {
     formData.append('category', category);
     formData.append('payment_mode', paymentMode);
     formData.append('amount', amount);
+    const hasTime = document.getElementById('editIncomeHasTime')?.checked ? '1' : '0';
+    formData.append('has_time', hasTime);
 
     const attachmentInput = document.getElementById('editIncomeAttachment');
     if (attachmentInput && attachmentInput.files.length > 0) {
@@ -931,14 +1007,18 @@ function populateExpenseCategoryDropdown(categories) {
 
 // Open add expense modal
 function openAddExpenseModal() {
-    // Set default date-time to now in local timezone
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
-    const hours = String(now.getHours()).padStart(2, '0');
-    const minutes = String(now.getMinutes()).padStart(2, '0');
-    document.getElementById('expenseDate').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+    
+    const chk = document.getElementById('expenseHasTime');
+    const dateInput = document.getElementById('expenseDate');
+    if (chk) chk.checked = false;
+    if (dateInput) {
+        dateInput.type = 'date';
+        dateInput.value = `${year}-${month}-${day}`;
+    }
 
     // Load categories
     fetch('api/expense_categories.php')
@@ -981,6 +1061,8 @@ function addExpenseWithDate(description, amount, category, paymentMode, date) {
     formData.append('category', category);
     formData.append('payment_mode', paymentMode);
     formData.append('date', date);
+    const hasTime = document.getElementById('expenseHasTime')?.checked ? '1' : '0';
+    formData.append('has_time', hasTime);
 
     const attachmentInput = document.getElementById('expenseAttachment');
     if (attachmentInput && attachmentInput.files.length > 0) {
@@ -1046,18 +1128,23 @@ function editExpense(id) {
             document.getElementById('editExpenseId').value = expense.id;
             
             // Format datetime local
+            let hasTime = false;
             let datetimeVal = expense.date;
             if (expense.created_at) {
                 const timePart = expense.created_at.split(' ')[1];
-                if (timePart) {
+                if (timePart && timePart !== '00:00:00' && timePart !== '00:00') {
                     datetimeVal += 'T' + timePart.substring(0, 5);
-                } else {
-                    datetimeVal += 'T12:00';
+                    hasTime = true;
                 }
-            } else {
-                datetimeVal += 'T12:00';
             }
-            document.getElementById('editExpenseDate').value = datetimeVal;
+            
+            const chk = document.getElementById('editExpenseHasTime');
+            const dateInput = document.getElementById('editExpenseDate');
+            if (chk) chk.checked = hasTime;
+            if (dateInput) {
+                dateInput.type = hasTime ? 'datetime-local' : 'date';
+                dateInput.value = hasTime ? datetimeVal : expense.date;
+            }
             
             document.getElementById('editExpenseDescription').value = expense.description;
             document.getElementById('editExpenseAmount').value = expense.amount;
@@ -1117,6 +1204,8 @@ function submitEditExpense(event) {
     formData.append('category', category);
     formData.append('payment_mode', paymentMode);
     formData.append('amount', amount);
+    const hasTime = document.getElementById('editExpenseHasTime')?.checked ? '1' : '0';
+    formData.append('has_time', hasTime);
 
     const attachmentInput = document.getElementById('editExpenseAttachment');
     if (attachmentInput && attachmentInput.files.length > 0) {
@@ -1377,6 +1466,7 @@ window.onclick = function (event) {
     const addExpenseModal = document.getElementById('addExpenseModal');
     const addIncomeModal = document.getElementById('addIncomeModal');
     const paymentModal = document.getElementById('paymentModesModal');
+    const auditLogModal = document.getElementById('auditLogModal');
 
     if (event.target == modal) {
         closeCategoryModal();
@@ -1392,6 +1482,9 @@ window.onclick = function (event) {
     }
     if (event.target == paymentModal) {
         closePaymentModesModal();
+    }
+    if (event.target == auditLogModal) {
+        closeAuditLogModal();
     }
 }
 
@@ -1637,7 +1730,7 @@ function loadPaymentModesDropdowns() {
     return fetch('api/get_payment_modes.php')
         .then(r => r.json())
         .then(modes => {
-            const targets = ['incomePaymentMode', 'expensePaymentMode', 'salaryPaymentMode'];
+            const targets = ['incomePaymentMode', 'expensePaymentMode', 'salaryPaymentMode', 'nonGstPaymentMode', 'gstPaymentMode'];
             targets.forEach(id => {
                 const sel = document.getElementById(id);
                 if (sel) {
@@ -1661,6 +1754,8 @@ function openPaymentModesModal() {
 function closePaymentModesModal() {
     document.getElementById('paymentModesModal').classList.remove('show');
     document.getElementById('newPaymentModeInput').value = '';
+    const balanceInput = document.getElementById('newPaymentModeBalanceInput');
+    if (balanceInput) balanceInput.value = '';
 }
 
 // Load payment modes for management
@@ -1689,9 +1784,16 @@ function displayPaymentModes(modes) {
     let html = '';
     modes.forEach(mode => {
         html += `
-        <div class="category-item">
-            <span class="category-name">${mode.mode_name}</span>
-            <button class="btn-delete-icon" onclick="deletePaymentMode(${mode.id}, '${mode.mode_name}')" title="Delete">✖</button>
+        <div class="category-item" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border-light); margin-bottom: 8px; background: rgba(0, 0, 0, 0.02); border-radius: 8px; align-items: stretch; justify-content: flex-start;">
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span class="category-name" style="font-weight: 700; color: #1e293b;">${mode.mode_name}</span>
+                <button class="btn-delete-icon" onclick="deletePaymentMode(${mode.id}, '${mode.mode_name}')" title="Delete" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto;">✖</button>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
+                <label style="font-size: 11px; color: var(--text-muted); width: 110px; margin: 0; text-transform: uppercase; font-weight: 600;">Opening Bal:</label>
+                <input type="number" id="opening-bal-${mode.id}" class="category-input" value="${parseFloat(mode.opening_balance || 0).toFixed(2)}" step="0.01" style="margin: 0; padding: 4px 8px; font-size: 12px; flex: 1; min-width: 0; height: 28px;">
+                <button onclick="updatePaymentModeBalance(${mode.id}, '${mode.mode_name}')" style="background: var(--primary); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; height: 28px; flex-shrink: 0;">Update</button>
+            </div>
         </div>`;
     });
 
@@ -1707,8 +1809,12 @@ function addPaymentMode() {
         return;
     }
 
+    const balInput = document.getElementById('newPaymentModeBalanceInput');
+    const balance = balInput ? balInput.value.trim() : '0.00';
+
     const formData = new FormData();
     formData.append('mode_name', name);
+    formData.append('opening_balance', balance || '0.00');
 
     fetch('api/add_payment_mode.php', {
         method: 'POST',
@@ -1718,8 +1824,12 @@ function addPaymentMode() {
         .then(data => {
             if (data.success) {
                 input.value = '';
+                if (balInput) balInput.value = '';
                 loadPaymentModesForManagement();
                 loadPaymentModesDropdowns();
+                if (typeof loadDashboardStats === 'function') {
+                    loadDashboardStats();
+                }
             } else {
                 showAlertPopup('Error', data.error || 'Failed to add payment method', 'error');
             }
@@ -1727,6 +1837,43 @@ function addPaymentMode() {
         .catch(error => {
             console.error('Error adding payment mode:', error);
             showAlertPopup('Error', 'Failed to save payment method due to a network error.', 'error');
+        });
+}
+
+// Update payment mode opening balance
+function updatePaymentModeBalance(id, name) {
+    const balInput = document.getElementById(`opening-bal-${id}`);
+    if (!balInput) return;
+    const balance = balInput.value.trim();
+    
+    if (balance === '') {
+        showAlertPopup('Warning', 'Opening balance cannot be empty', 'warning');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('id', id);
+    formData.append('opening_balance', balance);
+    
+    fetch('api/update_payment_mode.php', {
+        method: 'POST',
+        body: formData
+    })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlertPopup('Success', `Opening balance for "${name}" updated to ₹${parseFloat(balance).toFixed(2)}.`, 'success');
+                loadPaymentModesForManagement();
+                if (typeof loadDashboardStats === 'function') {
+                    loadDashboardStats();
+                }
+            } else {
+                showAlertPopup('Error', data.error || 'Failed to update opening balance', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error updating payment mode balance:', error);
+            showAlertPopup('Error', 'Failed to update opening balance due to a network error.', 'error');
         });
 }
 
@@ -1743,6 +1890,9 @@ function deletePaymentMode(id, name) {
                         showAlertPopup('Deleted', `Payment method "${name}" has been deleted.`, 'success');
                         loadPaymentModesForManagement();
                         loadPaymentModesDropdowns();
+                        if (typeof loadDashboardStats === 'function') {
+                            loadDashboardStats();
+                        }
                     } else {
                         showAlertPopup('Error', data.error || 'Failed to delete payment method', 'error');
                     }
@@ -1784,7 +1934,7 @@ function displaySalaryLogs(logs) {
         return;
     }
 
-    let html = `<table>
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
         <thead>
             <tr>
                 <th>S.No</th>
@@ -2849,8 +2999,17 @@ function applyTxnFilters() {
         if (timeFilter === 'last-month') {
             return itemDate.getMonth() === prevMonth && itemDate.getFullYear() === prevYear;
         }
-        if (timeFilter === 'this-year') {
-            return itemDate.getFullYear() === currentYear;
+        if (timeFilter === 'this-fy') {
+            const startYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+            const fyStart = new Date(startYear, 3, 1);
+            const fyEnd = new Date(startYear + 1, 2, 31, 23, 59, 59);
+            return itemDate >= fyStart && itemDate <= fyEnd;
+        }
+        if (timeFilter === 'last-fy') {
+            const startYear = (currentMonth >= 3 ? currentYear : currentYear - 1) - 1;
+            const fyStart = new Date(startYear, 3, 1);
+            const fyEnd = new Date(startYear + 1, 2, 31, 23, 59, 59);
+            return itemDate >= fyStart && itemDate <= fyEnd;
         }
         if (timeFilter === 'specific-date') {
             const specDateVal = document.getElementById('txn-specific-date')?.value;
@@ -2899,7 +3058,7 @@ function displayFilteredTxns(list) {
         return;
     }
 
-    let html = `<table>
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
         <thead>
             <tr>
                 <th>S.No</th>
@@ -2928,7 +3087,7 @@ function displayFilteredTxns(list) {
 
         html += `<tr>
             <td>${index + 1}</td>
-            <td>${new Date(item.date).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})}</td>
+            <td>${formatTransactionDate(item.date, item.created_at)}</td>
             <td>${item.description || '-'}</td>
             <td><span class="category-badge">${item.category || 'Other'}</span></td>
             <td>${item.payment_mode || 'Cash'}</td>
@@ -2959,23 +3118,26 @@ function loadClients() {
             const tbody = document.getElementById('clients-list-container');
             if (!tbody) return;
             
-            let html = `<table>
+            let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Client Name</th>
+                        <th>S.No</th>
+                        <th>Name</th>
+                        <th>Type</th>
                         <th>Phone</th>
                         <th>Email</th>
                         <th>GST Number</th>
                         <th>Invoices</th>
                         <th>Last Invoice Date</th>
+                        <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>`;
             
             if (data.length === 0) {
-                html += '<tr><td colspan="7" class="text-center" style="color: var(--text-muted); padding: 30px;">No clients available.</td></tr>';
+                html += '<tr><td colspan="9" class="text-center" style="color: var(--text-muted); padding: 30px;">No clients available.</td></tr>';
             } else {
+                let sNo = 1;
                 data.forEach(client => {
                     const lastDate = client.lastInvoiceDate 
                         ? new Date(client.lastInvoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})
@@ -2983,13 +3145,34 @@ function loadClients() {
                         
                     html += `
                         <tr>
-                            <td><strong>#${client.id}</strong></td>
+                            <td><strong>${sNo++}</strong></td>
                             <td>${client.name}</td>
+                            <td><span style="background: ${client.client_type === 'Student' ? '#eff6ff' : '#f8fafc'}; color: ${client.client_type === 'Student' ? '#3b82f6' : '#64748b'}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; border: 1px solid ${client.client_type === 'Student' ? '#bfdbfe' : '#e2e8f0'};">${client.client_type || 'Client'}</span></td>
                             <td>${client.phone}</td>
                             <td>${client.email}</td>
                             <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${client.gstNumber}</span></td>
-                            <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600;">${client.invoiceCount} Invoices</span></td>
+                            <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block;">${client.invoiceCount} Invoices</span></td>
                             <td>${lastDate}</td>
+                            <td>
+                                
+                                <button class="btn-action btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${client.phone}', '${client.email}')" title="Create Invoice" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: #10b981; padding: 6px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 6px;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                        <polyline points="10 9 9 9 8 9"></polyline>
+                                    </svg>
+                                </button>
+                                <button class="btn-action btn-delete-small" onclick="deleteClient(${client.id}, '${escapeHtml(client.name)}')" title="Delete Client" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: #ef4444; padding: 6px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </td>
                         </tr>
                     `;
                 });
@@ -2998,6 +3181,24 @@ function loadClients() {
             tbody.innerHTML = html;
         })
         .catch(err => console.error('Error loading clients:', err));
+}
+
+function deleteClient(id, name) {
+    if (!confirm(`Are you sure you want to delete client "${name}"?\n\nWarning: This will also permanently delete all invoices and quotations associated with this client.`)) {
+        return;
+    }
+
+    fetch('api/delete_client.php?id=' + id)
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadClients();
+                if (typeof loadDashboardData === 'function') loadDashboardData();
+            } else {
+                alert('Error: ' + (data.error || 'Failed to delete client'));
+            }
+        })
+        .catch(err => console.error('Error deleting client:', err));
 }
 
 // ==========================================
@@ -3021,9 +3222,16 @@ function loadQuotations() {
 
 function displayQuotations(quotes) {
     const tbody = document.getElementById('quotations-list-container');
+            
+            // Update Quotation Stats
+            const acceptedCount = quotes.filter(q => q.status === 'Accepted').length;
+            const rejectedCount = quotes.filter(q => q.status === 'Rejected').length;
+            if(document.getElementById('quotation-accepted-count')) document.getElementById('quotation-accepted-count').textContent = acceptedCount;
+            if(document.getElementById('quotation-rejected-count')) document.getElementById('quotation-rejected-count').textContent = rejectedCount;
+
     if (!tbody) return;
     
-    let html = `<table>
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
         <thead>
             <tr>
                 <th>Quotation No</th>
@@ -3120,93 +3328,408 @@ function loadAuditLogs() {
 }
 
 function displayAuditLogs(logs) {
-    const tbody = document.getElementById('audit-logs-container');
-    if (!tbody) return;
+    const container = document.getElementById('audit-logs-container');
+    if (!container) return;
     
-    let html = '';
-    logs.forEach(log => {
-        const timeStr = new Date(log.created_at).toLocaleString('en-IN', {
-            day: '2-digit', month: 'short', year: 'numeric',
-            hour: '2-digit', minute: '2-digit', second: '2-digit'
-        });
-        
-        let actionBadgeColor = 'rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3)';
-        if (log.action.toLowerCase().includes('delete') || log.action.toLowerCase().includes('remove')) {
-            actionBadgeColor = 'rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3)';
-        } else if (log.action.toLowerCase().includes('add') || log.action.toLowerCase().includes('insert') || log.action.toLowerCase().includes('create')) {
-            actionBadgeColor = 'rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3)';
-        }
-        
-        html += `
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
+        <thead>
             <tr>
-                <td style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${timeStr}</td>
-                <td><strong>${log.username || 'System'}</strong></td>
-                <td><span class="status-badge" style="background: ${actionBadgeColor}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${log.action}</span></td>
-                <td><span style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${log.table_name}</span></td>
-                <td><strong>#${log.record_id || '-'}</strong></td>
-                <td style="font-size: 12px; color: #fff;">${log.details || '-'}</td>
+                <th style="width: 180px;">Timestamp (IST)</th>
+                <th style="width: 120px;">User</th>
+                <th style="width: 120px;">Action</th>
+                <th style="width: 150px;">Module</th>
+                <th style="width: 120px; text-align: center;">Record</th>
             </tr>
-        `;
-    });
+        </thead>
+        <tbody>`;
     
-    tbody.innerHTML = html || '<tr><td colspan="6" class="text-center" style="color: var(--text-muted); padding: 30px;">No audit records available.</td></tr>';
+    if (logs.length === 0) {
+        html += '<tr><td colspan="5" class="text-center" style="color: var(--text-muted); padding: 30px;">No audit records available.</td></tr>';
+    } else {
+        logs.forEach(log => {
+            // Convert to IST (Asia/Kolkata) explicitly
+            let timeStr = '-';
+            if (log.created_at) {
+                try {
+                    const utcDateStr = log.created_at.replace(' ', 'T') + 'Z';
+                    timeStr = new Date(utcDateStr).toLocaleString('en-IN', {
+                        timeZone: 'Asia/Kolkata',
+                        day: '2-digit', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit', second: '2-digit',
+                        hour12: true
+                    });
+                } catch (e) {
+                    timeStr = log.created_at;
+                }
+            }
+            
+            let actionBadgeColor = 'rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3)';
+            if (log.action.toLowerCase().includes('delete') || log.action.toLowerCase().includes('remove')) {
+                actionBadgeColor = 'rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3)';
+            } else if (log.action.toLowerCase().includes('add') || log.action.toLowerCase().includes('insert') || log.action.toLowerCase().includes('create')) {
+                actionBadgeColor = 'rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3)';
+            }
+            
+            html += `
+                <tr>
+                    <td style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${timeStr}</td>
+                    <td><strong>${log.username || 'System'}</strong></td>
+                    <td><span class="status-badge" style="background: ${actionBadgeColor}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${log.action}</span></td>
+                    <td><span style="font-family: monospace; font-size: 11px; color: var(--text-muted);">${log.table_name}</span></td>
+                    <td style="text-align: center;">
+                        <button class="btn-action btn-edit-small" onclick="openAuditLogModal(${log.id})" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            View
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+    }
+    
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+function openAuditLogModal(id) {
+    const log = allAuditLogs.find(l => l.id == id);
+    if (!log) return;
+    
+    let timeStr = '-';
+    if (log.created_at) {
+        try {
+            const utcDateStr = log.created_at.replace(' ', 'T') + 'Z';
+            timeStr = new Date(utcDateStr).toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            timeStr = log.created_at;
+        }
+    }
+    
+    document.getElementById('audit-modal-timestamp').textContent = timeStr;
+    document.getElementById('audit-modal-user').textContent = log.username || 'System';
+    
+    const actionBadge = document.getElementById('audit-modal-action');
+    actionBadge.textContent = log.action;
+    
+    let actionBadgeColor = 'rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3)';
+    if (log.action.toLowerCase().includes('delete') || log.action.toLowerCase().includes('remove')) {
+        actionBadgeColor = 'rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3)';
+    } else if (log.action.toLowerCase().includes('add') || log.action.toLowerCase().includes('insert') || log.action.toLowerCase().includes('create')) {
+        actionBadgeColor = 'rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3)';
+    }
+    actionBadge.style.cssText = `background: ${actionBadgeColor}; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;`;
+    
+    document.getElementById('audit-modal-module').textContent = log.table_name;
+    document.getElementById('audit-modal-record-id').textContent = log.record_id ? '#' + log.record_id : '-';
+    document.getElementById('audit-modal-details').textContent = log.details || 'No details available.';
+    
+    document.getElementById('auditLogModal').classList.add('show');
+}
+
+function closeAuditLogModal() {
+    document.getElementById('auditLogModal').classList.remove('show');
+}
+
+function filterAuditLogs() {
+    const query = document.getElementById('audit-search').value.toLowerCase();
+    const filtered = allAuditLogs.filter(log => {
+        return (log.username || '').toLowerCase().includes(query) ||
+               (log.action || '').toLowerCase().includes(query) ||
+               (log.table_name || '').toLowerCase().includes(query) ||
+               (log.record_id || '').toString().toLowerCase().includes(query) ||
+               (log.details || '').toLowerCase().includes(query);
+    });
+    displayAuditLogs(filtered);
 }
 
 // ==========================================
 // 5. Global Settings & 2FA Control
 // ==========================================
 function loadSettings() {
-    fetch('api/get_settings.php')
-        .then(res => res.json())
-        .then(settings => {
-            if (settings.error) {
-                console.error(settings.error);
-                return;
-            }
-            
-            if (document.getElementById('setCompanyName')) {
-                document.getElementById('setCompanyName').value = settings.company_name || '';
-                document.getElementById('setCompanyGst').value = settings.company_gst || '';
-                document.getElementById('setCompanyPhone').value = settings.company_phone || '';
-                document.getElementById('setCompanyEmail').value = settings.company_email || '';
-                document.getElementById('setCompanyAddress').value = settings.company_address || '';
-                
-                // 2FA status
-                const is2FA = settings.enable_2fa === 'true' || settings.enable_2fa === '1';
-                document.getElementById('set2FA').checked = is2FA;
-            }
-        })
-        .catch(err => console.error('Error loading settings:', err));
+    // Company details and 2FA settings removed from the UI.
 }
 
 function saveGlobalSettings(event) {
-    event.preventDefault();
-    
-    const payload = {
-        company_name: document.getElementById('setCompanyName').value,
-        company_gst: document.getElementById('setCompanyGst').value,
-        company_phone: document.getElementById('setCompanyPhone').value,
-        company_email: document.getElementById('setCompanyEmail').value,
-        company_address: document.getElementById('setCompanyAddress').value,
-        enable_2fa: document.getElementById('set2FA').checked ? 'true' : 'false'
-    };
-    
-    fetch('api/save_settings.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            alert('Global Configurations saved successfully!');
-            loadSettings();
-        } else {
-            alert('Error: ' + (data.error || 'Failed to save configurations'));
-        }
-    })
-    .catch(err => console.error('Error saving settings:', err));
+    if (event) event.preventDefault();
 }
 
 
 // Invoice functions moved to invoice_functions.js
+
+
+function openAddClientModal() {
+    document.getElementById('addClientModal').classList.add('show');
+}
+function closeAddClientModal() {
+    document.getElementById('addClientModal').classList.remove('show');
+    document.getElementById('addClientForm').reset();
+    if(typeof setClientType === 'function') setClientType('Client');
+    if(document.getElementById('collegeDisplay')) document.getElementById('collegeDisplay').textContent = 'Select College';
+    if(document.getElementById('deptDisplay')) document.getElementById('deptDisplay').textContent = 'Select Department';
+}
+function saveNewClient(e) {
+    e.preventDefault();
+    const data = new FormData();
+    data.append('name', document.getElementById('newClientName').value);
+    data.append('phone', document.getElementById('newClientPhone').value);
+    data.append('email', document.getElementById('newClientEmail').value);
+    data.append('client_type', document.getElementById('newClientType').value);
+    
+    if (document.getElementById('newClientType').value === 'Student') {
+        data.append('college_name', document.getElementById('newClientCollege').value);
+        data.append('department', document.getElementById('newClientDepartment').value);
+        data.append('gst_number', '');
+        data.append('address', '');
+    } else {
+        data.append('gst_number', document.getElementById('newClientGst').value);
+        data.append('address', '');
+        data.append('college_name', '');
+        data.append('department', '');
+    }
+
+    fetch('api/add_client.php', {
+        method: 'POST',
+        body: data
+    }).then(res => res.json()).then(res => {
+        if(res.success) {
+            closeAddClientModal();
+            loadClients();
+            alert('Client added successfully');
+        } else {
+            alert(res.error || 'Failed to add client');
+        }
+    });
+}
+
+
+function toggleClientFields() {
+    const type = document.getElementById('newClientType').value;
+    const clientFields = document.getElementById('clientSpecificFields');
+    const studentFields = document.getElementById('studentSpecificFields');
+    const nameLabel = document.getElementById('nameLabel');
+
+    if (type === 'Student') {
+        clientFields.style.display = 'none';
+        studentFields.style.display = 'block';
+        nameLabel.innerHTML = 'Student Name <span class="required">*</span>';
+    } else {
+        clientFields.style.display = 'block';
+        studentFields.style.display = 'none';
+        nameLabel.innerHTML = 'Client Name <span class="required">*</span>';
+    }
+}
+
+
+function setClientType(type) {
+    document.getElementById('newClientType').value = type;
+    
+    if (type === 'Student') {
+        document.getElementById('btnTypeStudent').classList.add('active');
+        document.getElementById('btnTypeClient').classList.remove('active');
+    } else {
+        document.getElementById('btnTypeClient').classList.add('active');
+        document.getElementById('btnTypeStudent').classList.remove('active');
+    }
+    
+    toggleClientFields();
+}
+
+
+function loadAcademicDropdowns() {
+    ['colleges', 'departments'].forEach(type => {
+        fetch('api/manage_academic.php?action=get&type=' + type)
+            .then(res => res.json())
+            .then(data => {
+                const isCollege = type === 'colleges';
+                const optionsId = isCollege ? 'collegeOptions' : 'deptOptions';
+                const hiddenId = isCollege ? 'newClientCollege' : 'newClientDepartment';
+                const displayId = isCollege ? 'collegeDisplay' : 'deptDisplay';
+                const defaultText = isCollege ? 'Select College' : 'Select Department';
+                
+                const optionsContainer = document.getElementById(optionsId);
+                if (optionsContainer) {
+                    optionsContainer.innerHTML = `<div class="custom-select-option" onclick="selectCustomOption('${optionsId}', '${hiddenId}', '${displayId}', '', '${defaultText}')">${defaultText}</div>`;
+                    data.forEach(item => {
+                        // Escape single quotes for inline onclick
+                        const safeName = item.name.replace(/'/g, "\\'");
+                        optionsContainer.innerHTML += `<div class="custom-select-option" onclick="selectCustomOption('${optionsId}', '${hiddenId}', '${displayId}', '${safeName}', '${safeName}')">${item.name}</div>`;
+                    });
+                }
+            });
+    });
+}
+
+// Call on load
+document.addEventListener('DOMContentLoaded', () => {
+    loadAcademicDropdowns();
+});
+
+function openManageAcademicModal(type) {
+    document.getElementById('manageAcademicType').value = type;
+    document.getElementById('manageAcademicTitle').textContent = type === 'colleges' ? 'Manage Colleges' : 'Manage Departments';
+    loadAcademicList(type);
+    document.getElementById('manageAcademicModal').classList.add('show');
+}
+
+function closeManageAcademicModal() {
+    document.getElementById('manageAcademicModal').classList.remove('show');
+    document.getElementById('addAcademicForm').reset();
+}
+
+function loadAcademicList(type) {
+    const tbody = document.getElementById('manageAcademicList');
+    tbody.innerHTML = '<tr><td colspan="2" style="padding: 15px; text-align: center; color: #64748b;">Loading...</td></tr>';
+    
+    fetch('api/manage_academic.php?action=get&type=' + type)
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.error) {
+                tbody.innerHTML = '<tr><td colspan="2" style="padding: 15px; text-align: center; color: #ef4444;">Failed to load data</td></tr>';
+                return;
+            }
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="2" style="padding: 15px; text-align: center; color: #64748b;">No records found</td></tr>';
+                return;
+            }
+            tbody.innerHTML = '';
+            data.forEach(item => {
+                tbody.innerHTML += `
+                    <tr style="border-bottom: 1px solid #f1f5f9;">
+                        <td style="padding: 10px; font-size: 14px;">${item.name}</td>
+                        <td style="padding: 10px; text-align: right;">
+                            <button type="button" onclick="deleteAcademicItem(${item.id}, '${type}')" style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 12px;">Delete</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        });
+}
+
+function addAcademicItem(e) {
+    e.preventDefault();
+    const type = document.getElementById('manageAcademicType').value;
+    const name = document.getElementById('newAcademicName').value;
+    
+    const data = new FormData();
+    data.append('action', 'add');
+    data.append('type', type);
+    data.append('name', name);
+    
+    fetch('api/manage_academic.php', { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                document.getElementById('newAcademicName').value = '';
+                loadAcademicList(type);
+                loadAcademicDropdowns();
+            } else {
+                alert(res.error || 'Failed to add');
+            }
+        });
+}
+
+function deleteAcademicItem(id, type) {
+    if(!confirm('Are you sure you want to delete this record?')) return;
+    
+    const data = new FormData();
+    data.append('action', 'delete');
+    data.append('type', type);
+    data.append('id', id);
+    
+    fetch('api/manage_academic.php', { method: 'POST', body: data })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                loadAcademicList(type);
+                loadAcademicDropdowns();
+            } else {
+                alert(res.error || 'Failed to delete');
+            }
+        });
+}
+
+
+// Custom Select Logic
+function toggleCustomSelect(id) {
+    document.querySelectorAll('.custom-select-options').forEach(el => {
+        if (el.id !== id) el.classList.remove('show');
+    });
+    document.getElementById(id).classList.toggle('show');
+}
+
+function selectCustomOption(optionsId, hiddenId, displayId, value, text) {
+    document.getElementById(hiddenId).value = value;
+    document.getElementById(displayId).textContent = text;
+    document.getElementById(optionsId).classList.remove('show');
+}
+
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-select-wrapper')) {
+        document.querySelectorAll('.custom-select-options').forEach(el => el.classList.remove('show'));
+    }
+});
+
+
+function openInvoiceForClient(clientName) {
+    // Open the modal (defaulting to GST or Non-GST, assuming openUnifiedInvoiceModal exists)
+    if (typeof openUnifiedInvoiceModal === 'function') {
+        openUnifiedInvoiceModal();
+    } else {
+        document.getElementById('unifiedInvoiceModal').classList.add('show');
+    }
+    
+    // Switch to Non-GST by default as it's safer, or just use the current active one
+    setTimeout(() => {
+        // Find which modal is active
+        let type = 'nonGst';
+        if (document.getElementById('gstInvoiceForm') && document.getElementById('gstInvoiceForm').offsetParent !== null) {
+            type = 'gst';
+        }
+        
+        const nameInput = document.getElementById(type + 'BillToName');
+        if (nameInput) {
+            nameInput.value = clientName;
+            // Trigger input event to autofill details
+            const event = new Event('input', { bubbles: true });
+            nameInput.dispatchEvent(event);
+        }
+    }, 100);
+}
+
+window.openInvoiceForClient = function(name, phone, email) {
+    if(typeof switchToNonGstModal === 'function') {
+        switchToNonGstModal();
+        setTimeout(() => {
+            const safeEmail = email && email !== 'N/A' && email !== 'null' ? email : '';
+            if(document.getElementById('nonGstBillToName')) document.getElementById('nonGstBillToName').value = name;
+            if(document.getElementById('nonGstPhone')) document.getElementById('nonGstPhone').value = phone;
+            if(document.getElementById('nonGstEmail')) document.getElementById('nonGstEmail').value = safeEmail;
+            
+            if(document.getElementById('gstBillToName')) document.getElementById('gstBillToName').value = name;
+            if(document.getElementById('gstPhone')) document.getElementById('gstPhone').value = phone;
+            if(document.getElementById('gstEmail')) document.getElementById('gstEmail').value = safeEmail;
+        }, 50);
+    } else {
+        alert('Invoice functions are not loaded yet.');
+    }
+};
+
+
+// Change Financial Year Dynamically
+window.changeFinancialYear = function(value) {
+    document.cookie = 'financial_year=' + value + '; path=/';
+    if(typeof loadDashboardStats === 'function') loadDashboardStats();
+    if(typeof loadInvoices === 'function') loadInvoices();
+    if(typeof loadTransactions === 'function') loadTransactions();
+    if(typeof loadClients === 'function') loadClients();
+    if(typeof loadSalaryLogs === 'function') loadSalaryLogs();
+    if(typeof loadLoans === 'function') loadLoans();
+    if(typeof fetchQuotations === 'function') fetchQuotations();
+    if(typeof loadReports === 'function') loadReports();
+    if(typeof showAlertPopup === 'function') showAlertPopup('Success', 'Financial Year changed to ' + value, 'success');
+};

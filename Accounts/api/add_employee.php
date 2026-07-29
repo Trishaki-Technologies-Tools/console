@@ -41,7 +41,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("s", $name);
 
     if ($stmt->execute()) {
-        echo json_encode(['success' => true, 'id' => $conn->insert_id]);
+        $empId = $conn->insert_id;
+        log_action($conn, 'ADD', 'employees', $empId, "Added employee: $name");
+        echo json_encode(['success' => true, 'id' => $empId]);
     } else {
         echo json_encode(['success' => false, 'error' => $conn->error]);
     }

@@ -61,6 +61,8 @@ if (isset($_GET['id'])) {
 
         if ($stmt->execute()) {
             $stmt->close();
+            $logMsg = $salaryLog ? "Deleted salary log for $name: ₹$amount" : "Deleted salary log ID: $id";
+            log_action($conn, 'DELETE', 'salary_logs', $id, $logMsg);
             $conn->commit();
             
             // Recalculate report totals

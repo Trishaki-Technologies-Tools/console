@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $query = "INSERT INTO incomes_categories (category_name) VALUES ('$categoryName')";
         
         if ($conn->query($query)) {
+            log_action($conn, 'ADD', 'incomes_categories', $conn->insert_id, "Added income category: $categoryName");
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => $conn->error]);

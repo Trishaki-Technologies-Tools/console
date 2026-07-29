@@ -542,6 +542,11 @@ tr:last-child td:last-child {
     border: 1px solid rgba(59, 130, 246, 0.2);
 }
 
+.status-badge {
+    display: inline-block;
+    white-space: nowrap;
+}
+
 /* Modals */
 .modal {
     position: fixed;

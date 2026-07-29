@@ -39,7 +39,9 @@ try {
     $tDesc = "Voucher " . $refNo . " to " . $payee;
     $tStmt->bind_param("dsis", $amount, $date, $vId, $tDesc);
     $tStmt->execute();
-
+    
+    log_action($conn, 'ADD', 'vouchers', $vId, "Generated voucher $refNo to $payee (₹$amount)");
+    
     echo json_encode([
         'success' => true,
         'refNo' => $refNo

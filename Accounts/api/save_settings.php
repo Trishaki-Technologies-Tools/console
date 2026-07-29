@@ -28,6 +28,8 @@ try {
     }
     
     $stmt->close();
+    log_action($conn, 'EDIT', 'settings', null, "Updated global settings");
+    
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);

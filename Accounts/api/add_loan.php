@@ -85,6 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("sddiss", $creditor_name, $principal_amount, $interest_rate, $duration_months, $start_date, $status);
 
         if ($stmt->execute()) {
+            $loanId = $conn->insert_id;
+            log_action($conn, 'ADD', 'loans', $loanId, "Added loan from $creditor_name (Principal: ₹$principal_amount)");
             $conn->commit();
             echo json_encode(['success' => true, 'message' => 'Loan added successfully']);
         } else {

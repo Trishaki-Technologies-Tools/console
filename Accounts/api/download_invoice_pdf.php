@@ -260,6 +260,8 @@ $dompdf->loadHtml($html);
 $dompdf->render();
 
 $filename = "Invoice_" . preg_replace('/[^A-Za-z0-9_\-]/', '_', $invoiceNo) . ".pdf";
+log_action($conn, 'VIEW', 'invoices', $inv['id'], "Downloaded invoice PDF: $invoiceNo");
+
 header('Content-Type: application/pdf');
 header('Content-Disposition: attachment; filename="' . $filename . '"');
 echo $dompdf->output();

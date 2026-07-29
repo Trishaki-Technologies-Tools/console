@@ -12,6 +12,7 @@ try {
     
     $conn->query("TRUNCATE TABLE invoices");
     $conn->query("TRUNCATE TABLE clients");
+    $conn->query("DELETE FROM transactions WHERE reference_table = 'invoices'");
     
     $conn->query("SET FOREIGN_KEY_CHECKS = 1");
     

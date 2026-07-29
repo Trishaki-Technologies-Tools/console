@@ -56,6 +56,8 @@ try {
         'cumulativeTotalPaid' => $invoice['cumulative_total_paid']
     ]);
     
+    log_action($conn, 'VIEW', 'invoices', null, "Viewed invoice: $invoiceNo");
+    
     header("Location: generate_invoice.php?$params");
     exit;
     

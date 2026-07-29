@@ -6,9 +6,9 @@ date_default_timezone_set('Asia/Kolkata');
 require_once __DIR__ . '/../../2fa_config.php';
 
 // Database configuration - REMOTE SERVER
-define('DB_HOST', '82.25.121.32');
-define('DB_USER', 'u164024082_accounts');
-define('DB_PASS', 'Trishaki@tech-accounts#304');
+define('DB_HOST', 'localhost');
+define('DB_USER', 'root');
+define('DB_PASS', '');
 define('DB_NAME', 'u164024082_accounts');
 
 // Create connection with explicit timeout and port
@@ -34,4 +34,37 @@ try {
 
 // Set charset
 $conn->set_charset("utf8");
+
+// Audit Log Helper
+function log_action($conn, $action, $table_name, $row_id, $details = '')
+{
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    $user_id = null;
+    $username = $_SESSION['username'] ?? 'System';
+
+    if ($username !== 'System') {
+        $stmt = $conn->prepare("SELECT id FROM users WHERE username = ?");
+        $stmt->bind_param("s", $username);
+        $stmt->execute();
+        $res = $stmt->get_result();
+        if ($res && $res->num_rows > 0) {
+            $user_id = $res->fetch_assoc()['id'];
+        } else {
+            // Insert user if not exists to satisfy foreign key constraint
+            $dummy_pass = '$2y$10$U6YeWhH9ausb3j2QraJ0Cu5JnR.2OQpujxR.ED2TSwiH6D8gNvbKu';
+            $ins = $conn->prepare("INSERT INTO users (username, password) VALUES (?, ?)");
+            $ins->bind_param("ss", $username, $dummy_pass);
+            if ($ins->execute()) {
+                $user_id = $conn->insert_id;
+            }
+        }
+    }
+
+    $stmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, table_name, row_id, ip_address) VALUES (?, ?, ?, ?, ?)");
+    $stmt->bind_param("issis", $user_id, $action, $table_name, $row_id, $details);
+    $stmt->execute();
+}
 ?>

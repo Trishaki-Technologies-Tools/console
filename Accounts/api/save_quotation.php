@@ -77,6 +77,12 @@ try {
         $id = $conn->insert_id;
     }
 
+    if (isset($data['quotationNo']) && $data['quotationNo']) {
+        log_action($conn, 'EDIT', 'quotations', $id, "Edited quotation: $quotationNo for $clientName (₹$totalAmount)");
+    } else {
+        log_action($conn, 'ADD', 'quotations', $id, "Created quotation: $quotationNo for $clientName (₹$totalAmount)");
+    }
+
     $conn->commit();
     echo json_encode(['success' => true, 'quotationNo' => $quotationNo, 'id' => $id]);
 

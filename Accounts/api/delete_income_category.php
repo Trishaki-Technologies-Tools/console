@@ -17,6 +17,7 @@ try {
             $query = "DELETE FROM incomes_categories WHERE id = $id";
             
             if ($conn->query($query)) {
+                log_action($conn, 'DELETE', 'incomes_categories', $id, "Deleted income category ID: $id");
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'error' => $conn->error]);

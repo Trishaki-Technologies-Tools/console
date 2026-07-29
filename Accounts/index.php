@@ -10,13 +10,13 @@ require_once '../2fa_config.php';
 
 // 2FA Check for Accounts Module
 if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verified']) || $_SESSION['accounts_2fa_verified'] !== true)) {
-    
+
     // Check if 2FA secret exists (Specific for Accounts)
     $secretFile = 'accounts_secret.txt';
     $isSetup = !file_exists($secretFile);
     $qrCodeUrl = '';
     $secret = '';
-    
+
     if ($isSetup) {
         require_once '../GoogleAuthenticator.php';
         $g2fa = new GoogleAuthenticator();
@@ -27,21 +27,23 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     ?>
     <!DOCTYPE html>
     <html lang="en">
+
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Accounts Security - Trishaki</title>
         <style>
-            body { 
-                font-family: 'Segoe UI', sans-serif; 
-                background: #0f172a; 
-                color: white; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                min-height: 100vh; 
-                margin: 0; 
+            body {
+                font-family: 'Segoe UI', sans-serif;
+                background: #0f172a;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                min-height: 100vh;
+                margin: 0;
             }
+
             .auth-container {
                 background: rgba(30, 41, 59, 0.7);
                 backdrop-filter: blur(10px);
@@ -53,9 +55,22 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 max-width: 400px;
                 box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
             }
-            .icon { font-size: 3rem; margin-bottom: 20px; }
-            h2 { margin: 0 0 10px; font-weight: 600; }
-            p { color: #94a3b8; margin-bottom: 30px; }
+
+            .icon {
+                font-size: 3rem;
+                margin-bottom: 20px;
+            }
+
+            h2 {
+                margin: 0 0 10px;
+                font-weight: 600;
+            }
+
+            p {
+                color: #94a3b8;
+                margin-bottom: 30px;
+            }
+
             input {
                 width: 100%;
                 padding: 15px;
@@ -70,7 +85,11 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 outline: none;
                 transition: border-color 0.3s;
             }
-            input:focus { border-color: #6366f1; }
+
+            input:focus {
+                border-color: #6366f1;
+            }
+
             button {
                 width: 100%;
                 padding: 15px;
@@ -83,17 +102,44 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 cursor: pointer;
                 transition: transform 0.2s;
             }
-            button:hover { transform: translateY(-2px); }
-            button:disabled { opacity: 0.7; cursor: not-allowed; }
-            .error { color: #ef4444; font-size: 0.9rem; margin-top: 15px; display: none; }
-            .qr-code { background: white; padding: 10px; border-radius: 8px; margin-bottom: 20px; }
-            .secret-key { font-family: monospace; color: #a855f7; margin-bottom: 20px; display: block; letter-spacing: 2px; }
+
+            button:hover {
+                transform: translateY(-2px);
+            }
+
+            button:disabled {
+                opacity: 0.7;
+                cursor: not-allowed;
+            }
+
+            .error {
+                color: #ef4444;
+                font-size: 0.9rem;
+                margin-top: 15px;
+                display: none;
+            }
+
+            .qr-code {
+                background: white;
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+            }
+
+            .secret-key {
+                font-family: monospace;
+                color: #a855f7;
+                margin-bottom: 20px;
+                display: block;
+                letter-spacing: 2px;
+            }
         </style>
     </head>
+
     <body>
         <div class="auth-container">
-            <div class="icon">🔐</div>
-            
+            <div class="icon">�?</div>
+
             <?php if ($isSetup): ?>
                 <h2>Setup 2FA</h2>
                 <p>Scan this QR code with Google Authenticator App</p>
@@ -120,8 +166,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 const code = document.getElementById('code').value;
                 const btn = document.getElementById('btn');
                 const err = document.getElementById('error');
-                
-                if(code.length < 6) return;
+
+                if (code.length < 6) return;
 
                 btn.disabled = true;
                 btn.textContent = 'Verifying...';
@@ -136,12 +182,12 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 try {
                     const res = await fetch('api/verify_2fa.php', {
                         method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(payload)
                     });
                     const data = await res.json();
-                    
-                    if(data.success) {
+
+                    if (data.success) {
                         location.reload();
                     } else {
                         err.textContent = data.message || 'Invalid Code';
@@ -149,7 +195,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         btn.disabled = false;
                         btn.textContent = isSetup ? 'Setup & Verify' : 'Verify Access';
                     }
-                } catch(e) {
+                } catch (e) {
                     err.textContent = 'Connection Error';
                     err.style.display = 'block';
                     btn.disabled = false;
@@ -158,11 +204,14 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             }
 
             // Auto submit on enter
-            document.getElementById('code').addEventListener('keypress', function(e) {
-                if(e.key === 'Enter') verify();
+            document.getElementById('code').addEventListener('keypress', function (e) {
+                if (e.key === 'Enter') verify();
             });
         </script>
-    </body>
+    <datalist id="clientDatalist"></datalist>
+    
+</body>
+
     </html>
     <?php
     exit;
@@ -175,11 +224,20 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>TriShaKi Technologies - Finance Dashboard</title>
-    <link rel="stylesheet" href="css/style.css?v=2">
+    <link rel="stylesheet" href="css/style.css?v=<?= time() ?>">
+    <style>
+        /* Fallback Layout Spacing Fixes */
+        .page-content { padding: 32px 40px !important; }
+        .stats-row-small { display: flex !important; flex-wrap: wrap !important; gap: 20px !important; margin-bottom: 24px !important; }
+        .stat-card-small { flex: 1 1 220px !important; min-width: 220px !important; }
+        .dashboard-section { margin-bottom: 35px !important; }
+        .records-section { margin-top: 24px !important; margin-bottom: 24px !important; }
+    </style>
     <style>
         .dropdown-option {
             transition: background-color 0.2s ease, color 0.2s ease;
         }
+
         .dropdown-option:hover {
             background-color: rgba(255, 255, 255, 0.08) !important;
             color: #6366f1 !important;
@@ -198,43 +256,97 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             </div>
             <nav class="nav-menu">
                 <a href="#" class="nav-item active" data-page="dashboard" title="Dashboard">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <rect x="3" y="3" width="7" height="9"></rect>
+                            <rect x="14" y="3" width="7" height="5"></rect>
+                            <rect x="14" y="12" width="7" height="9"></rect>
+                            <rect x="3" y="16" width="7" height="5"></rect>
+                        </svg></span>
                     <span>Dashboard</span>
                 </a>
                 <a href="#" class="nav-item" data-page="transactions" title="Transactions">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <line x1="12" y1="1" x2="12" y2="23"></line>
+                            <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                        </svg></span>
                     <span>Transactions</span>
                 </a>
                 <a href="#" class="nav-item" data-page="salary-logs" title="Salary Logs">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg></span>
                     <span>Salary Logs</span>
                 </a>
                 <a href="#" class="nav-item" data-page="loans" title="Loans">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg></span>
                     <span>Loans</span>
                 </a>
                 <a href="#" class="nav-item" data-page="invoices" title="Invoices">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                        </svg></span>
                     <span>Invoices</span>
                 </a>
                 <a href="#" class="nav-item" data-page="voucher" title="Vouchers">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="16" y1="8" x2="16" y2="16"></line><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="8" x2="8" y2="16"></line></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                            <line x1="16" y1="8" x2="16" y2="16"></line>
+                            <line x1="12" y1="8" x2="12" y2="16"></line>
+                            <line x1="8" y1="8" x2="8" y2="16"></line>
+                        </svg></span>
                     <span>Vouchers</span>
                 </a>
                 <a href="#" class="nav-item" data-page="clients" title="Clients">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg></span>
                     <span>Clients</span>
                 </a>
                 <a href="#" class="nav-item" data-page="quotations" title="Quotations">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <path d="M12 20h9"></path>
+                            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg></span>
                     <span>Quotations</span>
                 </a>
                 <a href="#" class="nav-item" data-page="audit-logs" title="Audit Logs">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <circle cx="11" cy="11" r="8"></circle>
+                            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                        </svg></span>
                     <span>Audit Logs</span>
                 </a>
                 <a href="#" class="nav-item" data-page="settings" title="Settings">
-                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg></span>
+                    <span class="icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path
+                                d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z">
+                            </path>
+                        </svg></span>
                     <span>Settings</span>
                 </a>
             </nav>
@@ -244,7 +356,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
         <main class="main-content">
             <header class="header">
                 <div style="display: flex; align-items: center; gap: 20px;">
-                    <button class="btn-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()" style="background: #ffffff; border: 1px solid #d1d5db; font-size: 18px; color: #111827; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px;">
+                    <button class="btn-sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()"
+                        style="background: #ffffff; border: 1px solid #d1d5db; font-size: 18px; color: #111827; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border-radius: 12px;">
                         <span class="icon">☰</span>
                     </button>
                     <div>
@@ -252,34 +365,103 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <p class="welcome-text">Overview of your financial records</p>
                     </div>
                 </div>
-                <div class="user-info">
-                    <button class="btn-logout" onclick="logout()">Sign Out</button>
+                <div class="user-info" style="display: flex; align-items: center; gap: 15px;">
+                    <select id="financialYear" class="form-input" style="padding: 8px 12px; border-radius: 8px; border: 1px solid #d1d5db; background: #f8fafc; font-weight: 600; color: #1e293b; cursor: pointer; outline: none; min-width: 130px;" onchange="changeFinancialYear(this.value)">
+                        <?php
+                        $startYear = 2025;
+                        $currentYear = date('Y');
+                        $currentMonth = date('n');
+                        
+                        // Financial year starts April 1st
+                        $endYear = ($currentMonth >= 4) ? $currentYear : $currentYear - 1;
+                        if ($endYear < $startYear) $endYear = $startYear;
+
+                        $currentFy = $endYear . '-' . ($endYear + 1);
+                        // Force reset to current FY on every page load/refresh
+                        setcookie('financial_year', $currentFy, time() + 86400, '/');
+                        $_COOKIE['financial_year'] = $currentFy;
+                        $selectedFy = $currentFy;
+
+                        for ($y = $startYear; $y <= $endYear; $y++) {
+                            $nextYear = $y + 1;
+                            $value = $y . '-' . $nextYear;
+                            $selected = ($value == $selectedFy) ? 'selected' : '';
+                            echo "<option value=\"$value\" $selected>FY $value</option>";
+                        }
+                        ?>
+                    </select>
+                    <button class="btn-logout" onclick="logout()" style="white-space: nowrap;">Sign Out</button>
                 </div>
             </header>
 
             <div class="content" id="content-area">
                 <!-- Dashboard Content -->
                 <div class="page-content" id="dashboard-page">
-                    <!-- Balances Section -->
+                    <!-- Profit/Loss Section -->
                     <div class="dashboard-section">
                         <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="22" width="20" height="2"></rect><path d="M4 22V10l8-6 8 6v12M18 22H6M12 10v12M9 14v8M15 14v8"></path></svg>
-                            Balances Section
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="12" y1="1" x2="12" y2="23" />
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                            </svg>
+                            Profit/Loss Section
                         </h3>
-                        <div class="stats-row-small" id="balances-grid">
-                            <!-- Total Available Balance Card -->
+                        <div class="stats-row-small">
+                            <!-- This Month Profit/Loss -->
                             <div class="stat-card-small">
-                                <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" /></svg>
+                                <div class="stat-icon-small icon-green">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
-                                    <div class="stat-value-small" id="balance">₹0</div>
-                                    <div class="stat-label-small">Total Available Balance</div>
+                                    <div class="stat-value-small" id="this-month-profit">₹0</div>
+                                    <div class="stat-label-small">This Month Profit/Loss</div>
                                 </div>
                             </div>
-                            <!-- Placeholder for Payment Method Cards -->
-                            <div id="payment-balances-row" style="display: contents;">
-                                <!-- Dynamically loaded from JS -->
+                            <!-- Last Month Profit/Loss -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-blue">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="last-month-profit">₹0</div>
+                                    <div class="stat-label-small">Last Month Profit/Loss</div>
+                                </div>
+                            </div>
+                            <!-- This FY Profit/Loss -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-purple">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="this-year-profit">₹0</div>
+                                    <div class="stat-label-small">This FY Profit/Loss</div>
+                                </div>
+                            </div>
+                            <!-- Overall Profit/Loss -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-cyan">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="overall-profit">₹0</div>
+                                    <div class="stat-label-small">Overall Profit/Loss</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -287,14 +469,22 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                     <!-- Income Section -->
                     <div class="dashboard-section">
                         <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <rect x="2" y="5" width="20" height="14" rx="2" />
+                                <line x1="2" y1="10" x2="22" y2="10" />
+                            </svg>
                             Income Section
                         </h3>
                         <div class="stats-row-small">
                             <!-- This Month Income -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-green">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                        <line x1="2" y1="10" x2="22" y2="10" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="this-month-income">₹0</div>
@@ -304,27 +494,39 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Last Month Income -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                        <line x1="2" y1="10" x2="22" y2="10" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="last-month-income">₹0</div>
                                     <div class="stat-label-small">Last Month Income</div>
                                 </div>
                             </div>
-                            <!-- This Year Income -->
+                            <!-- This FY Income -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-purple">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                        <line x1="2" y1="10" x2="22" y2="10" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="this-year-income">₹0</div>
-                                    <div class="stat-label-small">This Year Income</div>
+                                    <div class="stat-label-small">This FY Income</div>
                                 </div>
                             </div>
                             <!-- Total Income -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="5" width="20" height="14" rx="2" />
+                                        <line x1="2" y1="10" x2="22" y2="10" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-income">₹0</div>
@@ -337,14 +539,22 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                     <!-- Expense Section -->
                     <div class="dashboard-section">
                         <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 6v6l4 2" />
+                            </svg>
                             Expense Section
                         </h3>
                         <div class="stats-row-small">
                             <!-- This Month Expense -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-purple">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 6v6l4 2" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="this-month-expense">₹0</div>
@@ -354,27 +564,39 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Last Month Expense -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 6v6l4 2" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="last-month-expense">₹0</div>
                                     <div class="stat-label-small">Last Month Expense</div>
                                 </div>
                             </div>
-                            <!-- This Year Expense -->
+                            <!-- This FY Expense -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 6v6l4 2" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="this-year-expense">₹0</div>
-                                    <div class="stat-label-small">This Year Expense</div>
+                                    <div class="stat-label-small">This FY Expense</div>
                                 </div>
                             </div>
                             <!-- Total Expenses -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-green">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M12 6v6l4 2" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-expenses">₹0</div>
@@ -384,97 +606,24 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         </div>
                     </div>
 
-                    <!-- Profit/Loss Section -->
                     <div class="dashboard-section">
                         <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                            Profit/Loss Section
-                        </h3>
-                        <div class="stats-row-small">
-                            <!-- This Month Profit/Loss -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-green">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="this-month-profit">₹0</div>
-                                    <div class="stat-label-small">This Month Profit/Loss</div>
-                                </div>
-                            </div>
-                            <!-- Last Month Profit/Loss -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="last-month-profit">₹0</div>
-                                    <div class="stat-label-small">Last Month Profit/Loss</div>
-                                </div>
-                            </div>
-                            <!-- This Year Profit/Loss -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-purple">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="this-year-profit">₹0</div>
-                                    <div class="stat-label-small">This Year Profit/Loss</div>
-                                </div>
-                            </div>
-                            <!-- Overall Profit/Loss -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="overall-profit">₹0</div>
-                                    <div class="stat-label-small">Overall Profit/Loss</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Loans Section -->
-                    <div class="dashboard-section">
-                        <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="1" x2="12" y2="23"></line><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                            Loans Section
-                        </h3>
-                        <div class="stats-row-small">
-                            <!-- Active Loan Amount -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-purple">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2" ry="2" /><line x1="12" y1="18" x2="12.01" y2="18" /><rect x="6" y="6" width="12" height="8" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="active-loan-amount">₹0</div>
-                                    <div class="stat-label-small">Active Loan Amount</div>
-                                </div>
-                            </div>
-                            <!-- Interest Paid Till Date -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="interest-paid-total">₹0</div>
-                                    <div class="stat-label-small">Interest Paid Till Date</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Business Operations Stats -->
-                    <div class="dashboard-section">
-                        <h3 class="section-title">
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                            </svg>
                             Business Operations Stats
                         </h3>
                         <div class="stats-row-small">
                             <!-- Invoices Total Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-invoices-count">0</div>
@@ -484,7 +633,12 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Vouchers Total Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-cyan">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"></rect><line x1="16" y1="2" x2="16" y2="4"></line><line x1="8" y1="2" x2="8" y2="4"></line></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+                                        <line x1="16" y1="2" x2="16" y2="4"></line>
+                                        <line x1="8" y1="2" x2="8" y2="4"></line>
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-vouchers-count">0</div>
@@ -494,7 +648,11 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Clients Total Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-purple">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                        <circle cx="9" cy="7" r="4" />
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-clients-count">0</div>
@@ -504,7 +662,13 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Quotations Total Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-green">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path
+                                            d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2">
+                                        </path>
+                                        <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-quotations-count">0</div>
@@ -514,7 +678,11 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <!-- Employees Total Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                                        <circle cx="12" cy="7" r="4"></circle>
+                                    </svg>
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-employees-count">0</div>
@@ -523,7 +691,81 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             </div>
                         </div>
                     </div>
-                </div>                <!-- Transactions Content -->
+                    <!-- Loans Section -->
+                    <div class="dashboard-section">
+                        <h3 class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <line x1="12" y1="1" x2="12" y2="23"></line>
+                                <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+                            </svg>
+                            Loans Section
+                        </h3>
+                        <div class="stats-row-small">
+                            <!-- Active Loan Amount -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-purple">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <rect x="2" y="2" width="20" height="20" rx="2" ry="2" />
+                                        <line x1="12" y1="18" x2="12.01" y2="18" />
+                                        <rect x="6" y="6" width="12" height="8" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="active-loan-amount">₹0</div>
+                                    <div class="stat-label-small">Active Loan Amount</div>
+                                </div>
+                            </div>
+                            <!-- Interest Paid Till Date -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-cyan">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <line x1="12" y1="1" x2="12" y2="23" />
+                                        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="interest-paid-total">₹0</div>
+                                    <div class="stat-label-small">Interest Paid Till Date</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Balances Section -->
+                    <div class="dashboard-section">
+                        <h3 class="section-title">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2.5">
+                                <rect x="2" y="22" width="20" height="2"></rect>
+                                <path d="M4 22V10l8-6 8 6v12M18 22H6M12 10v12M9 14v8M15 14v8"></path>
+                            </svg>
+                            Balances Section
+                        </h3>
+                        <div class="stats-row-small" id="balances-grid">
+                            <!-- Total Available Balance Card -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-cyan">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="balance">₹0</div>
+                                    <div class="stat-label-small">Total Available Balance</div>
+                                </div>
+                            </div>
+                            <!-- Placeholder for Payment Method Cards -->
+                            <div id="payment-balances-row" style="display: contents;">
+                                <!-- Dynamically loaded from JS -->
+                            </div>
+                        </div>
+                    </div>
+                    </div>
+                </div> <!-- Dashboard Content End -->
                 <div class="page-content hidden" id="transactions-page">
                     <div class="section-header" style="margin-bottom: 20px;">
                         <div>
@@ -532,45 +774,70 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         </div>
                         <div class="filter-row" style="gap: 12px;">
                             <!-- Tab Options -->
-                            <div class="ledger-tabs" style="display: flex; background: #e5e7eb; padding: 4px; border-radius: 6px; gap: 4px;">
-                                <button id="txn-tab-income" class="ledger-tab-btn active" onclick="switchLedgerTab('income')">Incomes</button>
-                                <button id="txn-tab-expense" class="ledger-tab-btn" onclick="switchLedgerTab('expense')">Expenses</button>
+                            <div class="ledger-tabs"
+                                style="display: flex; background: #e5e7eb; padding: 4px; border-radius: 6px; gap: 4px;">
+                                <button id="txn-tab-income" class="ledger-tab-btn active"
+                                    onclick="switchLedgerTab('income')">Incomes</button>
+                                <button id="txn-tab-expense" class="ledger-tab-btn"
+                                    onclick="switchLedgerTab('expense')">Expenses</button>
                             </div>
-                            <button class="btn-primary" id="btn-add-income" onclick="openAddIncomeModal()">+ Add Income</button>
-                            <button class="btn-primary" id="btn-add-expense" onclick="openAddExpenseModal()" style="display: none; background: var(--danger);">+ Add Expense</button>
+                            <button class="btn-primary" id="btn-add-income" onclick="openAddIncomeModal()">+ Add
+                                Income</button>
+                            <button class="btn-primary" id="btn-add-expense" onclick="openAddExpenseModal()"
+                                style="display: none; background: var(--danger);">+ Add Expense</button>
                         </div>
                     </div>
 
                     <!-- Filter Controls Section -->
-                    <div class="records-section" style="margin-bottom: 20px; padding: 16px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--bg-card);">
-                        <div style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
+                    <div class="records-section"
+                        style="margin-bottom: 20px; padding: 16px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--bg-card);">
+                        <div
+                            style="display: flex; flex-wrap: wrap; gap: 16px; align-items: center; justify-content: space-between;">
                             <!-- Left: Search and Filters -->
                             <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center;">
-                                <input type="text" id="txn-search" class="form-input" placeholder="Search description, category..." oninput="onTxnFilterChange()" style="max-width: 250px; min-width: 200px;">
-                                <div class="ledger-period-filters" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: 10px;">
-                                    <a href="#" class="period-filter-link active" data-period="this-month" onclick="selectPeriod(event, 'this-month')">This Month</a>
-                                    <a href="#" class="period-filter-link" data-period="last-month" onclick="selectPeriod(event, 'last-month')">Last Month</a>
-                                    <a href="#" class="period-filter-link" data-period="this-year" onclick="selectPeriod(event, 'this-year')">This Year</a>
-                                    <a href="#" class="period-filter-link" data-period="total" onclick="selectPeriod(event, 'total')">Total</a>
-                                    <a href="#" class="period-filter-link" data-period="specific-date" onclick="selectPeriod(event, 'specific-date')">Specific Date</a>
-                                    <a href="#" class="period-filter-link" data-period="date-range" onclick="selectPeriod(event, 'date-range')">Date Range</a>
+                                <input type="text" id="txn-search" class="form-input"
+                                    placeholder="Search description, category..." oninput="onTxnFilterChange()"
+                                    style="max-width: 250px; min-width: 200px;">
+                                <div class="ledger-period-filters"
+                                    style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: 10px;">
+                                    <a href="#" class="period-filter-link active" data-period="this-month"
+                                        onclick="selectPeriod(event, 'this-month')">This Month</a>
+                                    <a href="#" class="period-filter-link" data-period="last-month"
+                                        onclick="selectPeriod(event, 'last-month')">Last Month</a>
+                                    <a href="#" class="period-filter-link" data-period="this-fy"
+                                        onclick="selectPeriod(event, 'this-fy')">This FY</a>
+                                    <a href="#" class="period-filter-link" data-period="last-fy"
+                                        onclick="selectPeriod(event, 'last-fy')">Last FY</a>
+                                    <a href="#" class="period-filter-link" data-period="total"
+                                        onclick="selectPeriod(event, 'total')">All time</a>
+                                    <a href="#" class="period-filter-link" data-period="specific-date"
+                                        onclick="selectPeriod(event, 'specific-date')">Specific Date</a>
+                                    <a href="#" class="period-filter-link" data-period="date-range"
+                                        onclick="selectPeriod(event, 'date-range')">Date Range</a>
                                 </div>
 
                                 <!-- Specific Date Picker (Hidden by default) -->
-                                <input type="date" id="txn-specific-date" class="form-input" onchange="onTxnFilterChange()" style="display: none; max-width: 150px;">
+                                <input type="date" id="txn-specific-date" class="form-input"
+                                    onchange="onTxnFilterChange()" style="display: none; max-width: 150px;">
 
                                 <!-- Date Range Pickers (Hidden by default) -->
-                                <div id="txn-date-range-container" style="display: none; align-items: center; gap: 8px;">
-                                    <input type="date" id="txn-start-date" class="form-input" onchange="onTxnFilterChange()" style="max-width: 140px;">
+                                <div id="txn-date-range-container"
+                                    style="display: none; align-items: center; gap: 8px;">
+                                    <input type="date" id="txn-start-date" class="form-input"
+                                        onchange="onTxnFilterChange()" style="max-width: 140px;">
                                     <span style="color: #64748b; font-size: 14px;">to</span>
-                                    <input type="date" id="txn-end-date" class="form-input" onchange="onTxnFilterChange()" style="max-width: 140px;">
+                                    <input type="date" id="txn-end-date" class="form-input"
+                                        onchange="onTxnFilterChange()" style="max-width: 140px;">
                                 </div>
                             </div>
 
                             <!-- Right: Category Manage -->
                             <div style="display: flex; gap: 10px;">
-                                <button id="btn-manage-income-cats" class="btn-secondary" onclick="openCategoryModal()">📊 Manage Categories</button>
-                                <button id="btn-manage-expense-cats" class="btn-secondary" onclick="openExpenseCategoryModal()" style="display: none;">📊 Manage Categories</button>
+                                <button id="btn-manage-income-cats" class="btn-secondary"
+                                    onclick="openCategoryModal()">📊 Manage Categories</button>
+                                <button id="btn-manage-expense-cats" class="btn-secondary"
+                                    onclick="openExpenseCategoryModal()" style="display: none;">📊 Manage
+                                    Categories</button>
                             </div>
                         </div>
                     </div>
@@ -637,7 +904,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             </div>
                         </div>
                         <div class="stat-card-small">
-                            <div class="stat-icon-small icon-orange">🗓️</div>
+                            <div class="stat-icon-small icon-orange">🗓�?</div>
                             <div class="stat-info-small">
                                 <div class="stat-value-small" id="salary-paid-last-month">₹0</div>
                                 <div class="stat-label-small">Last Month Payroll</div>
@@ -678,7 +945,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             </div>
                         </div>
                         <div class="stat-card-small">
-                            <div class="stat-icon-small icon-green">↩️</div>
+                            <div class="stat-icon-small icon-green">↩�?</div>
                             <div class="stat-info-small">
                                 <div class="stat-value-small" id="total-loan-paid-back">₹0</div>
                                 <div class="stat-label-small">Total Paid Back</div>
@@ -708,20 +975,13 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <p class="company-subtitle">Manage client billings, invoice states and print layouts</p>
                         </div>
                         <div class="filter-row">
-                            <button class="btn-secondary" onclick="triggerCSVImport()">📂 Bulk Import (CSV)</button>
-                            <button class="btn-danger" style="background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3);" onclick="clearAllInvoices()">🗑️ Clear All</button>
-                            <div class="generate-invoice-container" style="position: relative; display: inline-block;">
-                                <button class="btn-primary" onclick="showInvoiceTypeSelection()">+ Generate Invoice</button>
-                                <!-- Invoice Type Selection Dropdown -->
-                                <div id="invoiceTypeSelectionDiv" style="display: none; position: absolute; right: 0; top: 110%; background: #1e293b; border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 8px; padding: 8px; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); grid-template-columns: 1fr; gap: 8px; min-width: 180px;">
-                                    <button class="btn-secondary dropdown-option" style="text-align: left; padding: 10px; width: 100%; border: none; background: transparent; color: white;" onclick="selectInvoiceType('gst')">📝 GST Invoice (18%)</button>
-                                    <button class="btn-secondary dropdown-option" style="text-align: left; padding: 10px; width: 100%; border: none; background: transparent; color: white;" onclick="selectInvoiceType('non-gst')">📄 Non-GST Invoice</button>
-                                </div>
-                            </div>
+
+                            
                         </div>
                     </div>
-                    
-                    <input type="file" id="csv-file-input" accept=".csv" style="display: none;" onchange="importInvoicesCSV(event)">
+
+                    <input type="file" id="csv-file-input" accept=".csv" style="display: none;"
+                        onchange="importInvoicesCSV(event)">
 
                     <div class="stats-row-small">
                         <div class="stat-card-small">
@@ -751,7 +1011,9 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <div class="records-header">
                             <h3>Issued Invoices</h3>
                             <div class="filter-row">
-                                <input type="text" id="invoice-search" class="form-input" placeholder="Search by name/number..." onkeyup="searchInvoices()" style="max-width: 250px;">
+                                <input type="text" id="invoice-search" class="form-input"
+                                    placeholder="Search by name/number..." onkeyup="searchInvoices()"
+                                    style="max-width: 250px;">
                             </div>
                         </div>
                         <div class="table-responsive" id="invoice-list">
@@ -766,9 +1028,11 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <button class="btn-secondary" onclick="closeInvoiceForm()">Back to List</button>
                         </div>
                         <form id="invoiceForm" onsubmit="saveInvoice(event)">
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px;">
                                 <div class="form-group">
-                                    <label class="form-label">Client / Billing Name <span class="required">*</span></label>
+                                    <label class="form-label">Client / Billing Name <span
+                                            class="required">*</span></label>
                                     <input type="text" id="billToName" class="form-input" required>
                                 </div>
                                 <div class="form-group">
@@ -781,14 +1045,13 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">GST Number</label>
-                                    <input type="text" id="gstNumber" class="form-input" placeholder="e.g. 29ABCDE1234F1Z5">
+                                    <input type="text" id="gstNumber" class="form-input"
+                                        placeholder="e.g. 29ABCDE1234F1Z5">
                                 </div>
                             </div>
-                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Billing Address</label>
-                                    <textarea id="address" class="form-input" rows="2"></textarea>
-                                </div>
+                            <div
+                                style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; margin-bottom: 20px;">
+                                
                                 <div class="form-group">
                                     <label class="form-label">Invoice Date <span class="required">*</span></label>
                                     <input type="date" id="invoiceDate" class="form-input" required>
@@ -802,7 +1065,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Invoice Number (Auto/Custom)</label>
-                                    <input type="text" id="invoiceNo" class="form-input" placeholder="Keep empty for auto-generate">
+                                    <input type="text" id="invoiceNo" class="form-input"
+                                        placeholder="Keep empty for auto-generate">
                                 </div>
                             </div>
 
@@ -825,25 +1089,34 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                 </table>
                             </div>
                             <div style="margin-top: 15px; margin-bottom: 30px;">
-                                <button type="button" class="btn-secondary" onclick="addInvoiceItemRow()">+ Add Item</button>
+                                <button type="button" class="btn-secondary" onclick="addInvoiceItemRow()">+ Add
+                                    Item</button>
                             </div>
 
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; border-top: 1px solid var(--border-light); padding-top: 20px;">
+                            <div
+                                style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; border-top: 1px solid var(--border-light); padding-top: 20px;">
                                 <div>
                                     <div class="form-group">
                                         <label class="form-label">Payment Received (₹)</label>
-                                        <input type="number" id="amtPaid" class="form-input" value="0" step="0.01" oninput="calculateInvoiceSummary()">
+                                        <input type="number" id="amtPaid" class="form-input" value="0" step="0.01"
+                                            oninput="calculateInvoiceSummary()">
                                     </div>
                                     <div class="form-group">
                                         <label class="form-label">Cumulative Total Paid (Read-Only)</label>
                                         <input type="number" id="cumulativePaid" class="form-input" value="0" readonly>
                                     </div>
                                 </div>
-                                <div style="text-align: right; color: var(--text-muted); font-size: 15px; font-weight: 500;">
-                                    <p>Subtotal: <span id="invSubtotal" style="color: #fff; font-weight: 600;">₹0.00</span></p>
-                                    <p id="invGstRow">CGST (9%) + SGST (9%): <span id="invGst" style="color: #fff; font-weight: 600;">₹0.00</span></p>
-                                    <h3 style="font-size: 22px; margin-top: 10px; color: #fff;">Total Payable: <span id="invTotalPayable">₹0.00</span></h3>
-                                    <h3 style="font-size: 18px; margin-top: 5px; color: var(--danger);">Balance Due: <span id="invBalanceDue">₹0.00</span></h3>
+                                <div
+                                    style="text-align: right; color: var(--text-muted); font-size: 15px; font-weight: 500;">
+                                    <p>Subtotal: <span id="invSubtotal"
+                                            style="color: #fff; font-weight: 600;">₹0.00</span></p>
+                                    <p id="invGstRow">CGST (9%) + SGST (9%): <span id="invGst"
+                                            style="color: #fff; font-weight: 600;">₹0.00</span></p>
+                                    <h3 style="font-size: 22px; margin-top: 10px; color: #fff;">Total Payable: <span
+                                            id="invTotalPayable">₹0.00</span></h3>
+                                    <h3 style="font-size: 18px; margin-top: 5px; color: var(--danger);">Balance Due:
+                                        <span id="invBalanceDue">₹0.00</span>
+                                    </h3>
                                 </div>
                             </div>
 
@@ -896,9 +1169,28 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <h2>Clients CRM & Directory</h2>
                             <p class="company-subtitle">View active clients, invoice history and GST information</p>
                         </div>
+                        <div class="filter-row">
+                            <button class="btn-primary" onclick="openAddClientModal()">+ Add Client</button>
+                        </div>
                     </div>
 
-                    <div class="records-section">
+                    <div class="stats-row-small" style="margin-top: 15px; margin-bottom: 25px;">
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-purple">&#128100;</div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="client-total-count">0</div>
+                                <div class="stat-label-small">Total Clients</div>
+                            </div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-blue">&#127891;</div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="student-total-count">0</div>
+                                <div class="stat-label-small">Total Students</div>
+                            </div>
+                        </div>
+                    </div>
+<div class="records-section">
                         <div class="table-responsive" id="clients-list-container">
                             <!-- Populated dynamically by clients load -->
                             <p style="padding: 40px; text-align: center; color: #64748b;">Loading clients list...</p>
@@ -916,7 +1208,23 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <button class="btn-primary" onclick="openQuotationModal()">+ Create Quotation</button>
                     </div>
 
-                    <div class="records-section">
+                    <div class="stats-row-small" style="margin-top: 15px; margin-bottom: 25px;">
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-green">&#10004;</div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="quotation-accepted-count">0</div>
+                                <div class="stat-label-small">Accepted</div>
+                            </div>
+                        </div>
+                        <div class="stat-card-small">
+                            <div class="stat-icon-small icon-red">&#10006;</div>
+                            <div class="stat-info-small">
+                                <div class="stat-value-small" id="quotation-rejected-count">0</div>
+                                <div class="stat-label-small">Rejected</div>
+                            </div>
+                        </div>
+                    </div>
+<div class="records-section">
                         <div class="table-responsive" id="quotations-list-container">
                             <p style="padding: 40px; text-align: center; color: #64748b;">Loading quotations...</p>
                         </div>
@@ -930,7 +1238,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             <h2>Security Audit Trail</h2>
                             <p class="company-subtitle">Centralized database audit logs and operational history</p>
                         </div>
-                        <input type="text" id="audit-search" class="form-input" placeholder="Search logs..." onkeyup="filterAuditLogs()" style="max-width: 250px;">
+                        <input type="text" id="audit-search" class="form-input" placeholder="Search logs..."
+                            onkeyup="filterAuditLogs()" style="max-width: 250px;">
                     </div>
 
                     <div class="records-section">
@@ -945,60 +1254,24 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                     <div class="section-header">
                         <div>
                             <h2>Global Settings</h2>
-                            <p class="company-subtitle">Configure company details, branding and module configurations</p>
+                            <p class="company-subtitle">Configure settings and payment methods</p>
                         </div>
                     </div>
 
                     <div class="records-section" style="max-width: 800px;">
-                        <form id="settingsForm" onsubmit="saveGlobalSettings(event)">
-                            <h3 style="color: #fff; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">Company Information</h3>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Company Name <span class="required">*</span></label>
-                                    <input type="text" id="setCompanyName" class="form-input" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">GSTIN / Tax ID</label>
-                                    <input type="text" id="setCompanyGst" class="form-input">
-                                </div>
+                        <h3
+                            style="color: #fff; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">
+                            Payment Settings</h3>
+                        <div class="form-group"
+                            style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 20px;">
+                            <div>
+                                <label class="form-label" style="margin-bottom: 0;">Payment Methods Management</label>
+                                <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Add, remove, and
+                                    manage custom payment methods used across the system.</p>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
-                                <div class="form-group">
-                                    <label class="form-label">Phone Number</label>
-                                    <input type="text" id="setCompanyPhone" class="form-input">
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" id="setCompanyEmail" class="form-input">
-                                </div>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Company Address</label>
-                                <textarea id="setCompanyAddress" class="form-input" rows="3"></textarea>
-                            </div>
-
-                            <h3 style="color: #fff; margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">Security Configurations</h3>
-                            <div class="form-group" style="display: flex; align-items: center; gap: 15px; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 20px;">
-                                <input type="checkbox" id="set2FA" style="width: 20px; height: 20px; cursor: pointer;">
-                                <div>
-                                    <label class="form-label" style="margin-bottom: 0; cursor: pointer;" for="set2FA">Enable Multi-Factor Authentication (2FA)</label>
-                                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Enforce 6-digit Google Authenticator code checks for securing accounting operations.</p>
-                                </div>
-                            </div>
-
-                            <h3 style="color: #fff; margin-top: 30px; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px;">Payment Settings</h3>
-                            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); padding: 15px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 20px;">
-                                <div>
-                                    <label class="form-label" style="margin-bottom: 0;">Payment Methods Management</label>
-                                    <p style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">Add, remove, and manage custom payment methods used across the system.</p>
-                                </div>
-                                <button type="button" class="btn-secondary" onclick="openPaymentModesModal()">💳 Manage Payment Methods</button>
-                            </div>
-
-                            <div style="margin-top: 30px;">
-                                <button type="submit" class="btn-primary">Save Configuration</button>
-                            </div>
-                        </form>
+                            <button type="button" class="btn-secondary" onclick="openPaymentModesModal()">💳 Manage
+                                Payment Methods</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1056,12 +1329,15 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             <div class="modal-body">
                 <div class="category-form-section">
                     <label class="category-form-label">Add New Payment Method</label>
-                    <div class="category-form">
-                        <input type="text" id="newPaymentModeInput" class="category-input" placeholder="Payment Method Name">
-                        <button class="btn-add-category" onclick="addPaymentMode()">+ Add</button>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px;">
+                        <input type="text" id="newPaymentModeInput" class="category-input"
+                            placeholder="Payment Method Name" style="width: 100%;">
+                        
+                        <button class="btn-add-category" onclick="addPaymentMode()" style="width: 100%;">+ Add Payment
+                            Method</button>
                     </div>
                 </div>
-                <div class="category-list" id="paymentModeList"></div>
+                <div class="category-list" id="paymentModeList" style="max-height: 350px;"></div>
             </div>
         </div>
     </div>
@@ -1099,8 +1375,16 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 <form id="expenseForm" onsubmit="submitExpense(event)" enctype="multipart/form-data">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Date & Time <span class="required">*</span></label>
-                            <input type="datetime-local" id="expenseDate" class="form-input" required>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label class="form-label" style="margin-bottom: 0;">Date & Time <span
+                                        class="required">*</span></label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="expenseHasTime"> Include Time
+                                </label>
+                            </div>
+                            <input type="date" id="expenseDate" class="form-input" required>
                         </div>
 
                         <div class="form-group">
@@ -1118,8 +1402,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                         <div class="form-group">
                             <label class="form-label">Description <span class="required">*</span></label>
-                            <input type="text" id="expenseDescription" class="form-input" placeholder="Enter description"
-                                required>
+                            <input type="text" id="expenseDescription" class="form-input"
+                                placeholder="Enter description" required>
                         </div>
 
                         <div class="form-group">
@@ -1155,14 +1439,22 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 <form id="incomeForm" onsubmit="submitIncome(event)" enctype="multipart/form-data">
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Date & Time <span class="required">*</span></label>
-                            <input type="datetime-local" id="incomeDate" class="form-input" required>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label class="form-label" style="margin-bottom: 0;">Date & Time <span
+                                        class="required">*</span></label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="incomeHasTime"> Include Time
+                                </label>
+                            </div>
+                            <input type="date" id="incomeDate" class="form-input" required>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Amount <span class="required">*</span></label>
-                            <input type="number" id="incomeAmount" class="form-input" placeholder="0.00" step="0.01" min="0"
-                                required>
+                            <input type="number" id="incomeAmount" class="form-input" placeholder="0.00" step="0.01"
+                                min="0" required>
                         </div>
 
                         <div class="form-group">
@@ -1337,7 +1629,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">Total Loan Amount <span class="required">*</span></label>
-                        <input type="number" id="loanAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                        <input type="number" id="loanAmount" class="form-input" placeholder="0.00" step="0.01" min="0"
+                            required>
                     </div>
 
                     <div class="form-group">
@@ -1347,7 +1640,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">Interest Rate (% Annually)</label>
-                        <input type="number" id="loanInterest" class="form-input" placeholder="0.00" step="0.01" min="0">
+                        <input type="number" id="loanInterest" class="form-input" placeholder="0.00" step="0.01"
+                            min="0">
                     </div>
 
                     <div class="form-group">
@@ -1364,7 +1658,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">Description</label>
-                        <textarea id="loanDescription" class="form-input" rows="2" placeholder="Additional details"></textarea>
+                        <textarea id="loanDescription" class="form-input" rows="2"
+                            placeholder="Additional details"></textarea>
                     </div>
 
                     <div class="modal-actions">
@@ -1521,7 +1816,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">Opening Balance</label>
-                        <input type="number" id="reportOpeningBalance" class="form-input" placeholder="0.00" step="0.01" value="0.00">
+                        <input type="number" id="reportOpeningBalance" class="form-input" placeholder="0.00" step="0.01"
+                            value="0.00">
                         <small class="form-hint">Set to 0 if this is not the first report.</small>
                     </div>
 
@@ -1553,16 +1849,25 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             <div class="modal-body">
                 <form id="editIncomeForm" onsubmit="submitEditIncome(event)" enctype="multipart/form-data">
                     <input type="hidden" id="editIncomeId">
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Date & Time <span class="required">*</span></label>
-                            <input type="datetime-local" id="editIncomeDate" class="form-input" required>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label class="form-label" style="margin-bottom: 0;">Date & Time <span
+                                        class="required">*</span></label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="editIncomeHasTime"> Include Time
+                                </label>
+                            </div>
+                            <input type="date" id="editIncomeDate" class="form-input" required>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Amount <span class="required">*</span></label>
-                            <input type="number" id="editIncomeAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                            <input type="number" id="editIncomeAmount" class="form-input" placeholder="0.00" step="0.01"
+                                min="0" required>
                         </div>
 
                         <div class="form-group">
@@ -1574,7 +1879,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                         <div class="form-group">
                             <label class="form-label">Description <span class="required">*</span></label>
-                            <input type="text" id="editIncomeDescription" class="form-input" placeholder="Enter description" required>
+                            <input type="text" id="editIncomeDescription" class="form-input"
+                                placeholder="Enter description" required>
                         </div>
 
                         <div class="form-group">
@@ -1613,13 +1919,22 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-grid">
                         <div class="form-group">
-                            <label class="form-label">Date & Time <span class="required">*</span></label>
-                            <input type="datetime-local" id="editExpenseDate" class="form-input" required>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                                <label class="form-label" style="margin-bottom: 0;">Date & Time <span
+                                        class="required">*</span></label>
+                                <label
+                                    style="display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--text-muted); cursor: pointer; user-select: none;">
+                                    <input type="checkbox" id="editExpenseHasTime"> Include Time
+                                </label>
+                            </div>
+                            <input type="date" id="editExpenseDate" class="form-input" required>
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Amount <span class="required">*</span></label>
-                            <input type="number" id="editExpenseAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                            <input type="number" id="editExpenseAmount" class="form-input" placeholder="0.00"
+                                step="0.01" min="0" required>
                         </div>
 
                         <div class="form-group">
@@ -1631,7 +1946,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                         <div class="form-group">
                             <label class="form-label">Description <span class="required">*</span></label>
-                            <input type="text" id="editExpenseDescription" class="form-input" placeholder="Enter description" required>
+                            <input type="text" id="editExpenseDescription" class="form-input"
+                                placeholder="Enter description" required>
                         </div>
 
                         <div class="form-group">
@@ -1687,19 +2003,24 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     <div id="nonGstInvoiceModal" class="modal">
         <div class="modal-content" style="max-width: 700px;">
             <div class="modal-header">
-                <h3>Non-GST Invoice Details</h3>
+                <div class="ledger-tabs" style="display: flex; background: #e5e7eb; padding: 4px; border-radius: 6px; gap: 4px; align-items: center; width: 100%; max-width: 300px;">
+                    <button type="button" class="ledger-tab-btn" onclick="switchToGstModal()" style="border: none;">GST Invoice (18%)</button>
+                    <button type="button" class="ledger-tab-btn active" style="border: none;">Non-GST Invoice</button>
+                </div>
                 <button class="modal-close" onclick="closeNonGstModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="nonGstInvoiceForm" onsubmit="generateNonGstInvoice(event)">
                     <div class="form-group">
                         <label class="form-label">Bill To Name <span class="required">*</span></label>
-                        <input type="text" id="nonGstBillToName" class="form-input" placeholder="Enter customer name" required>
+                        <input type="text" id="nonGstBillToName" class="form-input" placeholder="Enter customer name or select from list" list="clientDatalist" oninput="autofillClientDetails('nonGst')"
+                            required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Phone Number <span class="required">*</span></label>
-                        <input type="tel" id="nonGstPhone" class="form-input" placeholder="Enter phone number" required oninput="checkExistingUser(this.value, 'non-gst')">
+                        <input type="tel" id="nonGstPhone" class="form-input" placeholder="Enter phone number" required
+                            oninput="checkExistingUser(this.value, 'non-gst')">
                         <div id="existingUserNonGst" style="margin-top: 10px;"></div>
                     </div>
 
@@ -1708,37 +2029,38 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <input type="email" id="nonGstEmail" class="form-input" placeholder="Enter email (optional)">
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Address</label>
-                        <input type="text" id="nonGstAddress" class="form-input" placeholder="Enter address (optional)">
-                    </div>
+                    
 
                     <div class="form-group">
                         <label class="form-label">Invoice Items <span class="required">*</span></label>
                         <div id="nonGstItemsContainer">
                             <div class="invoice-item-row" style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                <input type="text" class="form-input nongst-item-desc" placeholder="Description" required style="flex: 3;">
-                                <input type="number" class="form-input nongst-item-amount" placeholder="Amount" step="0.01" min="0" required style="flex: 1;" oninput="onNonGstItemAmountChange()">
+                                <input type="text" class="form-input nongst-item-desc" placeholder="Description"
+                                    required style="flex: 3;">
+                                <input type="number" class="form-input nongst-item-amount" placeholder="Amount"
+                                    step="0.01" min="0" required style="flex: 1;" oninput="onNonGstItemAmountChange()">
                                 <button type="button" class="btn-add-item" onclick="addNonGstItem()">+</button>
                             </div>
                         </div>
-                        <button type="button" id="btnNonGstDone" class="btn-primary" style="margin-top: 10px; background-color: #0ea5e9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;" onclick="clickNonGstDone()">Done</button>
+                        <button type="button" id="btnNonGstDone" class="btn-primary"
+                            style="margin-top: 10px; background-color: #0ea5e9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                            onclick="clickNonGstDone()">Done</button>
                     </div>
 
                     <!-- Payment & Summary Section -->
-                    <div id="nonGstPaymentSummarySection" style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px;">
-                        <h4 style="margin-bottom: 15px; color: #1e293b; font-size: 15px; font-weight: 600;">Payment & Summary</h4>
-                        
+                    <div id="nonGstPaymentSummarySection"
+                        style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px;">
+                        <h4 style="margin-bottom: 15px; color: #1e293b; font-size: 15px; font-weight: 600;">Payment &
+                            Summary</h4>
+
                         <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Payment Mode <span class="required">*</span></label>
                                 <select id="nonGstPaymentMode" class="form-select">
                                     <option value="">Select Mode</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Online">Online</option>
                                 </select>
                             </div>
-                            
+
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Payment Date <span class="required">*</span></label>
                                 <input type="date" id="nonGstPaymentDate" class="form-input">
@@ -1748,21 +2070,26 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end;">
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Amount Paid <span class="required">*</span></label>
-                                <input type="number" id="nonGstAmountPaid" class="form-input" placeholder="Enter amount paid" step="0.01" min="0" oninput="updateNonGstSummary()">
+                                <input type="number" id="nonGstAmountPaid" class="form-input"
+                                    placeholder="Enter amount paid" step="0.01" min="0" oninput="updateNonGstSummary()">
                             </div>
                         </div>
-                        
+
                         <!-- Summary Box -->
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                        <div
+                            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">Total Amount:</span>
                                 <span id="summaryNonGstTotal" style="font-weight: 700; color: #0f172a;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">Amount Paid:</span>
                                 <span id="summaryNonGstPaid" style="font-weight: 700; color: #10b981;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 600;">Balance Due:</span>
                                 <span id="summaryNonGstDue" style="font-weight: 700; color: #ef4444;">₹0.00</span>
                             </div>
@@ -1771,7 +2098,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" onclick="closeNonGstModal()">Cancel</button>
-                        <button type="submit" id="btnNonGstGenerate" class="btn-save" style="display: none;">Generate Invoice</button>
+                        <button type="submit" id="btnNonGstGenerate" class="btn-save" style="display: none;">Generate
+                            Invoice</button>
                     </div>
                 </form>
             </div>
@@ -1782,25 +2110,31 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     <div id="gstInvoiceModal" class="modal">
         <div class="modal-content" style="max-width: 900px;">
             <div class="modal-header">
-                <h3>GST Invoice Details</h3>
+                <div class="ledger-tabs" style="display: flex; background: #e5e7eb; padding: 4px; border-radius: 6px; gap: 4px; align-items: center; width: 100%; max-width: 300px;">
+                    <button type="button" class="ledger-tab-btn active" style="border: none;">GST Invoice (18%)</button>
+                    <button type="button" class="ledger-tab-btn" onclick="switchToNonGstModal()" style="border: none;">Non-GST Invoice</button>
+                </div>
                 <button class="modal-close" onclick="closeGstModal()">&times;</button>
             </div>
             <div class="modal-body">
                 <form id="gstInvoiceForm" onsubmit="generateGstInvoice(event)">
                     <div class="form-group">
                         <label class="form-label">Bill To Name <span class="required">*</span></label>
-                        <input type="text" id="gstBillToName" class="form-input" placeholder="Enter customer name" required>
+                        <input type="text" id="gstBillToName" class="form-input" placeholder="Enter customer name or select from list" list="clientDatalist" oninput="autofillClientDetails('gst')"
+                            required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Phone Number <span class="required">*</span></label>
-                        <input type="tel" id="gstPhone" class="form-input" placeholder="Enter phone number" required oninput="checkExistingUser(this.value, 'gst')">
+                        <input type="tel" id="gstPhone" class="form-input" placeholder="Enter phone number" required
+                            oninput="checkExistingUser(this.value, 'gst')">
                         <div id="existingUserGst" style="margin-top: 10px;"></div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">GST Number <span class="required">*</span></label>
-                        <input type="text" id="gstModalNumber" class="form-input" placeholder="Enter GST number" required pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}">
+                        <input type="text" id="gstModalNumber" class="form-input" placeholder="Enter GST number"
+                            required pattern="[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}">
                         <small style="color: #64748b; font-size: 12px;">Format: 22AAAAA0000A1Z5</small>
                     </div>
 
@@ -1809,40 +2143,42 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <input type="email" id="gstEmail" class="form-input" placeholder="Enter email (optional)">
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Address</label>
-                        <input type="text" id="gstAddress" class="form-input" placeholder="Enter address (optional)">
-                    </div>
+                    
 
                     <div class="form-group">
                         <label class="form-label">Invoice Items <span class="required">*</span></label>
                         <div id="gstItemsContainer">
                             <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
-                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)" step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
-                                <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
+                                <input type="text" class="form-input gst-desc" placeholder="Description" required
+                                    style="flex: 3;">
+                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)"
+                                    step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
+                                <label
+                                    style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
                                     <input type="checkbox" class="gst-desc-check"> Desc.%
                                 </label>
                                 <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
                             </div>
                         </div>
-                        <button type="button" id="btnGstDone" class="btn-primary" style="margin-top: 10px; background-color: #0ea5e9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;" onclick="clickGstDone()">Done</button>
+                        <button type="button" id="btnGstDone" class="btn-primary"
+                            style="margin-top: 10px; background-color: #0ea5e9; color: white; border: none; padding: 8px 16px; border-radius: 4px; cursor: pointer; font-weight: 600;"
+                            onclick="clickGstDone()">Done</button>
                     </div>
 
                     <!-- Payment & Summary Section -->
-                    <div id="gstPaymentSummarySection" style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px;">
-                        <h4 style="margin-bottom: 15px; color: #1e293b; font-size: 15px; font-weight: 600;">Payment & Summary</h4>
-                        
+                    <div id="gstPaymentSummarySection"
+                        style="display: none; border-top: 1px solid #e2e8f0; margin-top: 20px; padding-top: 15px;">
+                        <h4 style="margin-bottom: 15px; color: #1e293b; font-size: 15px; font-weight: 600;">Payment &
+                            Summary</h4>
+
                         <div style="display: flex; gap: 15px; margin-bottom: 15px;">
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Payment Mode <span class="required">*</span></label>
                                 <select id="gstPaymentMode" class="form-select">
                                     <option value="">Select Mode</option>
-                                    <option value="Cash">Cash</option>
-                                    <option value="Online">Online</option>
                                 </select>
                             </div>
-                            
+
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Payment Date <span class="required">*</span></label>
                                 <input type="date" id="gstPaymentDate" class="form-input">
@@ -1852,29 +2188,36 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <div style="display: flex; gap: 15px; margin-bottom: 15px; align-items: flex-end;">
                             <div class="form-group" style="flex: 1; margin-bottom: 0;">
                                 <label class="form-label">Amount Paid <span class="required">*</span></label>
-                                <input type="number" id="gstAmountPaid" class="form-input" placeholder="Enter amount paid" step="0.01" min="0" oninput="updateGstSummary()">
+                                <input type="number" id="gstAmountPaid" class="form-input"
+                                    placeholder="Enter amount paid" step="0.01" min="0" oninput="updateGstSummary()">
                             </div>
                         </div>
-                        
+
                         <!-- Summary Box -->
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                        <div
+                            style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">Charges (Excl. Tax):</span>
                                 <span id="summaryGstCharges" style="font-weight: 700; color: #0f172a;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">GST (18%):</span>
                                 <span id="summaryGstTax" style="font-weight: 700; color: #0f172a;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">Total Amount (Incl. Tax):</span>
                                 <span id="summaryGstTotal" style="font-weight: 700; color: #0f172a;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 500;">Amount Paid:</span>
                                 <span id="summaryGstPaid" style="font-weight: 700; color: #10b981;">₹0.00</span>
                             </div>
-                            <div style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px; font-size: 13px;">
+                            <div
+                                style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px; margin-top: 8px; font-size: 13px;">
                                 <span style="color: #64748b; font-weight: 600;">Balance Due:</span>
                                 <span id="summaryGstDue" style="font-weight: 700; color: #ef4444;">₹0.00</span>
                             </div>
@@ -1883,7 +2226,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="modal-actions">
                         <button type="button" class="btn-cancel" onclick="closeGstModal()">Cancel</button>
-                        <button type="submit" id="btnGstGenerate" class="btn-save" style="display: none;">Generate Invoice</button>
+                        <button type="submit" id="btnGstGenerate" class="btn-save" style="display: none;">Generate
+                            Invoice</button>
                     </div>
                 </form>
             </div>
@@ -1901,12 +2245,14 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 <form id="voucherForm" onsubmit="generateVoucher(event)">
                     <div class="form-group">
                         <label class="form-label">To whom (Payee Name) <span class="required">*</span></label>
-                        <input type="text" id="voucherPayee" class="form-input" placeholder="Enter name of the person/company" required>
+                        <input type="text" id="voucherPayee" class="form-input"
+                            placeholder="Enter name of the person/company" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Amount <span class="required">*</span></label>
-                        <input type="number" id="voucherAmount" class="form-input" placeholder="0.00" step="0.01" min="0" required>
+                        <input type="number" id="voucherAmount" class="form-input" placeholder="0.00" step="0.01"
+                            min="0" required>
                     </div>
 
                     <div class="form-group">
@@ -1923,7 +2269,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
                     <div class="form-group">
                         <label class="form-label">Being (Description) <span class="required">*</span></label>
-                        <textarea id="voucherDescription" class="form-input" placeholder="Purpose of payment" required style="height: 80px;"></textarea>
+                        <textarea id="voucherDescription" class="form-input" placeholder="Purpose of payment" required
+                            style="height: 80px;"></textarea>
                     </div>
 
                     <div class="modal-actions">
@@ -1934,13 +2281,15 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             </div>
         </div>
     </div>
-    
+
     <!-- Add/Edit Quotation Modal -->
     <!-- Add/Edit Quotation Modal -->
     <div id="quotationModal" class="modal">
         <div class="modal-content fullscreen">
-            <div class="modal-header" style="margin-bottom: 0; padding: 15px 24px; background: #ffffff; border-bottom: 1px solid var(--border-light);">
-                <h3 id="quotationModalTitle" style="color: var(--text-main); font-weight: 800; font-size: 18px;">Create Corporate Quotation</h3>
+            <div class="modal-header"
+                style="margin-bottom: 0; padding: 15px 24px; background: #ffffff; border-bottom: 1px solid var(--border-light);">
+                <h3 id="quotationModalTitle" style="color: var(--text-main); font-weight: 800; font-size: 18px;">Create
+                    Corporate Quotation</h3>
                 <button class="modal-close" onclick="closeQuotationModal()">&times;</button>
             </div>
             <input type="hidden" id="quotationId" value="">
@@ -1948,74 +2297,100 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                 <!-- Left Panel: Form Steps -->
                 <div class="qb-editor">
                     <div class="qb-tabs">
-                        <button type="button" class="qb-tab-btn active" id="tab-btn-info" onclick="switchQuotationTab('info')">1. Client & Project</button>
-                        <button type="button" class="qb-tab-btn" id="tab-btn-commercial" onclick="switchQuotationTab('commercial')">2. Commercial Details</button>
-                        <button type="button" class="qb-tab-btn" id="tab-btn-scope" onclick="switchQuotationTab('scope')">3. Scope of Work</button>
+                        <button type="button" class="qb-tab-btn active" id="tab-btn-info"
+                            onclick="switchQuotationTab('info')">1. Client & Project</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-commercial"
+                            onclick="switchQuotationTab('commercial')">2. Commercial Details</button>
+                        <button type="button" class="qb-tab-btn" id="tab-btn-scope"
+                            onclick="switchQuotationTab('scope')">3. Scope of Work</button>
                     </div>
-                    
+
                     <div class="qb-tab-content">
                         <!-- Step 1: Client & Project Info -->
                         <div id="step-info" class="qb-step-panel active">
-                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Client Information</h4>
+                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">
+                                Client Information</h4>
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                                 <div class="form-group">
                                     <label class="form-label">Phone Number <span class="required">*</span></label>
-                                    <input type="text" id="qClientPhone" class="form-input" required placeholder="e.g. 9876543210" style="color: var(--text-main); background: #fff;">
+                                    <input type="text" id="qClientPhone" class="form-input" required
+                                        placeholder="e.g. 9876543210"
+                                        style="color: var(--text-main); background: #fff;">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Client Name <span class="required">*</span></label>
-                                    <input type="text" id="qClientName" class="form-input" required placeholder="e.g. John Doe" style="color: var(--text-main); background: #fff;">
+                                    <input type="text" id="qClientName" class="form-input" required
+                                        placeholder="e.g. John Doe" style="color: var(--text-main); background: #fff;">
                                 </div>
                             </div>
-                            
+
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                                 <div class="form-group">
                                     <label class="form-label">Email Address</label>
-                                    <input type="email" id="qClientEmail" class="form-input" placeholder="e.g. client@example.com" style="color: var(--text-main); background: #fff;">
+                                    <input type="email" id="qClientEmail" class="form-input"
+                                        placeholder="e.g. client@example.com"
+                                        style="color: var(--text-main); background: #fff;">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">GST Number</label>
-                                    <input type="text" id="qClientGst" class="form-input" placeholder="e.g. 29ABCDE1234F1Z5" style="color: var(--text-main); background: #fff;">
+                                    <input type="text" id="qClientGst" class="form-input"
+                                        placeholder="e.g. 29ABCDE1234F1Z5"
+                                        style="color: var(--text-main); background: #fff;">
                                 </div>
                             </div>
-                            
+
                             <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 15px; margin-bottom: 25px;">
                                 <div class="form-group">
                                     <label class="form-label">Billing Address</label>
-                                    <input type="text" id="qClientAddress" class="form-input" placeholder="Enter client address" style="color: var(--text-main); background: #fff;">
+                                    <input type="text" id="qClientAddress" class="form-input"
+                                        placeholder="Enter client address"
+                                        style="color: var(--text-main); background: #fff;">
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Quotation Date <span class="required">*</span></label>
-                                    <input type="date" id="qDate" class="form-input" required style="color: var(--text-main); background: #fff;">
+                                    <input type="date" id="qDate" class="form-input" required
+                                        style="color: var(--text-main); background: #fff;">
                                 </div>
                             </div>
-                            
-                            <h4 style="margin-top: 20px; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Project Details</h4>
+
+                            <h4
+                                style="margin-top: 20px; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">
+                                Project Details</h4>
                             <div class="form-group" style="margin-bottom: 15px;">
                                 <label class="form-label">Project Name <span class="required">*</span></label>
-                                <input type="text" id="qProjectName" class="form-input" required placeholder="e.g. E-Commerce Website Development" style="color: var(--text-main); background: #fff;">
+                                <input type="text" id="qProjectName" class="form-input" required
+                                    placeholder="e.g. E-Commerce Website Development"
+                                    style="color: var(--text-main); background: #fff;">
                             </div>
                             <div class="form-group" style="margin-bottom: 10px;">
                                 <label class="form-label">Project Description</label>
-                                <textarea id="qProjectDescription" class="form-input" rows="3" placeholder="Brief outline of the project objectives and scope..." style="color: var(--text-main); background: #fff; resize: vertical;"></textarea>
+                                <textarea id="qProjectDescription" class="form-input" rows="3"
+                                    placeholder="Brief outline of the project objectives and scope..."
+                                    style="color: var(--text-main); background: #fff; resize: vertical;"></textarea>
                             </div>
-                            <div style="margin-top: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
-                                <input type="checkbox" id="qIncludeScope" checked onchange="toggleScopeStepVisibility()" style="width: 18px; height: 18px; cursor: pointer;">
-                                <label for="qIncludeScope" style="font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; user-select: none;">Include Project Scope Page in PDF</label>
+                            <div
+                                style="margin-top: 15px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                <input type="checkbox" id="qIncludeScope" checked onchange="toggleScopeStepVisibility()"
+                                    style="width: 18px; height: 18px; cursor: pointer;">
+                                <label for="qIncludeScope"
+                                    style="font-size: 13px; font-weight: 600; color: var(--text-main); cursor: pointer; user-select: none;">Include
+                                    Project Scope Page in PDF</label>
                             </div>
                         </div>
-                        
+
                         <!-- Step 2: Commercial Details -->
                         <div id="step-commercial" class="qb-step-panel">
-                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">Commercial Line Items</h4>
-                            
+                            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--text-main); font-size: 15px;">
+                                Commercial Line Items</h4>
+
                             <div class="table-responsive" style="overflow: visible; margin-bottom: 15px;">
                                 <table style="width: 100%;">
                                     <thead>
                                         <tr>
                                             <th style="width: 40px;"></th>
                                             <th>Description</th>
-                                            <th style="width: 150px; text-align: right; padding-right: 15px;">Amount (₹)</th>
+                                            <th style="width: 150px; text-align: right; padding-right: 15px;">Amount (₹)
+                                            </th>
                                             <th style="width: 50px; text-align: center;"></th>
                                         </tr>
                                     </thead>
@@ -2024,18 +2399,24 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                     </tbody>
                                 </table>
                             </div>
-                            
-                            <button type="button" class="btn-secondary" onclick="addQuotationItemRowNew()" style="margin-bottom: 25px;">+ Add Item</button>
-                            
-                            <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+
+                            <button type="button" class="btn-secondary" onclick="addQuotationItemRowNew()"
+                                style="margin-bottom: 25px;">+ Add Item</button>
+
+                            <div
+                                style="background: #f1f5f9; padding: 20px; border-radius: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                                 <div style="display: flex; flex-direction: column; gap: 12px;">
                                     <div class="form-group">
                                         <label class="form-label">Discount Amount (₹)</label>
-                                        <input type="number" id="qDiscountInput" class="form-input" min="0" value="0" step="0.01" oninput="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff;">
+                                        <input type="number" id="qDiscountInput" class="form-input" min="0" value="0"
+                                            step="0.01" oninput="calculateQuotationSummaryNew()"
+                                            style="color: var(--text-main); background: #fff;">
                                     </div>
                                     <div class="form-group" style="display: none !important;">
                                         <label class="form-label">GST Percentage (%)</label>
-                                        <select id="qGstRateInput" class="form-input" onchange="calculateQuotationSummaryNew()" style="color: var(--text-main); background: #fff; height: 42px;">
+                                        <select id="qGstRateInput" class="form-input"
+                                            onchange="calculateQuotationSummaryNew()"
+                                            style="color: var(--text-main); background: #fff; height: 42px;">
                                             <option value="18" selected>18% (Standard GST)</option>
                                             <option value="12">12%</option>
                                             <option value="5">5%</option>
@@ -2043,53 +2424,71 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                                         </select>
                                     </div>
                                 </div>
-                                <div style="display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right;">
-                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                <div
+                                    style="display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-end; text-align: right;">
+                                    <div
+                                        style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
                                         <span>Total Amount:</span>
                                         <strong id="qSubtotalVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>
-                                    <div style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                    <div
+                                        style="font-size: 14px; color: var(--text-muted); display: flex; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
                                         <span>Discount:</span>
                                         <strong id="qDiscountVal" style="color: #ef4444;">-₹0.00</strong>
                                     </div>
-                                    <div style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
+                                    <div
+                                        style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 6px;">
                                         <span id="qCgstLabel">CGST (9%):</span>
                                         <strong id="qCgstVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>
-                                    <div style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 10px;">
+                                    <div
+                                        style="font-size: 14px; color: var(--text-muted); display: none !important; justify-content: space-between; width: 100%; max-width: 280px; margin-bottom: 10px;">
                                         <span id="qSgstLabel">SGST (9%):</span>
                                         <strong id="qSgstVal" style="color: var(--text-main);">₹0.00</strong>
                                     </div>
-                                    <div style="border-top: 2px solid #cbd5e1; padding-top: 10px; width: 100%; max-width: 280px; display: flex; justify-content: space-between; align-items: center;">
-                                        <span style="font-weight: 700; color: var(--text-main); font-size: 16px;">Grand Total:</span>
-                                        <strong id="qGrandTotalVal" style="font-size: 22px; color: var(--primary); font-weight: 800;">₹0.00</strong>
+                                    <div
+                                        style="border-top: 2px solid #cbd5e1; padding-top: 10px; width: 100%; max-width: 280px; display: flex; justify-content: space-between; align-items: center;">
+                                        <span style="font-weight: 700; color: var(--text-main); font-size: 16px;">Grand
+                                            Total:</span>
+                                        <strong id="qGrandTotalVal"
+                                            style="font-size: 22px; color: var(--primary); font-weight: 800;">₹0.00</strong>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Step 3: Scope of Work Builder -->
                         <div id="step-scope" class="qb-step-panel">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                <h4 style="margin: 0; color: var(--text-main); font-size: 15px;">Project Scope Modules</h4>
-                                <button type="button" class="btn-primary" onclick="addScopeModule()" style="padding: 6px 12px; font-size: 12px;">+ Add Module</button>
+                            <div
+                                style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                <h4 style="margin: 0; color: var(--text-main); font-size: 15px;">Project Scope Modules
+                                </h4>
+                                <button type="button" class="btn-primary" onclick="addScopeModule()"
+                                    style="padding: 6px 12px; font-size: 12px;">+ Add Module</button>
                             </div>
-                            
+
                             <div id="qScopeModulesList" class="sortable-list" style="margin-bottom: 20px;">
                                 <!-- Modules will be populated here -->
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="modal-actions" style="padding: 15px 24px; border-top: 1px solid var(--border-light); background: #ffffff; margin-top: 0; display: flex; justify-content: space-between; align-items: center;">
+
+                    <div class="modal-actions"
+                        style="padding: 15px 24px; border-top: 1px solid var(--border-light); background: #ffffff; margin-top: 0; display: flex; justify-content: space-between; align-items: center;">
                         <div>
-                            <button type="button" class="btn-cancel" onclick="closeQuotationModal()" style="border: 1px solid #cbd5e1;">Cancel</button>
+                            <button type="button" class="btn-cancel" onclick="closeQuotationModal()"
+                                style="border: 1px solid #cbd5e1;">Cancel</button>
                         </div>
                         <div style="display: flex; gap: 8px;">
-                            <button type="button" class="btn-secondary" id="btnQuotationPrev" style="display: none;" onclick="navigateQuotationStep(-1)">Back</button>
-                            <button type="button" class="btn-primary" id="btnQuotationNext" onclick="navigateQuotationStep(1)">Next</button>
-                            <button type="button" class="btn-secondary" id="btnQuotationSaveDraft" onclick="saveQuotationNew('draft')" style="background: #e2e8f0; color: #334155; border: none;">Save Draft</button>
-                            <button type="button" class="btn-save" id="btnQuotationSubmit" onclick="saveQuotationNew('sent')" style="display: none;">Save & Generate</button>
+                            <button type="button" class="btn-secondary" id="btnQuotationPrev" style="display: none;"
+                                onclick="navigateQuotationStep(-1)">Back</button>
+                            <button type="button" class="btn-primary" id="btnQuotationNext"
+                                onclick="navigateQuotationStep(1)">Next</button>
+                            <button type="button" class="btn-secondary" id="btnQuotationSaveDraft"
+                                onclick="saveQuotationNew('draft')"
+                                style="background: #e2e8f0; color: #334155; border: none;">Save Draft</button>
+                            <button type="button" class="btn-save" id="btnQuotationSubmit"
+                                onclick="saveQuotationNew('sent')" style="display: none;">Save & Generate</button>
                         </div>
                     </div>
                 </div>
@@ -2098,8 +2497,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
     </div>
 
 
-    <script src="js/app.js"></script>
-    <script src="js/invoice_functions.js"></script>
+    <script src="js/app.js?v=93069_1785317163"></script>
+    <script src="js/invoice_functions.js?v=19837_1785317356"></script>
     <script src="js/quotation_functions.js?v=2"></script>
     <script>
         function toggleInvoiceDropdown(event) {
@@ -2113,7 +2512,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
         }
 
         // Close Invoice Type Selection Dropdown when clicking outside
-        document.addEventListener('click', function(event) {
+        document.addEventListener('click', function (event) {
             const dropdown = document.getElementById('invoiceTypeSelectionDiv');
             const container = document.querySelector('.generate-invoice-container');
             if (dropdown && container && !container.contains(event.target)) {
@@ -2123,7 +2522,7 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
 
         // Add this to handle generic page transitions for dynamic content
         document.querySelectorAll('.dropdown-item, .nav-item:not(.has-dropdown)').forEach(item => {
-            item.addEventListener('click', function(e) {
+            item.addEventListener('click', function (e) {
                 const page = this.getAttribute('data-page');
                 if (page === 'voucher') {
                     if (typeof loadVouchers === 'function') {
@@ -2165,7 +2564,8 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                             </div>
                             <div class="form-group">
                                 <label class="form-label">Designation</label>
-                                <input type="text" id="payGrade" class="form-input" placeholder="e.g. Software Engineer">
+                                <input type="text" id="payGrade" class="form-input"
+                                    placeholder="e.g. Software Engineer">
                             </div>
                         </fieldset>
 
@@ -2191,16 +2591,21 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
                         <!-- Earnings -->
                         <fieldset style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
                             <legend style="padding: 0 10px; font-weight: 600; color: #10b981;">Earnings (₹)</legend>
-                            <div class="form-group"><label class="form-label">Basic Salary</label><input type="number" id="payBasic" class="form-input" value="15000"></div>
-                            <div class="form-group"><label class="form-label">HRA</label><input type="number" id="payHra" class="form-input" value="6000"></div>
-                            <div class="form-group"><label class="form-label">Other Allowance</label><input type="number" id="payOther" class="form-input" value="5000"></div>
+                            <div class="form-group"><label class="form-label">Basic Salary</label><input type="number"
+                                    id="payBasic" class="form-input" value="15000"></div>
+                            <div class="form-group"><label class="form-label">HRA</label><input type="number"
+                                    id="payHra" class="form-input" value="6000"></div>
+                            <div class="form-group"><label class="form-label">Other Allowance</label><input
+                                    type="number" id="payOther" class="form-input" value="5000"></div>
                         </fieldset>
 
                         <!-- Deductions -->
                         <fieldset style="border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px;">
                             <legend style="padding: 0 10px; font-weight: 600; color: #ef4444;">Deductions (₹)</legend>
-                            <div class="form-group"><label class="form-label">Provident Fund</label><input type="number" id="payPf" class="form-input" value="1800"></div>
-                            <div class="form-group"><label class="form-label">Health Insurance</label><input type="number" id="payHealth" class="form-input" value="200"></div>
+                            <div class="form-group"><label class="form-label">Provident Fund</label><input type="number"
+                                    id="payPf" class="form-input" value="1800"></div>
+                            <div class="form-group"><label class="form-label">Health Insurance</label><input
+                                    type="number" id="payHealth" class="form-input" value="200"></div>
                         </fieldset>
                     </div>
 
@@ -2212,11 +2617,194 @@ if (defined('ENABLE_2FA') && ENABLE_2FA && (!isset($_SESSION['accounts_2fa_verif
             </div>
         </div>
     </div>
+    <!-- Audit Log Details Modal -->
+    <div id="auditLogModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3 style="color: var(--text-main); font-weight: 800; font-size: 18px;">Audit Log Details</h3>
+                <button class="modal-close" onclick="closeAuditLogModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px 0;">
+                <div style="margin-bottom: 15px;">
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">Timestamp
+                        (IST)</strong>
+                    <span id="audit-modal-timestamp" style="font-size: 14px; font-weight: 600;"></span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">User</strong>
+                    <span id="audit-modal-user" style="font-size: 14px; font-weight: 600;"></span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">Action</strong>
+                    <span id="audit-modal-action" class="status-badge"
+                        style="padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase;"></span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">Module
+                        / Table</strong>
+                    <span id="audit-modal-module" style="font-family: monospace; font-size: 13px;"></span>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">Record
+                        ID</strong>
+                    <span id="audit-modal-record-id" style="font-weight: bold;"></span>
+                </div>
+                <div>
+                    <strong
+                        style="color: var(--text-muted); font-size: 11px; display: block; text-transform: uppercase;">Action
+                        Details</strong>
+                    <p id="audit-modal-details"
+                        style="font-size: 13px; color: #000; background: #f8fafc; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e1; margin-top: 5px; white-space: pre-wrap; word-break: break-word;">
+                    </p>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-cancel" onclick="closeAuditLogModal()">Close</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         function logout() {
             window.location.href = 'api/logout.php';
         }
     </script>
+<datalist id="clientDatalist"></datalist>
+    
+
+    <!-- Add Client Modal -->
+    <div id="addClientModal" class="modal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>Add New Client</h3>
+                <button class="modal-close" onclick="closeAddClientModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addClientForm" onsubmit="saveNewClient(event)">
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" style="display: block; margin-bottom: 8px;">Client Type</label>
+                        <style>
+                            .client-type-btn { border: none; padding: 8px; border-radius: 6px; font-weight: 500; cursor: pointer; flex: 1; text-align: center; background: transparent; color: #94a3b8; transition: all 0.2s; }
+                            .client-type-btn.active { background: #3b82f6; color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+                        </style>
+                        <div style="display: flex; background: #0f172a; padding: 4px; border: 1px solid #334155; border-radius: 8px; gap: 4px;">
+                            <button type="button" class="client-type-btn active" id="btnTypeClient" onclick="setClientType('Client')">Client</button>
+                            <button type="button" class="client-type-btn" id="btnTypeStudent" onclick="setClientType('Student')">Student</button>
+                        </div>
+                        <input type="hidden" id="newClientType" value="Client">
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 15px;">
+                        <label class="form-label" id="nameLabel">Client Name <span class="required">*</span></label>
+                        <input type="text" id="newClientName" class="form-input" required>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" id="newClientPhone" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Email Address (Optional)</label>
+                            <input type="email" id="newClientEmail" class="form-input">
+                        </div>
+                    </div>
+
+                    <!-- Client Specific Fields -->
+                    <div id="clientSpecificFields">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <label class="form-label">GST Number (Optional)</label>
+                            <input type="text" id="newClientGst" class="form-input">
+                        </div>
+                        
+                    </div>
+
+                    <!-- Student Specific Fields -->
+                    <div id="studentSpecificFields" style="display: none;">
+                        <div class="form-group" style="margin-bottom: 15px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="form-label" style="margin-bottom: 0;">College Name</label>
+                                <a href="#" onclick="openManageAcademicModal('colleges'); return false;" style="font-size: 12px; color: #3b82f6; text-decoration: none;">Manage</a>
+                            </div>
+                            <style>
+    .custom-select-wrapper { position: relative; user-select: none; }
+    .custom-select-display { border: 1px solid #cbd5e1; padding: 10px 15px; border-radius: 6px; background: #fff; cursor: pointer; font-size: 14px; color: #0f172a; display: flex; justify-content: space-between; align-items: center; }
+    .custom-select-display::after { content: "▼"; font-size: 10px; color: #64748b; }
+    .custom-select-options { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid #cbd5e1; border-radius: 6px; margin-top: 4px; max-height: 160px; overflow-y: auto; z-index: 50; display: none; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+    .custom-select-options.show { display: block; }
+    .custom-select-option { padding: 10px 15px; cursor: pointer; font-size: 14px; color: #0f172a; border-bottom: 1px solid #f1f5f9; }
+    .custom-select-option:last-child { border-bottom: none; }
+    .custom-select-option:hover { background: #f8fafc; color: #3b82f6; }
+</style>
+                            <div class="custom-select-wrapper">
+                                <input type="hidden" id="newClientCollege" value="">
+                                <div class="custom-select-display" id="collegeDisplay" onclick="toggleCustomSelect('collegeOptions')">Select College</div>
+                                <div class="custom-select-options hidden-scrollbar" id="collegeOptions">
+                                    <div class="custom-select-option" onclick="selectCustomOption('collegeOptions', 'newClientCollege', 'collegeDisplay', '', 'Select College')">Select College</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                <label class="form-label" style="margin-bottom: 0;">Department</label>
+                                <a href="#" onclick="openManageAcademicModal('departments'); return false;" style="font-size: 12px; color: #3b82f6; text-decoration: none;">Manage</a>
+                            </div>
+                            <div class="custom-select-wrapper">
+                                <input type="hidden" id="newClientDepartment" value="">
+                                <div class="custom-select-display" id="deptDisplay" onclick="toggleCustomSelect('deptOptions')">Select Department</div>
+                                <div class="custom-select-options hidden-scrollbar" id="deptOptions">
+                                    <div class="custom-select-option" onclick="selectCustomOption('deptOptions', 'newClientDepartment', 'deptDisplay', '', 'Select Department')">Select Department</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" style="width: 100%;">Save Record</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Manage Academic Modal -->
+    <div id="manageAcademicModal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 id="manageAcademicTitle">Manage Records</h3>
+                <button class="modal-close" onclick="closeManageAcademicModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="addAcademicForm" onsubmit="addAcademicItem(event)" style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="hidden" id="manageAcademicType">
+                    <input type="text" id="newAcademicName" class="form-input" placeholder="Enter name to add..." required style="flex: 1;">
+                    <button type="submit" class="btn-primary">Add</button>
+                </form>
+                <style>
+                    .hidden-scrollbar::-webkit-scrollbar { display: none; }
+                    .hidden-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+                </style>
+                <div class="table-responsive hidden-scrollbar" style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead style="position: sticky; top: 0; z-index: 1;">
+                            <tr style="border-bottom: 1px solid #e2e8f0; background: #f8fafc;">
+                                <th style="padding: 10px; text-align: left; font-size: 13px; color: #64748b;">Name</th>
+                                <th style="padding: 10px; text-align: right; font-size: 13px; color: #64748b; width: 80px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="manageAcademicList">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

@@ -34,6 +34,8 @@ try {
         die("Quotation not found");
     }
 
+    log_action($conn, 'VIEW', 'quotations', $id, "Printed quotation: " . $quote['quotation_no']);
+
     // Fetch company settings
     $settingsResult = $conn->query("SELECT setting_key AS `key`, setting_value AS `value` FROM settings");
     $settings = [];

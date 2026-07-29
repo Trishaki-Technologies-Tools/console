@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $amount = floatval($_POST['amount']);
     $category_name = $_POST['category'] ?? 'Other';
     $payment_mode_name = $_POST['payment_mode'] ?? 'Cash';
-    $date = $_POST['date'] ?? date('Y-m-d');
+    $date = !empty($_POST['date']) ? $_POST['date'] : date('Y-m-d');
 
     // Get old date and attachment to handle month changes and file deletion
     $oldQuery = "SELECT date, attachment FROM expenses WHERE id = $id";
@@ -49,6 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $oldAttachment = $oldRow['attachment'];
         
         $date_db = date('Y-m-d', strtotime($date));
+        $has_time = isset($_POST['has_time']) && $_POST['has_time'] === '1';
+        $created_at = $has_time ? date('Y-m-d H:i:s', strtotime($date)) : date('Y-m-d 00:00:00', strtotime($date));
         
         // File upload
         $attachment_path = null;
@@ -72,11 +74,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $payment_mode_id = getPaymentModeId($conn, $payment_mode_name);
         
         if ($has_new_attachment) {
-            $stmt = $conn->prepare("UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, payment_mode_id = ?, attachment = ? WHERE id = ?");
-            $stmt->bind_param("sdsiisi", $description, $amount, $date_db, $category_id, $payment_mode_id, $attachment_path, $id);
+            $stmt = $conn->prepare("UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, payment_mode_id = ?, attachment = ?, created_at = ? WHERE id = ?");
+            $stmt->bind_param("sdsiissi", $description, $amount, $date_db, $category_id, $payment_mode_id, $attachment_path, $created_at, $id);
         } else {
-            $stmt = $conn->prepare("UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, payment_mode_id = ? WHERE id = ?");
-            $stmt->bind_param("sdsiii", $description, $amount, $date_db, $category_id, $payment_mode_id, $id);
+            $stmt = $conn->prepare("UPDATE expenses SET description = ?, amount = ?, date = ?, category_id = ?, payment_mode_id = ?, created_at = ? WHERE id = ?");
+            $stmt->bind_param("sdsiisi", $description, $amount, $date_db, $category_id, $payment_mode_id, $created_at, $id);
         }
         
         if ($stmt->execute()) {
@@ -85,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unlink('../' . $oldAttachment);
             }
             // Update transaction log
-            $tStmt = $conn->prepare("UPDATE transactions SET amount = ?, date = ?, description = ? WHERE reference_id = ? AND reference_table = 'expenses'");
-            $tStmt->bind_param("dssi", $amount, $date, $description, $id);
+            $tStmt = $conn->prepare("UPDATE transactions SET amount = ?, date = ?, description = ?, created_at = ? WHERE reference_id = ? AND reference_table = 'expenses'");
+            $tStmt->bind_param("dsssi", $amount, $date_db, $description, $created_at, $id);
             $tStmt->execute();
             
             // Update reports for both old and new months
@@ -121,6 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                      }
                  }
             }
+            log_action($conn, 'EDIT', 'expenses', $id, "Edited expense: $description (₹$amount)");
             echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => $conn->error]);

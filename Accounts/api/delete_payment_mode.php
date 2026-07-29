@@ -22,6 +22,7 @@ try {
             $query = "DELETE FROM payment_modes WHERE id = $id";
             
             if ($conn->query($query)) {
+                log_action($conn, 'DELETE', 'payment_modes', $id, "Deleted payment mode ID: $id");
                 echo json_encode(['success' => true]);
             } else {
                 echo json_encode(['success' => false, 'error' => $conn->error]);

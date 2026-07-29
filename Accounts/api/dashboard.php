@@ -12,21 +12,55 @@ function getSingleValue($conn, $query, $key) {
     return 0;
 }
 
+// Parse Financial Year cookie
+$selected_fy = $_COOKIE['financial_year'] ?? '';
+if (preg_match('/^(\d{4})-(\d{4})$/', $selected_fy, $matches)) {
+    $fy_start_year = intval($matches[1]);
+    $fy_end_year = intval($matches[2]);
+} else {
+    $currentMonth = intval(date('n'));
+    $currentYear = intval(date('Y'));
+    $fy_start_year = ($currentMonth >= 4) ? $currentYear : $currentYear - 1;
+    $fy_end_year = $fy_start_year + 1;
+}
+
+$fy_start_date = "$fy_start_year-04-01";
+$fy_end_date = "$fy_end_year-03-31";
+
+// Target month/year calculations relative to FY
+$currentMonth = intval(date('n'));
+
+// This month within selected FY
+$target_year_this_month = ($currentMonth >= 4) ? $fy_start_year : $fy_end_year;
+$this_month_start = sprintf("%04d-%02d-01", $target_year_this_month, $currentMonth);
+$this_month_end = date('Y-m-t', strtotime($this_month_start));
+
+// Last month within selected FY
+$prevMonth = $currentMonth - 1;
+if ($prevMonth == 0) {
+    $prevMonth = 12;
+}
+$target_year_last_month = ($prevMonth >= 4) ? $fy_start_year : $fy_end_year;
+$last_month_start = sprintf("%04d-%02d-01", $target_year_last_month, $prevMonth);
+$last_month_end = date('Y-m-t', strtotime($last_month_start));
+
 // --- 1. BALANCES BY PAYMENT METHOD ---
-$modes_res = $conn->query("SELECT id, mode_name FROM payment_modes WHERE status='active'");
+$modes_res = $conn->query("SELECT id, mode_name, opening_balance FROM payment_modes WHERE status='active'");
 $payment_balances = [];
 $total_inflow = getSingleValue($conn, "SELECT SUM(amount) as total FROM incomes", 'total');
 $total_outflow = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses", 'total');
-$total_balance = $total_inflow - $total_outflow;
+$total_opening = getSingleValue($conn, "SELECT SUM(opening_balance) as total FROM payment_modes WHERE status='active'", 'total');
+$total_balance = $total_inflow - $total_outflow + $total_opening;
 
 if ($modes_res) {
     while ($m = $modes_res->fetch_assoc()) {
         $mode_id = $m['id'];
         $mode_name = $m['mode_name'];
+        $opening = floatval($m['opening_balance']);
         
         $inc = getSingleValue($conn, "SELECT SUM(amount) as total FROM incomes WHERE payment_mode_id = $mode_id", 'total');
         $exp = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses WHERE payment_mode_id = $mode_id", 'total');
-        $bal = $inc - $exp;
+        $bal = $opening + $inc - $exp;
         
         $payment_balances[] = [
             'name' => $mode_name,
@@ -42,21 +76,19 @@ $this_month_income = getSingleValue($conn, "SELECT SUM(i.amount) as total
                  FROM incomes i
                  LEFT JOIN incomes_categories c ON i.category_id = c.id
                  WHERE ($category_exclude)
-                   AND MONTH(i.date) = MONTH(CURRENT_DATE()) 
-                   AND YEAR(i.date) = YEAR(CURRENT_DATE())", 'total');
+                   AND i.date >= '$this_month_start' AND i.date <= '$this_month_end'", 'total');
 
 $last_month_income = getSingleValue($conn, "SELECT SUM(i.amount) as total 
                  FROM incomes i
                  LEFT JOIN incomes_categories c ON i.category_id = c.id
                  WHERE ($category_exclude)
-                   AND MONTH(i.date) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) 
-                   AND YEAR(i.date) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)", 'total');
+                   AND i.date >= '$last_month_start' AND i.date <= '$last_month_end'", 'total');
 
 $this_year_income = getSingleValue($conn, "SELECT SUM(i.amount) as total 
                  FROM incomes i
                  LEFT JOIN incomes_categories c ON i.category_id = c.id
                  WHERE ($category_exclude)
-                   AND YEAR(i.date) = YEAR(CURRENT_DATE())", 'total');
+                   AND i.date >= '$fy_start_date' AND i.date <= '$fy_end_date'", 'total');
 
 $total_income = getSingleValue($conn, "SELECT SUM(i.amount) as total 
                   FROM incomes i
@@ -66,13 +98,13 @@ $total_income = getSingleValue($conn, "SELECT SUM(i.amount) as total
 
 // --- 3. EXPENSE METRICS ---
 $this_month_expense = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses 
-                 WHERE MONTH(date) = MONTH(CURRENT_DATE()) AND YEAR(date) = YEAR(CURRENT_DATE())", 'total');
+                 WHERE date >= '$this_month_start' AND date <= '$this_month_end'", 'total');
 
 $last_month_expense = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses 
-                 WHERE MONTH(date) = MONTH(CURRENT_DATE() - INTERVAL 1 MONTH) AND YEAR(date) = YEAR(CURRENT_DATE() - INTERVAL 1 MONTH)", 'total');
+                 WHERE date >= '$last_month_start' AND date <= '$last_month_end'", 'total');
 
 $this_year_expense = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses 
-                 WHERE YEAR(date) = YEAR(CURRENT_DATE())", 'total');
+                 WHERE date >= '$fy_start_date' AND date <= '$fy_end_date'", 'total');
 
 $total_expenses = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses", 'total');
 
@@ -90,11 +122,11 @@ $interest_paid_total = getSingleValue($conn, "SELECT SUM(amount) as total FROM l
 
 
 // --- 6. OPERATIONAL COUNTS ---
-$total_invoices_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM invoices", 'total');
-$total_vouchers_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM vouchers", 'total');
-$total_clients_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM clients", 'total');
-$total_quotations_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM quotations", 'total');
-$total_employees_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM employees WHERE status = 'active'", 'total');
+$total_invoices_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM invoices WHERE invoice_date >= '$fy_start_date' AND invoice_date <= '$fy_end_date'", 'total');
+$total_vouchers_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM vouchers WHERE date >= '$fy_start_date' AND date <= '$fy_end_date'", 'total');
+$total_clients_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM clients WHERE created_at >= '$fy_start_date 00:00:00' AND created_at <= '$fy_end_date 23:59:59'", 'total');
+$total_quotations_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM quotations WHERE quotation_date >= '$fy_start_date' AND quotation_date <= '$fy_end_date'", 'total');
+$total_employees_count = getSingleValue($conn, "SELECT COUNT(*) as total FROM employees WHERE status = 'active' AND created_at >= '$fy_start_date 00:00:00' AND created_at <= '$fy_end_date 23:59:59'", 'total');
 
 
 echo json_encode([

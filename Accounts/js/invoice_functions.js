@@ -142,7 +142,7 @@ function editInvoiceByNo(invoiceNo) {
         document.getElementById('gstPhone').value = invoice.phone;
         document.getElementById('gstModalNumber').value = invoice.gstNumber;
         document.getElementById('gstEmail').value = invoice.email || '';
-        document.getElementById('gstAddress').value = invoice.address || '';
+        if (document.getElementById('gstAddress')) document.getElementById('gstAddress').value = invoice.address || '';
         
         // Populate items
         const items = JSON.parse(invoice.items);
@@ -189,7 +189,7 @@ function editInvoiceByNo(invoiceNo) {
         document.getElementById('nonGstBillToName').value = invoice.billToName;
         document.getElementById('nonGstPhone').value = invoice.phone;
         document.getElementById('nonGstEmail').value = invoice.email || '';
-        document.getElementById('nonGstAddress').value = invoice.address || '';
+        if (document.getElementById('nonGstAddress')) document.getElementById('nonGstAddress').value = invoice.address || '';
         
         const items = JSON.parse(invoice.items);
         const container = document.getElementById('nonGstItemsContainer');
@@ -375,7 +375,7 @@ function loadExistingCustomer(phone, type) {
             } else {
                 document.getElementById('nonGstBillToName').value = lastInvoice.billToName;
                 document.getElementById('nonGstEmail').value = lastInvoice.email || '';
-                document.getElementById('nonGstAddress').value = lastInvoice.address || '';
+                if (document.getElementById('nonGstAddress')) document.getElementById('nonGstAddress').value = lastInvoice.address || '';
                 
                 const form = document.getElementById('nonGstInvoiceForm');
                 delete form.dataset.continueFrom;
@@ -446,7 +446,7 @@ function continuePartPayment(phone, type, targetLastInvoiceNo) {
                 document.getElementById('gstBillToName').value = lastInvoiceRecord.billToName;
                 document.getElementById('gstModalNumber').value = lastInvoiceRecord.gstNumber || '';
                 document.getElementById('gstEmail').value = lastInvoiceRecord.email || '';
-                document.getElementById('gstAddress').value = lastInvoiceRecord.address || '';
+                if (document.getElementById('gstAddress')) document.getElementById('gstAddress').value = lastInvoiceRecord.address || '';
                 
                 const container = document.getElementById('gstItemsContainer');
                 container.innerHTML = '';
@@ -480,7 +480,7 @@ function continuePartPayment(phone, type, targetLastInvoiceNo) {
             } else {
                 document.getElementById('nonGstBillToName').value = lastInvoiceRecord.billToName;
                 document.getElementById('nonGstEmail').value = lastInvoiceRecord.email || '';
-                document.getElementById('nonGstAddress').value = lastInvoiceRecord.address || '';
+                if (document.getElementById('nonGstAddress')) document.getElementById('nonGstAddress').value = lastInvoiceRecord.address || '';
                 
                 const container = document.getElementById('nonGstItemsContainer');
                 container.innerHTML = '';
@@ -522,12 +522,33 @@ function showInvoiceTypeSelection() {
     div.style.display = div.style.display === 'none' ? 'grid' : 'none';
 }
 
+function showInvoiceTypeSelection() {
+    // Legacy function, replaced by openUnifiedInvoiceModal
+    openUnifiedInvoiceModal();
+}
+
+function openUnifiedInvoiceModal() {
+    // Default open GST modal
+    document.getElementById('gstInvoiceModal').classList.add('show');
+}
+
+function switchToGstModal() {
+    document.getElementById('nonGstInvoiceModal').classList.remove('show');
+    document.getElementById('gstInvoiceModal').classList.add('show');
+    if (typeof loadPaymentModesDropdowns === 'function') loadPaymentModesDropdowns();
+}
+
+function switchToNonGstModal() {
+    document.getElementById('gstInvoiceModal').classList.remove('show');
+    document.getElementById('nonGstInvoiceModal').classList.add('show');
+    if (typeof loadPaymentModesDropdowns === 'function') loadPaymentModesDropdowns();
+}
+
 function selectInvoiceType(type) {
-    document.getElementById('invoiceTypeSelectionDiv').style.display = 'none';
     if (type === 'non-gst') {
-        document.getElementById('nonGstInvoiceModal').classList.add('show');
+        switchToNonGstModal();
     } else if (type === 'gst') {
-        document.getElementById('gstInvoiceModal').classList.add('show');
+        switchToGstModal();
     }
 }
 
@@ -930,7 +951,7 @@ async function generateGstInvoice(event) {
         phone: document.getElementById('gstPhone').value,
         gstNumber: document.getElementById('gstModalNumber').value,
         email: document.getElementById('gstEmail').value,
-        address: document.getElementById('gstAddress').value,
+        address: document.getElementById('gstAddress') ? document.getElementById('gstAddress').value : '',
         items: JSON.stringify(items),
         invoiceNo: invoiceNo || null
     };
@@ -986,7 +1007,7 @@ async function generateNonGstInvoice(event) {
         billToName: document.getElementById('nonGstBillToName').value,
         phone: document.getElementById('nonGstPhone').value,
         email: document.getElementById('nonGstEmail').value,
-        address: document.getElementById('nonGstAddress').value || '',
+        address: document.getElementById('nonGstAddress') ? document.getElementById('nonGstAddress').value : '',
         items: JSON.stringify(items),
         invoiceNo: invoiceNo || null,
         date: paymentDate
@@ -1319,4 +1340,21 @@ function deleteInvoiceByNo(invoiceNo) {
 // Download individual invoice PDF
 function downloadInvoiceByNo(invoiceNo) {
     window.open('api/download_invoice_pdf.php?invoiceNo=' + encodeURIComponent(invoiceNo), '_blank');
+}
+
+
+function autofillClientDetails(type) {
+    if (!window.allClients) return;
+    const nameVal = document.getElementById(type + 'BillToName').value;
+    const client = window.allClients.find(c => c.name === nameVal);
+    
+    if (client) {
+        document.getElementById(type + 'Phone').value = client.phone || '';
+        document.getElementById(type + 'Email').value = client.email && client.email !== 'N/A' ? client.email : '';
+        document.getElementById(type + 'Address').value = client.address || '';
+        
+        if (type === 'gst' && document.getElementById('gstModalNumber')) {
+            document.getElementById('gstModalNumber').value = client.gstNumber && client.gstNumber !== 'Not Applicable' ? client.gstNumber : '';
+        }
+    }
 }

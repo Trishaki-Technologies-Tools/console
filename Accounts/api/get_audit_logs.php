@@ -8,8 +8,8 @@ try {
             a.id,
             a.action,
             a.table_name,
-            a.record_id,
-            a.details,
+            a.row_id as record_id,
+            a.ip_address as details,
             a.created_at,
             COALESCE(u.username, 'System') as username
         FROM audit_logs a

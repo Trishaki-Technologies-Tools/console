@@ -73,6 +73,7 @@ try {
                 }
             }
 
+            log_action($conn, 'ADD', 'reports', null, "Created report for month: $month (Opening: ₹$opening_balance)");
             echo json_encode(['success' => true]);
         } else {
             throw new Exception("Database Error: " . $conn->error);

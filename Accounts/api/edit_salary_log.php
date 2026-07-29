@@ -117,6 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($stmt->execute()) {
             $stmt->close();
+            log_action($conn, 'EDIT', 'salary_logs', $id, "Updated salary log for $employee_name: ₹$amount ($month)");
             $conn->commit();
             
             // Recalculate reports for old date (if changed) and new date

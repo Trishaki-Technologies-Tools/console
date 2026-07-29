@@ -28,6 +28,8 @@ if (!$salary) {
     die("Salary record not found");
 }
 
+log_action($conn, 'VIEW', 'salary_logs', $id, "Printed payslip for " . $salary['employee_name'] . " ($monthLabel)");
+
 // Fetch company settings
 $settingsResult = $conn->query("SELECT setting_key AS `key`, setting_value AS `value` FROM settings");
 $settings = [];

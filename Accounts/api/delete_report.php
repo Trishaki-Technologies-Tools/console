@@ -54,6 +54,7 @@ try {
             $stmtExp->execute();
             $stmtExp->close();
 
+            log_action($conn, 'DELETE', 'reports', null, "Deleted report and all transactions for month: $month");
             $conn->commit();
             echo json_encode(['success' => true]);
 

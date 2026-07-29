@@ -55,6 +55,7 @@ if (isset($_GET['id'])) {
 
         if ($stmt->execute()) {
             $stmt->close();
+            log_action($conn, 'DELETE', 'loans', $id, "Deleted loan ID: $id");
             $conn->commit();
             
             // Update report totals for the month

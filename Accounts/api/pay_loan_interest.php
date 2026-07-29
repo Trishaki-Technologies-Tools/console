@@ -87,6 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $tStmt->bind_param("dsis", $interestAmount, $payment_date, $expenseId, $description);
             $tStmt->execute();
 
+            log_action($conn, 'EDIT', 'loans', $loan_id, "Paid interest of ₹$interestAmount for loan: " . $loan['description']);
             $conn->commit();
             
             // 5. Update Reports

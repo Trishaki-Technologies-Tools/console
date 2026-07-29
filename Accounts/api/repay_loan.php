@@ -102,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $updStmt->close();
         }
         
-        $conn->commit();
+            log_action($conn, 'EDIT', 'loans', $loan_id, "Recorded repayment of ₹$amount for loan: " . $loan['description']);
+            $conn->commit();
         
         // Update reports
         recalculateReport($conn, $payment_date);
