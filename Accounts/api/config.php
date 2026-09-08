@@ -7,9 +7,9 @@ require_once __DIR__ . '/../../2fa_config.php';
 
 // Database configuration - REMOTE SERVER
 define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-define('DB_NAME', 'u164024082_accounts');
+define('DB_USER', 'u345018570_accounts');
+define('DB_PASS', 'Trishaki@tech-console#304');
+define('DB_NAME', 'u345018570_accounts');
 
 // Create connection with explicit timeout and port
 try {
