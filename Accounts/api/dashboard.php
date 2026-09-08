@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
 
 // Helper function to run query and return single value
 function getSingleValue($conn, $query, $key) {
@@ -45,6 +46,8 @@ $last_month_start = sprintf("%04d-%02d-01", $target_year_last_month, $prevMonth)
 $last_month_end = date('Y-m-t', strtotime($last_month_start));
 
 // --- 1. BALANCES BY PAYMENT METHOD ---
+reconcileMerchantSettlements($conn);
+
 $modes_res = $conn->query("SELECT id, mode_name, opening_balance FROM payment_modes WHERE status='active'");
 $payment_balances = [];
 $total_inflow = getSingleValue($conn, "SELECT SUM(amount) as total FROM incomes", 'total');
@@ -56,11 +59,7 @@ if ($modes_res) {
     while ($m = $modes_res->fetch_assoc()) {
         $mode_id = $m['id'];
         $mode_name = $m['mode_name'];
-        $opening = floatval($m['opening_balance']);
-        
-        $inc = getSingleValue($conn, "SELECT SUM(amount) as total FROM incomes WHERE payment_mode_id = $mode_id", 'total');
-        $exp = getSingleValue($conn, "SELECT SUM(amount) as total FROM expenses WHERE payment_mode_id = $mode_id", 'total');
-        $bal = $opening + $inc - $exp;
+        $bal = calculatePaymentModeBalance($conn, $mode_id);
         
         $payment_balances[] = [
             'name' => $mode_name,

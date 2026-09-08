@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
 
 function getCategoryId($conn, $name) {
     $stmt = $conn->prepare("SELECT id FROM incomes_categories WHERE category_name = ?");
@@ -99,6 +100,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $conn->query($updateQuery);
         }
         
+        reconcileMerchantSettlements($conn);
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => $conn->error]);

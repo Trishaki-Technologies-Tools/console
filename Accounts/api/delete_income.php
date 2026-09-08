@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
 
 if (isset($_GET['id'])) {
     $id = intval($_GET['id']);
@@ -20,6 +21,7 @@ if (isset($_GET['id'])) {
             unlink('../' . $filePath);
         }
         log_action($conn, 'DELETE', 'incomes', $id, "Deleted income: $description (₹$amount)");
+        reconcileMerchantSettlements($conn);
         echo json_encode(['success' => true]);
     } else {
         echo json_encode(['success' => false, 'error' => $conn->error]);

@@ -1,3 +1,13 @@
+
+// Safe DOM Helpers to prevent null element errors across pages
+function setSafeText(id, text) {
+    const el = document.getElementById(id);
+    if (el) el.textContent = text;
+}
+function setSafeHtml(id, html) {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = html;
+}
 // Check if running from file protocol
 if (window.location.protocol === 'file:') {
     alert('⚠️ You are opening this file directly! \n\nDynamic features like Database and APIs will NOT work.\nPlease open this project through your local server (XAMPP/WAMP) at:\nhttp://localhost/Accounts/');
@@ -43,20 +53,21 @@ function showAlertPopup(title, message, type) {
 }
 
 // Navigation handling with Persistence
+// Navigation handling across separate PHP pages
 function switchPage(pageId, title = null) {
     if (!pageId) return;
     
-    // Hide all pages
-    document.querySelectorAll('.page-content').forEach(content => content.classList.add('hidden'));
-    
-    // Show selected page
-    const pageElement = document.getElementById(pageId + '-page');
-    if (pageElement) {
-        pageElement.classList.remove('hidden');
+    const targetPage = document.getElementById(pageId + '-page');
+    if (targetPage) {
+        document.querySelectorAll('.page-content').forEach(content => content.classList.add('hidden'));
+        targetPage.classList.remove('hidden');
     } else {
-        // Fallback to dashboard if page doesn't exist
-        document.getElementById('dashboard-page').classList.remove('hidden');
-        pageId = 'dashboard';
+        // Navigate to dedicated PHP page if not present on current DOM
+        const targetFile = pageId + '.php';
+        if (window.location.pathname.indexOf(targetFile) === -1) {
+            window.location.href = targetFile;
+            return;
+        }
     }
 
     // Update active class in menu
@@ -70,7 +81,8 @@ function switchPage(pageId, title = null) {
     });
 
     if (title) {
-        document.getElementById('page-title').textContent = title;
+        const titleEl = document.getElementById('page-title');
+        if (titleEl) titleEl.textContent = title;
     }
 
     // Hide Financial Year dropdown on Transactions page since it has its own FY filters
@@ -79,39 +91,55 @@ function switchPage(pageId, title = null) {
         fyDropdown.style.display = (pageId === 'transactions') ? 'none' : 'block';
     }
 
-    // Save to memory
+    // Save active page to memory
     localStorage.setItem('activeAccountsPage', pageId);
 
-    // Load page-specific data if functions exist
+    // Load page-specific data
     if (pageId === 'dashboard') {
-        loadDashboardData();
-        loadReports();
+        if (typeof loadDashboardData === 'function') loadDashboardData();
+        if (typeof loadReports === 'function') loadReports();
     }
-    if (pageId === 'transactions') loadTransactions();
-    if (pageId === 'salary-logs') loadSalaryLogs();
-    if (pageId === 'loans') loadLoans();
+    if (pageId === 'transactions') {
+        if (typeof loadTransactions === 'function') loadTransactions();
+    }
+    if (pageId === 'salary-logs') {
+        if (typeof loadSalaryLogs === 'function') loadSalaryLogs();
+    }
+    if (pageId === 'loans') {
+        if (typeof loadLoans === 'function') loadLoans();
+    }
     if (pageId === 'invoices') {
         if (typeof loadInvoicesFromDB === 'function') loadInvoicesFromDB();
     }
     if (pageId === 'voucher') {
         if (typeof loadVouchers === 'function') loadVouchers();
     }
-    if (pageId === 'clients') loadClients();
-    if (pageId === 'quotations') loadQuotations();
-    if (pageId === 'audit-logs') loadAuditLogs();
-    if (pageId === 'settings') loadSettings();
+    if (pageId === 'clients') {
+        if (typeof loadClients === 'function') loadClients();
+    }
+    if (pageId === 'quotations') {
+        if (typeof loadQuotations === 'function') loadQuotations();
+    }
+    if (pageId === 'audit-logs') {
+        if (typeof loadAuditLogs === 'function') loadAuditLogs();
+    }
+    if (pageId === 'settings') {
+        if (typeof loadSettings === 'function') loadSettings();
+    }
 }
 
 document.querySelectorAll('.nav-item, .dropdown-item').forEach(item => {
     item.addEventListener('click', function (e) {
         const page = this.getAttribute('data-page');
-        if (!page) return; // Dropdown parent
+        if (!page) return;
+        const href = this.getAttribute('href');
+        if (href && href !== '#' && href !== 'javascript:void(0)') {
+            return; // Allow native link navigation to dedicated PHP page
+        }
         e.preventDefault();
         switchPage(page, this.textContent.trim());
     });
 });
-
-// Toggle Sidebar collapsible state
 function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     if (sidebar) {
@@ -126,15 +154,12 @@ function initApp() {
     console.log("Initializing App...");
     
     // Sidebar state loading
-    if (localStorage.getItem('sidebarCollapsed') === 'true') {
-        const sidebar = document.querySelector('.sidebar');
-        if (sidebar) sidebar.classList.add('collapsed');
-    }
+    const sidebar = document.querySelector('.sidebar'); if (sidebar) sidebar.classList.add('collapsed');
 
     const savedPage = localStorage.getItem('activeAccountsPage') || 'dashboard';
     
     // Switch to page first (loads active page data on demand)
-    switchPage(savedPage);
+    // switchPage(savedPage);
     
     if (typeof setInitialDates === 'function') setInitialDates();
     initTimeCheckboxes();
@@ -271,7 +296,7 @@ function loadDashboardData() {
                 const data = JSON.parse(text);
                 
                 // 1. Balances Section
-                document.getElementById('balance').textContent = '₹' + data.total_balance;
+                setSafeText('balance', '₹' + data.total_balance);
                 
                 const modeIcons = {
                     'Cash': { icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>`, colorClass: 'icon-green' },
@@ -298,65 +323,65 @@ function loadDashboardData() {
                         `;
                     });
                 }
-                document.getElementById('payment-balances-row').innerHTML = paymentHtml;
+                setSafeHtml('payment-balances-row', paymentHtml);
 
                 // 2. Income Section
-                document.getElementById('this-month-income').textContent = '₹' + data.this_month_income;
-                document.getElementById('last-month-income').textContent = '₹' + data.last_month_income;
-                document.getElementById('this-year-income').textContent = '₹' + data.this_year_income;
-                document.getElementById('total-income').textContent = '₹' + data.total_income;
+                setSafeText('this-month-income', '₹' + data.this_month_income);
+                setSafeText('last-month-income', '₹' + data.last_month_income);
+                setSafeText('this-year-income', '₹' + data.this_year_income);
+                setSafeText('total-income', '₹' + data.total_income);
 
                 // 3. Expense Section
-                document.getElementById('this-month-expense').textContent = '₹' + data.this_month_expense;
-                document.getElementById('last-month-expense').textContent = '₹' + data.last_month_expense;
-                document.getElementById('this-year-expense').textContent = '₹' + data.this_year_expense;
-                document.getElementById('total-expenses').textContent = '₹' + data.total_expenses;
+                setSafeText('this-month-expense', '₹' + data.this_month_expense);
+                setSafeText('last-month-expense', '₹' + data.last_month_expense);
+                setSafeText('this-year-expense', '₹' + data.this_year_expense);
+                setSafeText('total-expenses', '₹' + data.total_expenses);
 
                 // 4. Profit/Loss Section
-                document.getElementById('this-month-profit').textContent = '₹' + data.this_month_profit;
-                document.getElementById('last-month-profit').textContent = '₹' + data.last_month_profit;
-                document.getElementById('this-year-profit').textContent = '₹' + data.this_year_profit;
-                document.getElementById('overall-profit').textContent = '₹' + data.overall_profit;
+                setSafeText('this-month-profit', '₹' + data.this_month_profit);
+                setSafeText('last-month-profit', '₹' + data.last_month_profit);
+                setSafeText('this-year-profit', '₹' + data.this_year_profit);
+                setSafeText('overall-profit', '₹' + data.overall_profit);
 
                 // 5. Loans Section
-                document.getElementById('active-loan-amount').textContent = '₹' + data.active_loans_amount;
-                document.getElementById('interest-paid-total').textContent = '₹' + data.interest_paid_total;
+                setSafeText('active-loan-amount', '₹' + data.active_loans_amount);
+                setSafeText('interest-paid-total', '₹' + data.interest_paid_total);
 
                 // 6. Business Operations Stats
-                document.getElementById('total-invoices-count').textContent = data.total_invoices_count;
-                document.getElementById('total-vouchers-count').textContent = data.total_vouchers_count;
-                document.getElementById('total-clients-count').textContent = data.total_clients_count;
-                document.getElementById('total-quotations-count').textContent = data.total_quotations_count;
-                document.getElementById('total-employees-count').textContent = data.total_employees_count;
+                setSafeText('total-invoices-count', data.total_invoices_count);
+                setSafeText('total-vouchers-count', data.total_vouchers_count);
+                setSafeText('total-clients-count', data.total_clients_count);
+                setSafeText('total-quotations-count', data.total_quotations_count);
+                setSafeText('total-employees-count', data.total_employees_count);
 
             } catch (e) {
                 console.error('Dashboard Error:', text);
-                document.getElementById('balance').textContent = '₹0';
-                document.getElementById('payment-balances-row').innerHTML = '';
+                setSafeText('balance', '₹0');
+                setSafeHtml('payment-balances-row', '');
                 
-                document.getElementById('this-month-income').textContent = '₹0';
-                document.getElementById('last-month-income').textContent = '₹0';
-                document.getElementById('this-year-income').textContent = '₹0';
-                document.getElementById('total-income').textContent = '₹0';
+                setSafeText('this-month-income', '₹0');
+                setSafeText('last-month-income', '₹0');
+                setSafeText('this-year-income', '₹0');
+                setSafeText('total-income', '₹0');
 
-                document.getElementById('this-month-expense').textContent = '₹0';
-                document.getElementById('last-month-expense').textContent = '₹0';
-                document.getElementById('this-year-expense').textContent = '₹0';
-                document.getElementById('total-expenses').textContent = '₹0';
+                setSafeText('this-month-expense', '₹0');
+                setSafeText('last-month-expense', '₹0');
+                setSafeText('this-year-expense', '₹0');
+                setSafeText('total-expenses', '₹0');
 
-                document.getElementById('this-month-profit').textContent = '₹0';
-                document.getElementById('last-month-profit').textContent = '₹0';
-                document.getElementById('this-year-profit').textContent = '₹0';
-                document.getElementById('overall-profit').textContent = '₹0';
+                setSafeText('this-month-profit', '₹0');
+                setSafeText('last-month-profit', '₹0');
+                setSafeText('this-year-profit', '₹0');
+                setSafeText('overall-profit', '₹0');
 
-                document.getElementById('active-loan-amount').textContent = '₹0';
-                document.getElementById('interest-paid-total').textContent = '₹0';
+                setSafeText('active-loan-amount', '₹0');
+                setSafeText('interest-paid-total', '₹0');
 
-                document.getElementById('total-invoices-count').textContent = '0';
-                document.getElementById('total-vouchers-count').textContent = '0';
-                document.getElementById('total-clients-count').textContent = '0';
-                document.getElementById('total-quotations-count').textContent = '0';
-                document.getElementById('total-employees-count').textContent = '0';
+                setSafeText('total-invoices-count', '0');
+                setSafeText('total-vouchers-count', '0');
+                setSafeText('total-clients-count', '0');
+                setSafeText('total-quotations-count', '0');
+                setSafeText('total-employees-count', '0');
             }
         })
         .catch(error => console.error('Network Error:', error));
@@ -1751,9 +1776,65 @@ function openPaymentModesModal() {
     loadPaymentModesForManagement();
 }
 
+function handlePaymentModeNameInput(input) {
+    const val = (input ? input.value : '').trim().toLowerCase();
+    const typeSelect = document.getElementById('newPaymentModeTypeSelect');
+    const notice = document.getElementById('cashNoTypeNotice');
+    const settleCol = document.getElementById('settlementBankCol');
+
+    if (val === 'cash') {
+        if (typeSelect) typeSelect.style.display = 'none';
+        if (notice) notice.style.display = 'inline-block';
+        if (settleCol) settleCol.style.display = 'none';
+    } else {
+        if (typeSelect) typeSelect.style.display = 'inline-block';
+        if (notice) notice.style.display = 'none';
+        if (typeSelect) handlePaymentModeTypeChange(typeSelect.value);
+    }
+}
+
+function handlePaymentModeTypeChange(type) {
+    const settleCol = document.getElementById('settlementBankCol');
+    const nameInput = document.getElementById('newPaymentModeInput');
+    const isCash = ((nameInput ? nameInput.value : '').trim().toLowerCase() === 'cash');
+
+    if (!isCash && type === 'merchant') {
+        if (settleCol) settleCol.style.display = 'block';
+        populateSettlementBankDropdown('newPaymentModeSettlementBankSelect');
+    } else {
+        if (settleCol) settleCol.style.display = 'none';
+    }
+}
+
+function populateSettlementBankDropdown(selectId, selectedId = null) {
+    const select = document.getElementById(selectId);
+    if (!select) return;
+
+    let html = '<option value="">Select Bank</option>';
+    const bankModes = (window.allPaymentModesList || []).filter(m => (m.type || '').toLowerCase() === 'bank');
+    
+    bankModes.forEach(b => {
+        const isSel = selectedId && parseInt(selectedId) === parseInt(b.id) ? 'selected' : '';
+        html += `<option value="${b.id}" ${isSel}>${escapeHtml(b.mode_name)}</option>`;
+    });
+
+    select.innerHTML = html;
+}
+
+function toggleItemSettlementBank(id, type) {
+    const wrap = document.getElementById(`item-settle-wrap-${id}`);
+    if (wrap) {
+        wrap.style.display = (type === 'merchant') ? 'inline-block' : 'none';
+    }
+}
+
 function closePaymentModesModal() {
     document.getElementById('paymentModesModal').classList.remove('show');
-    document.getElementById('newPaymentModeInput').value = '';
+    const nameInput = document.getElementById('newPaymentModeInput');
+    if (nameInput) {
+        nameInput.value = '';
+        handlePaymentModeNameInput(nameInput);
+    }
     const balanceInput = document.getElementById('newPaymentModeBalanceInput');
     if (balanceInput) balanceInput.value = '';
 }
@@ -1773,6 +1854,7 @@ function loadPaymentModesForManagement() {
 
 // Display payment modes inside modal list
 function displayPaymentModes(modes) {
+    window.allPaymentModesList = modes || [];
     const container = document.getElementById('paymentModeList');
     if (!container) return;
 
@@ -1781,18 +1863,62 @@ function displayPaymentModes(modes) {
         return;
     }
 
+    const bankModes = modes.filter(m => (m.type || '').toLowerCase() === 'bank');
+
     let html = '';
     modes.forEach(mode => {
+        const isCash = (mode.mode_name || '').trim().toLowerCase() === 'cash';
+        const currentType = (mode.type || 'bank').toLowerCase();
+        
+        let typeHtml = '';
+        let settleBankHtml = '';
+
+        if (isCash) {
+            typeHtml = `<span style="font-size: 11px; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">No Type (Cash)</span>`;
+        } else {
+            typeHtml = `
+                <select id="type-select-${mode.id}" class="category-input" onchange="toggleItemSettlementBank(${mode.id}, this.value)" style="margin: 0; padding: 2px 6px; font-size: 11px; height: 28px; width: 90px;">
+                    <option value="bank" ${currentType === 'bank' ? 'selected' : ''}>Bank</option>
+                    <option value="merchant" ${currentType === 'merchant' ? 'selected' : ''}>Merchant</option>
+                </select>
+            `;
+
+            let bankOptions = '<option value="">Select Settlement Bank</option>';
+            bankModes.forEach(b => {
+                const isSel = mode.settlement_bank_id && parseInt(mode.settlement_bank_id) === parseInt(b.id) ? 'selected' : '';
+                bankOptions += `<option value="${b.id}" ${isSel}>${escapeHtml(b.mode_name)}</option>`;
+            });
+
+            settleBankHtml = `
+                <div id="item-settle-wrap-${mode.id}" style="display: ${currentType === 'merchant' ? 'inline-block' : 'none'};">
+                    <select id="settle-bank-select-${mode.id}" class="category-input" style="margin: 0; padding: 2px 6px; font-size: 11px; height: 28px; width: 130px;">
+                        ${bankOptions}
+                    </select>
+                </div>
+            `;
+        }
+
+        const curBal = parseFloat(mode.current_balance || 0);
+
         html += `
         <div class="category-item" style="display: flex; flex-direction: column; gap: 8px; padding: 12px; border-bottom: 1px solid var(--border-light); margin-bottom: 8px; background: rgba(0, 0, 0, 0.02); border-radius: 8px; align-items: stretch; justify-content: flex-start;">
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
-                <span class="category-name" style="font-weight: 700; color: #1e293b;">${mode.mode_name}</span>
-                <button class="btn-delete-icon" onclick="deletePaymentMode(${mode.id}, '${mode.mode_name}')" title="Delete" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto;">✖</button>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span class="category-name" style="font-weight: 700; color: #1e293b;">${escapeHtml(mode.mode_name)}</span>
+                    ${typeHtml}
+                    ${settleBankHtml}
+                </div>
+                ${isCash ? '<span style="font-size: 11px; color: #94a3b8; font-style: italic;">System Cash Account</span>' : `
+                <button class="btn-delete-icon" onclick="deletePaymentMode(${mode.id}, '${escapeHtml(mode.mode_name)}')" title="Delete" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto;">✖</button>
+                `}
             </div>
             <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
-                <label style="font-size: 11px; color: var(--text-muted); width: 110px; margin: 0; text-transform: uppercase; font-weight: 600;">Opening Bal:</label>
-                <input type="number" id="opening-bal-${mode.id}" class="category-input" value="${parseFloat(mode.opening_balance || 0).toFixed(2)}" step="0.01" style="margin: 0; padding: 4px 8px; font-size: 12px; flex: 1; min-width: 0; height: 28px;">
-                <button onclick="updatePaymentModeBalance(${mode.id}, '${mode.mode_name}')" style="background: var(--primary); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; height: 28px; flex-shrink: 0;">Update</button>
+                <label style="font-size: 11px; color: var(--text-muted); width: 85px; margin: 0; text-transform: uppercase; font-weight: 600;">Opening Bal:</label>
+                <input type="number" id="opening-bal-${mode.id}" class="category-input" value="${parseFloat(mode.opening_balance || 0).toFixed(2)}" step="0.01" style="margin: 0; padding: 4px 8px; font-size: 12px; width: 85px; height: 28px;">
+                
+                <span style="font-size: 11px; color: #0284c7; font-weight: 700; margin-left: auto;">Bal: ₹${curBal.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</span>
+                
+                <button onclick="updatePaymentModeBalance(${mode.id}, '${escapeHtml(mode.mode_name)}')" style="background: var(--primary); color: #fff; border: none; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; height: 28px; flex-shrink: 0;">Update</button>
             </div>
         </div>`;
     });
@@ -1809,11 +1935,25 @@ function addPaymentMode() {
         return;
     }
 
+    const isCash = name.toLowerCase() === 'cash';
+    const typeSelect = document.getElementById('newPaymentModeTypeSelect');
+    const type = isCash ? '' : (typeSelect ? typeSelect.value : 'bank');
+
+    const settleSelect = document.getElementById('newPaymentModeSettlementBankSelect');
+    const settlementBankId = (!isCash && type === 'merchant' && settleSelect) ? settleSelect.value : '';
+
+    if (!isCash && type === 'merchant' && !settlementBankId) {
+        showAlertPopup('Warning', 'Please select a Settlement Bank for merchant account', 'warning');
+        return;
+    }
+
     const balInput = document.getElementById('newPaymentModeBalanceInput');
     const balance = balInput ? balInput.value.trim() : '0.00';
 
     const formData = new FormData();
     formData.append('mode_name', name);
+    formData.append('type', type);
+    formData.append('settlement_bank_id', settlementBankId);
     formData.append('opening_balance', balance || '0.00');
 
     fetch('api/add_payment_mode.php', {
@@ -1825,6 +1965,7 @@ function addPaymentMode() {
             if (data.success) {
                 input.value = '';
                 if (balInput) balInput.value = '';
+                handlePaymentModeNameInput(input);
                 loadPaymentModesForManagement();
                 loadPaymentModesDropdowns();
                 if (typeof loadDashboardStats === 'function') {
@@ -1840,7 +1981,7 @@ function addPaymentMode() {
         });
 }
 
-// Update payment mode opening balance
+// Update payment mode opening balance & type
 function updatePaymentModeBalance(id, name) {
     const balInput = document.getElementById(`opening-bal-${id}`);
     if (!balInput) return;
@@ -1851,10 +1992,24 @@ function updatePaymentModeBalance(id, name) {
         return;
     }
     
+    const isCash = (name || '').trim().toLowerCase() === 'cash';
+    const typeSelect = document.getElementById(`type-select-${id}`);
+    const type = isCash ? '' : (typeSelect ? typeSelect.value : 'bank');
+
+    const settleSelect = document.getElementById(`settle-bank-select-${id}`);
+    const settlementBankId = (!isCash && type === 'merchant' && settleSelect) ? settleSelect.value : '';
+
+    if (!isCash && type === 'merchant' && !settlementBankId) {
+        showAlertPopup('Warning', 'Please select a Settlement Bank for merchant account', 'warning');
+        return;
+    }
+
     const formData = new FormData();
     formData.append('id', id);
     formData.append('opening_balance', balance);
-    
+    formData.append('type', type);
+    formData.append('settlement_bank_id', settlementBankId);
+
     fetch('api/update_payment_mode.php', {
         method: 'POST',
         body: formData
@@ -1862,18 +2017,18 @@ function updatePaymentModeBalance(id, name) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showAlertPopup('Success', `Opening balance for "${name}" updated to ₹${parseFloat(balance).toFixed(2)}.`, 'success');
+                showAlertPopup('Success', `Payment method "${name}" updated successfully.`, 'success');
                 loadPaymentModesForManagement();
                 if (typeof loadDashboardStats === 'function') {
                     loadDashboardStats();
                 }
             } else {
-                showAlertPopup('Error', data.error || 'Failed to update opening balance', 'error');
+                showAlertPopup('Error', data.error || 'Failed to update payment method', 'error');
             }
         })
         .catch(error => {
             console.error('Error updating payment mode balance:', error);
-            showAlertPopup('Error', 'Failed to update opening balance due to a network error.', 'error');
+            showAlertPopup('Error', 'Failed to update payment method due to a network error.', 'error');
         });
 }
 
@@ -1904,7 +2059,6 @@ function deletePaymentMode(id, name) {
         }
     );
 }
-
 // --- Salary Logs Functionality ---
 
 // Load salary logs
@@ -1912,15 +2066,16 @@ function loadSalaryLogs() {
     fetch('api/salary_logs.php')
         .then(response => response.text())
         .then(text => {
+            let data;
             try {
-                const data = JSON.parse(text);
-                displaySalaryLogs(data);
-                updateSalaryStats(data);
+                data = JSON.parse(text);
             } catch (e) {
-                console.error('Server Error loading logs:', text);
-                // Don't alert on load, just log to console to avoid annoying popups on page load
-                document.getElementById('salary-list').innerHTML = '<p style="color:red; text-align:center;">Failed to load data. <br>Error: invalid server response.<br>Check console for details.</p>';
+                console.error('Server Error loading salary logs JSON:', text);
+                setSafeHtml('salary-list', '<p style="color:red; text-align:center;">Failed to load data. <br>Error: invalid server response.<br>Check console for details.</p>');
+                return;
             }
+            displaySalaryLogs(data);
+            updateSalaryStats(data);
         })
         .catch(error => console.error('Network Error:', error));
 }
@@ -1928,8 +2083,9 @@ function loadSalaryLogs() {
 // Display salary logs in table
 function displaySalaryLogs(logs) {
     const container = document.getElementById('salary-list');
+    if (!container) return;
 
-    if (logs.length === 0) {
+    if (!Array.isArray(logs) || logs.length === 0) {
         container.innerHTML = '<p style="padding: 40px; text-align: center; color: #64748b;">No salary records found. Add your first record!</p>';
         return;
     }
@@ -1981,8 +2137,8 @@ function updateSalaryStats(logs) {
     const totalPaid = paidLogs.reduce((sum, log) => sum + parseFloat(log.amount), 0);
     const employees = new Set(logs.map(log => log.employee_name));
 
-    document.getElementById('total-salary-paid').textContent = '₹' + totalPaid.toFixed(2);
-    document.getElementById('total-employees-paid').textContent = employees.size;
+    setSafeText('total-salary-paid', '₹' + totalPaid.toFixed(2));
+    setSafeText('total-employees-paid', employees.size);
 
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -2833,7 +2989,7 @@ function logout() {
 // ==========================================
 // 1. Transactions Ledger Module
 // ==========================================
-let currentLedgerTab = 'income';
+var currentLedgerTab = (typeof currentLedgerTab !== 'undefined') ? currentLedgerTab : 'income';
 let allIncomesData = [];
 let allExpensesData = [];
 
@@ -3105,8 +3261,39 @@ function displayFilteredTxns(list) {
 }
 
 // ==========================================
+// ==========================================
 // 2. Clients Directory Module
 // ==========================================
+let currentClientTab = 'Student'; // Default active tab: 'Student'
+window.allClientsData = [];
+
+if (typeof escapeHtml !== 'function') {
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+}
+
+function switchClientTab(tab) {
+    currentClientTab = tab;
+    
+    // Update active tab buttons UI
+    const btnStudents = document.getElementById('client-tab-students');
+    const btnClients = document.getElementById('client-tab-clients');
+    const btnAll = document.getElementById('client-tab-all');
+    
+    if (btnStudents) btnStudents.classList.toggle('active', tab === 'Student');
+    if (btnClients) btnClients.classList.toggle('active', tab === 'Client');
+    if (btnAll) btnAll.classList.toggle('active', tab === 'all');
+    
+    renderClientsTable();
+}
+
 function loadClients() {
     fetch('api/get_clients.php')
         .then(res => res.json())
@@ -3115,72 +3302,189 @@ function loadClients() {
                 console.error(data.error);
                 return;
             }
-            const tbody = document.getElementById('clients-list-container');
-            if (!tbody) return;
             
-            let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:20px;">
-                <thead>
+            window.allClientsData = data || [];
+            window.allClients = data || [];
+            
+            // Update stats counters
+            const clientCount = window.allClientsData.filter(c => (c.client_type || 'Client') === 'Client').length;
+            const studentCount = window.allClientsData.filter(c => c.client_type === 'Student').length;
+            if (document.getElementById('client-total-count')) document.getElementById('client-total-count').textContent = clientCount;
+            if (document.getElementById('student-total-count')) document.getElementById('student-total-count').textContent = studentCount;
+            if (document.getElementById('total-clients-count')) document.getElementById('total-clients-count').textContent = window.allClientsData.length;
+
+            // Populate invoice datalists if present
+            const datalist = document.getElementById('clientDatalist');
+            if (datalist) {
+                datalist.innerHTML = window.allClientsData.map(c => 
+                    `<option value="${escapeHtml(c.name)}">${c.client_type === 'Student' ? '[Student] ' : ''}${c.phone ? '(' + c.phone + ')' : ''}</option>`
+                ).join('');
+            }
+            
+            renderClientsTable();
+        })
+        .catch(err => console.error('Error loading clients:', err));
+}
+
+function renderClientsTable() {
+    const container = document.getElementById('clients-list-container');
+    if (!container) return;
+    
+    const allData = window.allClientsData || [];
+    let filteredData = allData;
+    
+    if (currentClientTab === 'Student') {
+        filteredData = allData.filter(c => c.client_type === 'Student');
+    } else if (currentClientTab === 'Client') {
+        filteredData = allData.filter(c => (c.client_type || 'Client') === 'Client');
+    }
+    
+    let headersHtml = '';
+    if (currentClientTab === 'Student') {
+        headersHtml = `
+            <th>S.No</th>
+            <th>Student Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>College / Department</th>
+            <th>Invoices</th>
+            <th>Last Invoice Date</th>
+            <th>Actions</th>
+        `;
+    } else if (currentClientTab === 'Client') {
+        headersHtml = `
+            <th>S.No</th>
+            <th>Client Name</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>GST Number</th>
+            <th>Invoices</th>
+            <th>Last Invoice Date</th>
+            <th>Actions</th>
+        `;
+    } else { // 'all'
+        headersHtml = `
+            <th>S.No</th>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Phone</th>
+            <th>Email</th>
+            <th>GST / Academic Info</th>
+            <th>Invoices</th>
+            <th>Last Invoice Date</th>
+            <th>Actions</th>
+        `;
+    }
+
+    let html = `<table class="records-table" style="width:100%; border-collapse: separate; border-spacing: 0; background: #fff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-top:15px;">
+        <thead>
+            <tr>
+                ${headersHtml}
+            </tr>
+        </thead>
+        <tbody>`;
+
+    if (filteredData.length === 0) {
+        const emptyMsg = currentClientTab === 'Student' 
+            ? 'No students found in directory.' 
+            : (currentClientTab === 'Client' ? 'No corporate clients found in directory.' : 'No clients or students available.');
+        const colSpan = currentClientTab === 'all' ? 9 : 8;
+        html += `<tr><td colspan="${colSpan}" class="text-center" style="color: var(--text-muted); padding: 40px; text-align: center;">${emptyMsg}</td></tr>`;
+    } else {
+        let sNo = 1;
+        filteredData.forEach(client => {
+            const lastDate = client.lastInvoiceDate 
+                ? new Date(client.lastInvoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})
+                : 'No Invoices';
+                
+            let detailCol = '';
+            if (currentClientTab === 'Student') {
+                const college = client.college_name || '';
+                const dept = client.department || '';
+                if (college || dept) {
+                    detailCol = `<td><strong style="color: #1e293b;">${escapeHtml(college)}</strong>${dept ? `<br><small style="color: #64748b; font-weight: 500;">${escapeHtml(dept)}</small>` : ''}</td>`;
+                } else {
+                    detailCol = `<td><span style="color: #94a3b8; font-style: italic;">N/A</span></td>`;
+                }
+            } else if (currentClientTab === 'Client') {
+                detailCol = `<td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${escapeHtml(client.gstNumber || 'Not Applicable')}</span></td>`;
+            } else { // 'all'
+                const typeBadge = `<span style="background: ${client.client_type === 'Student' ? '#eff6ff' : '#f8fafc'}; color: ${client.client_type === 'Student' ? '#3b82f6' : '#64748b'}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; border: 1px solid ${client.client_type === 'Student' ? '#bfdbfe' : '#e2e8f0'};">${client.client_type || 'Client'}</span>`;
+                const infoText = client.client_type === 'Student' 
+                    ? (client.college_name ? `${client.college_name}${client.department ? ' (' + client.department + ')' : ''}` : 'N/A')
+                    : (client.gstNumber || 'N/A');
+                detailCol = `<td>${typeBadge}</td><td>${escapeHtml(client.phone)}</td><td>${escapeHtml(client.email)}</td><td><small style="color: var(--text-muted);">${escapeHtml(infoText)}</small></td>`;
+            }
+
+            if (currentClientTab !== 'all') {
+                html += `
                     <tr>
-                        <th>S.No</th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Phone</th>
-                        <th>Email</th>
-                        <th>GST Number</th>
-                        <th>Invoices</th>
-                        <th>Last Invoice Date</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>`;
-            
-            if (data.length === 0) {
-                html += '<tr><td colspan="9" class="text-center" style="color: var(--text-muted); padding: 30px;">No clients available.</td></tr>';
-            } else {
-                let sNo = 1;
-                data.forEach(client => {
-                    const lastDate = client.lastInvoiceDate 
-                        ? new Date(client.lastInvoiceDate).toLocaleDateString('en-IN', {day: '2-digit', month: 'short', year: 'numeric'})
-                        : 'No Invoices';
-                        
-                    html += `
-                        <tr>
-                            <td><strong>${sNo++}</strong></td>
-                            <td>${client.name}</td>
-                            <td><span style="background: ${client.client_type === 'Student' ? '#eff6ff' : '#f8fafc'}; color: ${client.client_type === 'Student' ? '#3b82f6' : '#64748b'}; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 500; border: 1px solid ${client.client_type === 'Student' ? '#bfdbfe' : '#e2e8f0'};">${client.client_type || 'Client'}</span></td>
-                            <td>${client.phone}</td>
-                            <td>${client.email}</td>
-                            <td><span style="font-family: monospace; font-size: 12px; color: var(--text-muted);">${client.gstNumber}</span></td>
-                            <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block;">${client.invoiceCount} Invoices</span></td>
-                            <td>${lastDate}</td>
-                            <td>
-                                
-                                <button class="btn-action btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${client.phone}', '${client.email}')" title="Create Invoice" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.15); color: #10b981; padding: 6px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 6px;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;">
+                        <td><strong>${sNo++}</strong></td>
+                        <td><strong style="color: var(--text-primary); font-weight: 600;">${escapeHtml(client.name)}</strong></td>
+                        <td>${escapeHtml(client.phone)}</td>
+                        <td>${escapeHtml(client.email)}</td>
+                        ${detailCol}
+                        <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block;">${client.invoiceCount} Invoices</span></td>
+                        <td>${lastDate}</td>
+                        <td>
+                            <div class="client-actions">
+                                <button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}')" title="Create Invoice for ${escapeHtml(client.name)}">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
                                         <line x1="16" y1="13" x2="8" y2="13"></line>
                                         <line x1="16" y1="17" x2="8" y2="17"></line>
-                                        <polyline points="10 9 9 9 8 9"></polyline>
                                     </svg>
+                                    Invoice
                                 </button>
-                                <button class="btn-action btn-delete-small" onclick="deleteClient(${client.id}, '${escapeHtml(client.name)}')" title="Delete Client" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.15); color: #ef4444; padding: 6px; border-radius: 4px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center;">
-                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;">
+                                <button class="btn-delete-small" onclick="deleteClient(${client.id}, '${escapeHtml(client.name)}')" title="Delete Client">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                         <polyline points="3 6 5 6 21 6"></polyline>
                                         <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                                         <line x1="10" y1="11" x2="10" y2="17"></line>
                                         <line x1="14" y1="11" x2="14" y2="17"></line>
                                     </svg>
                                 </button>
-                            </td>
-                        </tr>
-                    `;
-                });
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            } else {
+                html += `
+                    <tr>
+                        <td><strong>${sNo++}</strong></td>
+                        <td><strong style="color: var(--text-primary); font-weight: 600;">${escapeHtml(client.name)}</strong></td>
+                        ${detailCol}
+                        <td><span class="status-badge" style="background: rgba(14, 165, 233, 0.15); color: #0ea5e9; border: 1px solid rgba(14, 165, 233, 0.3); padding: 4px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block;">${client.invoiceCount} Invoices</span></td>
+                        <td>${lastDate}</td>
+                        <td>
+                            <div class="client-actions">
+                                <button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}')" title="Create Invoice for ${escapeHtml(client.name)}">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                        <polyline points="14 2 14 8 20 8"></polyline>
+                                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                                    </svg>
+                                    Invoice
+                                </button>
+                                <button class="btn-delete-small" onclick="deleteClient(${client.id}, '${escapeHtml(client.name)}')" title="Delete Client">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="3 6 5 6 21 6"></polyline>
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                                        <line x1="10" y1="11" x2="10" y2="17"></line>
+                                        <line x1="14" y1="11" x2="14" y2="17"></line>
+                                    </svg>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             }
-            html += '</tbody></table>';
-            tbody.innerHTML = html;
-        })
-        .catch(err => console.error('Error loading clients:', err));
+        });
+    }
+    html += '</tbody></table>';
+    container.innerHTML = html;
 }
 
 function deleteClient(id, name) {

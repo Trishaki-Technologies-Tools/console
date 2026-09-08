@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
 
 function getCategoryId($conn, $name) {
     $stmt = $conn->prepare("SELECT id FROM expenses_categories WHERE category_name = ?");
@@ -124,7 +125,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                  }
             }
             log_action($conn, 'EDIT', 'expenses', $id, "Edited expense: $description (₹$amount)");
-            echo json_encode(['success' => true]);
+            reconcileMerchantSettlements($conn);
+        echo json_encode(['success' => true]);
         } else {
             echo json_encode(['success' => false, 'error' => $conn->error]);
         }

@@ -12,6 +12,8 @@ try {
             c.gst_number,
             c.address,
             c.client_type,
+            c.college_name,
+            c.department,
             COUNT(i.id) as invoice_count,
             MAX(i.created_at) as last_invoice_date
         FROM clients c
@@ -33,6 +35,8 @@ try {
             'gstNumber' => $row['gst_number'] ?: 'Not Applicable',
             'address' => $row['address'] ?: '',
             'client_type' => $row['client_type'] ?: 'Client',
+            'college_name' => $row['college_name'] ?: '',
+            'department' => $row['department'] ?: '',
             'invoiceCount' => $row['invoice_count'],
             'lastInvoiceDate' => $row['last_invoice_date']
         ];

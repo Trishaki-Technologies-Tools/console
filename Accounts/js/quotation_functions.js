@@ -681,8 +681,11 @@ function updateQuotationPreview() {
                 </tr>
                 ` : ''}
                 <tr class="total-row">
-                    <td>Grand Total:</td>
-                    <td style="text-align: right;">₹${grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
+                    <td>
+                        Grand Total:
+                        <div style="font-size: 8pt; font-weight: 500; color: #475569; margin-top: 1px;">(Excluding Taxes)</div>
+                    </td>
+                    <td style="text-align: right; vertical-align: middle;">₹${grandTotal.toLocaleString('en-IN', {minimumFractionDigits: 2})}</td>
                 </tr>
             </table>
         </div>
