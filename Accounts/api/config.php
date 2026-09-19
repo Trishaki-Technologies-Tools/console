@@ -10,12 +10,17 @@ if (file_exists(__DIR__ . '/../../2fa_config.php')) {
 // Load Financial Year Helper
 require_once __DIR__ . '/fy_helper.php';
 
-// Database configuration
+// Database production configuration
 $db_host = 'localhost';
-$db_user = 'root';
-$db_pass = '';
-// $db_name = 'u164024082_accounts';
-$db_name = 'testing_acc';
+$db_user = 'u345018570_accounts';
+$db_pass = 'Trishaki@tech-console#304';
+$db_name = 'u345018570_accounts';
+
+// Database testing configuration
+// $db_host = 'localhost';
+// $db_user = 'root';
+// $db_pass = '';
+// $db_name = 'u345018570_accounts';
 
 try {
     mysqli_report(MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR);
@@ -80,7 +85,8 @@ if (!defined('ENCRYPTION_KEY')) {
 }
 
 if (!function_exists('encryptToken')) {
-    function encryptToken($string) {
+    function encryptToken($string)
+    {
         $cipher = "AES-128-ECB";
         $encrypted = openssl_encrypt($string, $cipher, ENCRYPTION_KEY);
         return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($encrypted));
@@ -88,7 +94,8 @@ if (!function_exists('encryptToken')) {
 }
 
 if (!function_exists('decryptToken')) {
-    function decryptToken($token) {
+    function decryptToken($token)
+    {
         $cipher = "AES-128-ECB";
         $data = str_replace(['-', '_'], ['+', '/'], $token);
         $mod4 = strlen($data) % 4;
