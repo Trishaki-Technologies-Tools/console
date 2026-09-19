@@ -2,34 +2,40 @@
 // Set timezone to IST
 date_default_timezone_set('Asia/Kolkata');
 
-// Load 2FA Configuration
-require_once __DIR__ . '/../../2fa_config.php';
+// Load 2FA Configuration if available
+if (file_exists(__DIR__ . '/../../2fa_config.php')) {
+    require_once __DIR__ . '/../../2fa_config.php';
+}
 
-// Database configuration - REMOTE SERVER
-define('DB_HOST', 'localhost');
-define('DB_USER', 'u345018570_accounts');
-define('DB_PASS', 'Trishaki@tech-console#304');
-define('DB_NAME', 'u345018570_accounts');
+// Load Financial Year Helper
+require_once __DIR__ . '/fy_helper.php';
 
-// Create connection with explicit timeout and port
+// Database configuration
+$db_host = 'localhost';
+$db_user = 'root';
+$db_pass = '';
+// $db_name = 'u164024082_accounts';
+$db_name = 'testing_acc';
+
 try {
-    // Set a connection timeout (5 seconds)
     mysqli_report(MYSQLI_REPORT_STRICT | MYSQLI_REPORT_ERROR);
-    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, 3306);
-
-    // Set connection timeout in MySQL
+    $conn = new mysqli($db_host, $db_user, $db_pass, $db_name, 3306);
     $conn->options(MYSQLI_OPT_CONNECT_TIMEOUT, 5);
-
 } catch (mysqli_sql_exception $e) {
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode([
-        'success' => false,
-        'message' => "Database connection failed",
-        'error' => $e->getMessage(),
-        'tip' => "Check if your Firewall or Antivirus is blocking port 3306, or if the Remote Server IP is still active."
-    ]);
-    exit;
+    // Fallback to u345018570_accounts if u164024082_accounts is not found on remote
+    try {
+        $conn = new mysqli($db_host, 'u345018570_accounts', '', 'u345018570_accounts', 3306);
+    } catch (mysqli_sql_exception $e2) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => "Database connection failed",
+            'error' => $e2->getMessage(),
+            'tip' => "Check if MySQL server is running and database configuration is correct."
+        ]);
+        exit;
+    }
 }
 
 // Set charset
@@ -66,5 +72,31 @@ function log_action($conn, $action, $table_name, $row_id, $details = '')
     $stmt = $conn->prepare("INSERT INTO audit_logs (user_id, action, table_name, row_id, ip_address) VALUES (?, ?, ?, ?, ?)");
     $stmt->bind_param("issis", $user_id, $action, $table_name, $row_id, $details);
     $stmt->execute();
+}
+
+// Encryption helpers for URLs
+if (!defined('ENCRYPTION_KEY')) {
+    define('ENCRYPTION_KEY', 'TrishakiAccountsSecureKey2026!');
+}
+
+if (!function_exists('encryptToken')) {
+    function encryptToken($string) {
+        $cipher = "AES-128-ECB";
+        $encrypted = openssl_encrypt($string, $cipher, ENCRYPTION_KEY);
+        return str_replace(['+', '/', '='], ['-', '_', ''], base64_encode($encrypted));
+    }
+}
+
+if (!function_exists('decryptToken')) {
+    function decryptToken($token) {
+        $cipher = "AES-128-ECB";
+        $data = str_replace(['-', '_'], ['+', '/'], $token);
+        $mod4 = strlen($data) % 4;
+        if ($mod4) {
+            $data .= substr('====', $mod4);
+        }
+        $decoded = base64_decode($data);
+        return openssl_decrypt($decoded, $cipher, ENCRYPTION_KEY);
+    }
 }
 ?>

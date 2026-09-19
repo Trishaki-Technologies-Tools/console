@@ -758,8 +758,9 @@
 
                     <div class="form-group">
                         <label class="form-label">Phone Number <span class="required">*</span></label>
-                        <input type="tel" id="nonGstPhone" class="form-input" placeholder="Enter phone number" required
-                            oninput="checkExistingUser(this.value, 'non-gst')">
+                        <input type="tel" id="nonGstPhone" class="form-input" placeholder="Enter 10-digit phone number" required
+                            pattern="[0-9]{10}" maxlength="10" minlength="10"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,''); checkExistingUser(this.value, 'non-gst')">
                         <div id="existingUserNonGst" style="margin-top: 10px;"></div>
                     </div>
 
@@ -865,8 +866,9 @@
 
                     <div class="form-group">
                         <label class="form-label">Phone Number <span class="required">*</span></label>
-                        <input type="tel" id="gstPhone" class="form-input" placeholder="Enter phone number" required
-                            oninput="checkExistingUser(this.value, 'gst')">
+                        <input type="tel" id="gstPhone" class="form-input" placeholder="Enter 10-digit phone number" required
+                            pattern="[0-9]{10}" maxlength="10" minlength="10"
+                            oninput="this.value=this.value.replace(/[^0-9]/g,''); checkExistingUser(this.value, 'gst')">
                         <div id="existingUserGst" style="margin-top: 10px;"></div>
                     </div>
 
@@ -887,13 +889,17 @@
                     <div class="form-group">
                         <label class="form-label">Invoice Items <span class="required">*</span></label>
                         <div id="gstItemsContainer">
-                            <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px;">
-                                <input type="text" class="form-input gst-desc" placeholder="Description" required
-                                    style="flex: 3;">
-                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (incl tax)"
-                                    step="0.01" min="0" required style="flex: 1;" oninput="onGstItemAmountChange()">
-                                <label
-                                    style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
+                            <div class="invoice-item-row-gst" style="display: flex; gap: 8px; margin-bottom: 8px; align-items: center;">
+                                <input type="text" class="form-input gst-desc" placeholder="Description" required style="flex: 3;">
+                                <select class="form-select gst-sac" style="flex: 2;">
+                                    <option value="">Select SAC</option>
+                                    <option value="9983">9983 - Project and Internship</option>
+                                    <option value="998314">998314 - For Client Projects</option>
+                                    <option value="998313">998313 - Consultancy</option>
+                                    <option value="998315">998315 - For Hosting</option>
+                                </select>
+                                <input type="number" class="form-input gst-total-incl" placeholder="Charges (excl tax)" step="0.01" min="0" required style="flex: 1.5;" oninput="onGstItemAmountChange()">
+                                <label style="display: flex; align-items: center; gap: 5px; flex-shrink: 0; padding: 0 5px;">
                                     <input type="checkbox" class="gst-desc-check"> Desc.%
                                 </label>
                                 <button type="button" class="btn-add-item" onclick="addGstItem()">+</button>
@@ -1052,8 +1058,10 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                                 <div class="form-group">
                                     <label class="form-label">Phone Number <span class="required">*</span></label>
-                                    <input type="text" id="qClientPhone" class="form-input" required
-                                        placeholder="e.g. 9876543210"
+                                    <input type="tel" id="qClientPhone" class="form-input" required
+                                        pattern="[0-9]{10}" maxlength="10" minlength="10"
+                                        placeholder="10-digit phone number"
+                                        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
                                         style="color: var(--text-main); background: #fff;">
                                 </div>
                                 <div class="form-group">
@@ -1237,7 +1245,6 @@
 
 
     
-    <script src="js/invoice_functions.js?v=19837_1785317356"></script>
     <script src="js/quotation_functions.js?v=2"></script>
     <script>
         function toggleInvoiceDropdown(event) {
@@ -1420,11 +1427,11 @@
     <div id="addClientModal" class="modal">
         <div class="modal-content" style="max-width: 600px;">
             <div class="modal-header">
-                <h3>Add New Client</h3>
+                <h3 id="addClientModalTitle">Add New Client</h3>
                 <button class="modal-close" onclick="closeAddClientModal()">&times;</button>
             </div>
             <div class="modal-body">
-                <form id="addClientForm" onsubmit="saveNewClient(event)">
+                <form id="addClientForm" onsubmit="saveNewClient(event)"><input type="hidden" id="editClientId" value="">
                     <div class="form-group" style="margin-bottom: 15px;">
                         <label class="form-label" style="display: block; margin-bottom: 8px;">Client Type</label>
                         <style>
@@ -1446,7 +1453,9 @@
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
                         <div class="form-group">
                             <label class="form-label">Phone Number</label>
-                            <input type="tel" id="newClientPhone" class="form-input">
+                            <input type="tel" id="newClientPhone" class="form-input" placeholder="10-digit phone number"
+                                pattern="[0-9]{10}" maxlength="10" minlength="10"
+                                oninput="this.value=this.value.replace(/[^0-9]/g,'')">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Email Address (Optional)</label>
@@ -1503,7 +1512,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn-primary" style="width: 100%;">Save Record</button>
+                    <button type="submit" id="addClientSubmitBtn" class="btn-primary" style="width: 100%;">Save Record</button>
                 </form>
             </div>
         </div>

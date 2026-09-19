@@ -10,26 +10,38 @@ if (!in_array($type, ['colleges', 'departments'])) {
     exit;
 }
 
+try {
+    $conn->query("
+        CREATE TABLE IF NOT EXISTS `$type` (
+            `id` INT AUTO_INCREMENT PRIMARY KEY,
+            `name` VARCHAR(255) NOT NULL UNIQUE,
+            `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    ");
+} catch (Throwable $t) {}
+
 if ($action === 'get') {
     try {
-        $result = $conn->query("SELECT * FROM $type ORDER BY name ASC");
+        $result = $conn->query("SELECT * FROM `$type` ORDER BY name ASC");
         $items = [];
-        while ($row = $result->fetch_assoc()) {
-            $items[] = $row;
+        if ($result) {
+            while ($row = $result->fetch_assoc()) {
+                $items[] = $row;
+            }
         }
         echo json_encode($items);
     } catch (Exception $e) {
-        echo json_encode(['error' => $e->getMessage()]);
+        echo json_encode([]);
     }
 } 
 elseif ($action === 'add') {
-    $name = $_POST['name'] ?? '';
+    $name = trim($_POST['name'] ?? '');
     if (empty($name)) {
         echo json_encode(['error' => 'Name is required']);
         exit;
     }
     try {
-        $stmt = $conn->prepare("INSERT INTO $type (name) VALUES (?)");
+        $stmt = $conn->prepare("INSERT INTO `$type` (name) VALUES (?)");
         $stmt->bind_param("s", $name);
         if ($stmt->execute()) {
             echo json_encode(['success' => true, 'id' => $conn->insert_id]);
@@ -41,9 +53,9 @@ elseif ($action === 'add') {
     }
 }
 elseif ($action === 'delete') {
-    $id = $_POST['id'] ?? 0;
+    $id = intval($_POST['id'] ?? 0);
     try {
-        $stmt = $conn->prepare("DELETE FROM $type WHERE id = ?");
+        $stmt = $conn->prepare("DELETE FROM `$type` WHERE id = ?");
         $stmt->bind_param("i", $id);
         if ($stmt->execute()) {
             echo json_encode(['success' => true]);

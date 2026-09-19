@@ -43,7 +43,7 @@ try {
             FROM invoices i
             JOIN clients c ON i.client_id = c.id
             WHERE i.client_id = ? AND i.type = ?
-            ORDER BY i.created_at ASC
+            ORDER BY i.invoice_date ASC, i.id ASC
         ");
         $stmt->bind_param("is", $clientId, $type);
     } else {
@@ -63,7 +63,7 @@ try {
             FROM invoices i
             JOIN clients c ON i.client_id = c.id
             WHERE i.client_id = ?
-            ORDER BY i.created_at ASC
+            ORDER BY i.invoice_date ASC, i.id ASC
         ");
         $stmt->bind_param("i", $clientId);
     }

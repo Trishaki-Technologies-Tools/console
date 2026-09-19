@@ -26,6 +26,8 @@ try {
     $roleSelect   = $hasEmpRole  ? "COALESCE(e.role, '')" : "''";
     $modeJoin     = $hasModeId   ? "LEFT JOIN payment_modes pm ON s.payment_mode_id = pm.id" : "";
 
+    $fy = getFinancialYearDates();
+
     $sql = "SELECT 
                 s.id,
                 s.amount,
@@ -38,6 +40,7 @@ try {
             FROM salary_logs s
             JOIN employees e ON s.employee_id = e.id
             {$modeJoin}
+            WHERE s.payment_date >= '{$fy['start_date']}' AND s.payment_date <= '{$fy['end_date']}'
             ORDER BY s.payment_date DESC";
 
     $result = $conn->query($sql);

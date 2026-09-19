@@ -3,6 +3,7 @@ ob_start();
 header('Content-Type: application/json');
 require_once 'config.php';
 require_once 'invoice_utils.php';
+require_once 'receipt_utils.php';
 
 function sendResponse($success, $data = []) {
     ob_clean();
@@ -127,7 +128,8 @@ try {
         $itemsJson = json_encode($itemsArr);
 
         // 5. Generate No and Insert
-        $invoiceNo = generateInvoiceNumber($conn, $clientId, $type, $continueFrom, $itemsJson);
+        $rowYear = function_exists('getFinancialYearYearFromDate') ? getFinancialYearYearFromDate($date) : date('Y', strtotime($date));
+        $invoiceNo = generateInvoiceNumber($conn, $clientId, $type, $continueFrom, $itemsJson, $rowYear);
         
         $status = 'unpaid';
         if ($cumulativeTotalForThisRow >= $totalCharged - 0.01) {
@@ -139,6 +141,14 @@ try {
         $stmt = $conn->prepare("INSERT INTO invoices (invoice_no, client_id, type, items, original_total_payable, cumulative_total_paid, invoice_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("sissddss", $invoiceNo, $clientId, $type, $itemsJson, $totalCharged, $cumulativeTotalForThisRow, $date, $status);
         $stmt->execute();
+
+        if ($paidNow > 0 || $cumulativeTotalForThisRow > 0) {
+            ensureReceiptsTableExists($conn);
+            $receiptNo = generateReceiptNumber($conn, $clientId, $type, null, $itemsJson, $rowYear);
+            $insRec = $conn->prepare("INSERT INTO receipts (receipt_no, client_id, invoice_no, type, items, original_total_payable, cumulative_total_paid, receipt_date, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $insRec->bind_param("sisssddss", $receiptNo, $clientId, $invoiceNo, $type, $itemsJson, $totalCharged, $cumulativeTotalForThisRow, $date, $status);
+            $insRec->execute();
+        }
         
         $count++;
     }

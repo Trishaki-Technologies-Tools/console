@@ -255,7 +255,7 @@ require_once 'includes/topbar.php';
                                     <div class="stat-label-small">Vouchers Total Count</div>
                                 </div>
                             </div>
-                            <!-- Clients Total Count -->
+                            <!-- Clients Count -->
                             <div class="stat-card-small">
                                 <div class="stat-icon-small icon-purple">
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -266,7 +266,21 @@ require_once 'includes/topbar.php';
                                 </div>
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-clients-count">0</div>
-                                    <div class="stat-label-small">Clients Total Count</div>
+                                    <div class="stat-label-small">Clients Count</div>
+                                </div>
+                            </div>
+                            <!-- Students Count -->
+                            <div class="stat-card-small">
+                                <div class="stat-icon-small icon-blue">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M22 10v6M2 10l10-5 10 5-10 5z"></path>
+                                        <path d="M6 12v5c3 3 9 3 12 0v-5"></path>
+                                    </svg>
+                                </div>
+                                <div class="stat-info-small">
+                                    <div class="stat-value-small" id="total-students-count">0</div>
+                                    <div class="stat-label-small">Students Count</div>
                                 </div>
                             </div>
                             <!-- Quotations Total Count -->
@@ -283,20 +297,6 @@ require_once 'includes/topbar.php';
                                 <div class="stat-info-small">
                                     <div class="stat-value-small" id="total-quotations-count">0</div>
                                     <div class="stat-label-small">Quotations Total Count</div>
-                                </div>
-                            </div>
-                            <!-- Employees Total Count -->
-                            <div class="stat-card-small">
-                                <div class="stat-icon-small icon-blue">
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                        stroke-width="2">
-                                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-                                        <circle cx="12" cy="7" r="4"></circle>
-                                    </svg>
-                                </div>
-                                <div class="stat-info-small">
-                                    <div class="stat-value-small" id="total-employees-count">0</div>
-                                    <div class="stat-label-small">Employees Total Count</div>
                                 </div>
                             </div>
                         </div>

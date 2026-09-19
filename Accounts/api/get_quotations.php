@@ -3,6 +3,7 @@ header('Content-Type: application/json');
 require_once 'config.php';
 
 try {
+    $fy = getFinancialYearDates();
     $stmt = $conn->prepare("
         SELECT 
             q.id,
@@ -17,9 +18,10 @@ try {
             c.email
         FROM quotations q
         JOIN clients c ON q.client_id = c.id
-        ORDER BY q.created_at DESC
+        WHERE q.quotation_date >= ? AND q.quotation_date <= ?
+        ORDER BY q.quotation_date DESC, q.id DESC
     ");
-    
+    $stmt->bind_param("ss", $fy['start_date'], $fy['end_date']);
     $stmt->execute();
     $result = $stmt->get_result();
     

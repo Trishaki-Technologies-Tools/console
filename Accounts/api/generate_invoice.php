@@ -7,7 +7,10 @@ $email = isset($email) ? $email : (isset($_GET['email']) ? htmlspecialchars($_GE
 $gstNumber = isset($gstNumber) ? $gstNumber : (isset($_GET['gstNumber']) ? htmlspecialchars($_GET['gstNumber']) : '');
 $address = isset($address) ? $address : (isset($_GET['address']) ? htmlspecialchars($_GET['address']) : '');
 $date = isset($date) ? $date : (isset($_GET['date']) ? $_GET['date'] : date('Y-m-d'));
-$invoiceNo = isset($invoiceNo) ? $invoiceNo : (isset($_GET['invoiceNo']) ? htmlspecialchars($_GET['invoiceNo']) : 'TSK-' . date('Y') . '-' . str_pad(rand(1, 999), 3, '0', STR_PAD_LEFT));
+$id = isset($id) ? $id : (isset($_GET['id']) ? intval($_GET['id']) : null);
+$invoiceNo = isset($invoiceNo) ? $invoiceNo : (isset($_GET['invoiceNo']) ? htmlspecialchars($_GET['invoiceNo']) : '');
+$isUnallocated = empty($invoiceNo);
+$displayInvoiceNo = $isUnallocated ? ($id ? "PROFORMA-BILL-$id (Pending 100% Pay)" : "PROFORMA (Pending 100% Pay)") : $invoiceNo;
 $originalTotalPayable = isset($originalTotalPayable) ? $originalTotalPayable : (isset($_GET['originalTotalPayable']) ? floatval($_GET['originalTotalPayable']) : null);
 $cumulativeTotalPaid = isset($cumulativeTotalPaid) ? $cumulativeTotalPaid : (isset($_GET['cumulativeTotalPaid']) ? floatval($_GET['cumulativeTotalPaid']) : null);
 
@@ -32,9 +35,9 @@ if (empty($items)) {
     ];
 }
 
-$isContinuation = (strpos($invoiceNo, '/P') !== false);
-// Calculate total amount from items if not provided or zero, or if it is NOT a continuation
-if (!$isContinuation) {
+$isContinuation = (!empty($invoiceNo) && strpos($invoiceNo, '/P') !== false);
+// Calculate total amount from items if not provided or zero
+if ($originalTotalPayable === null || $originalTotalPayable <= 0) {
     $calcTotal = 0;
     foreach ($items as $item) {
         if ($type === 'gst') {
@@ -44,10 +47,6 @@ if (!$isContinuation) {
         }
     }
     $originalTotalPayable = $calcTotal > 0 ? $calcTotal : 5000.00;
-} else {
-    if (!$originalTotalPayable || $originalTotalPayable <= 0) {
-        $originalTotalPayable = 5000.00;
-    }
 }
 
 // Robust Date handling: Use payment date from first item if main date is missing or invalid
@@ -135,7 +134,7 @@ if ($type === 'gst') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice - <?php echo $invoiceNo; ?></title>
+    <title><?php echo $isUnallocated ? 'Proforma Invoice / Bill' : ($type === 'gst' ? 'Tax Invoice' : 'Invoice'); ?> - <?php echo $displayInvoiceNo; ?></title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <?php endif; ?>
     <?php
@@ -534,12 +533,12 @@ if ($type === 'gst') {
     </style>
 </head>
 <body>
-    <button class="print-btn" onclick="window.print()">🖨️ PRINT INVOICE</button>
+    <button class="print-btn" onclick="window.print()">🖨️ PRINT <?php echo $isUnallocated ? 'PROFORMA INVOICE / BILL' : ($type === 'gst' ? 'TAX INVOICE' : 'INVOICE'); ?></button>
 <?php endif; ?>
 
     <div class="invoice-container">
         <div class="invoice-inner">
-            <div class="tax-invoice-label"><?php echo $type === 'gst' ? 'TAX INVOICE' : 'INVOICE'; ?></div>
+            <div class="tax-invoice-label"><?php echo $isUnallocated ? 'PROFORMA INVOICE / ESTIMATE' : ($type === 'gst' ? 'TAX INVOICE' : 'INVOICE'); ?></div>
 
             <div class="header-section">
                 <div class="header-left">
@@ -577,15 +576,18 @@ if ($type === 'gst') {
                 <div class="invoice-info-box">
                     <div class="section-title">Invoice Information:</div>
                     <div class="billing-content">
-                        <div><strong>Invoice No:</strong> <?php echo $invoiceNo; ?></div>
+                        <div><strong>Invoice No:</strong> <?php echo $displayInvoiceNo; ?></div>
                         <div><strong>Invoice Date:</strong> <?php 
                             $tempTs = strtotime($date);
                             // Avoid 30-Nov--0001 or Jan 1970 on invalid data
                             if (!$tempTs || $tempTs < 0) $tempTs = time();
                             echo date('d-M-Y', $tempTs); 
                         ?></div>
-                        <?php if (!empty($items)): ?>
-                        <div><strong>Payment Mode:</strong> <?php echo htmlspecialchars($items[0]['paymentMode']); ?></div>
+                        <?php if (!empty($items)): 
+                            $rawInvMode = trim($items[0]['paymentMode'] ?? $items[0]['payment_mode'] ?? $items[0]['mode'] ?? '');
+                            $invModeDisplay = (strcasecmp($rawInvMode, 'cash') === 0) ? 'Cash' : 'Online';
+                        ?>
+                        <div><strong>Payment Mode:</strong> <?php echo htmlspecialchars($invModeDisplay); ?></div>
                         <?php endif; ?>
                     </div>
                 </div>
@@ -596,8 +598,9 @@ if ($type === 'gst') {
                     <thead>
                         <tr>
                             <th width="10%" style="white-space: nowrap;">Sl No</th>
-                            <th width="<?php echo $type === 'gst' ? ($hasDescColumn ? '66%' : '76%') : '76%'; ?>">Description</th>
+                            <th width="<?php echo $type === 'gst' ? ($hasDescColumn ? '52%' : '62%') : '76%'; ?>">Description</th>
                             <?php if ($type === 'gst'): ?>
+                            <th width="14%" style="text-align: center; white-space: nowrap;">SAC</th>
                             <th width="<?php echo $hasDescColumn ? '15%' : '14%'; ?>" style="text-align: right; white-space: nowrap;">Charges (Exc. of Tax)</th>
                             <?php if ($hasDescColumn): ?>
                             <th width="9%" style="text-align: center;">Desc.%</th>
@@ -613,6 +616,7 @@ if ($type === 'gst') {
                             <td><?php echo $index + 1; ?></td>
                             <td><strong><?php echo htmlspecialchars($item['description']); ?></strong></td>
                             <?php if ($type === 'gst'): ?>
+                            <td style="text-align: center; font-weight: 600;"><?php echo htmlspecialchars($item['sacCode'] ?? $item['sac'] ?? '-'); ?></td>
                             <?php 
                                 // Show FULL item charge (incl tax) then find Exc. of Tax
                                 $rowTotalItem = floatval($item['totalInclTax'] ?? $item['amount'] ?? 5000);
@@ -636,7 +640,7 @@ if ($type === 'gst') {
                         <!-- SGST Row -->
                         <tr>
                             <td style="border-right: 1px solid var(--primary-black);"></td>
-                            <td style="text-align: right; padding-right: 10px; border-right: none;"><strong>State Tax (SGST) 9%</strong></td>
+                            <td style="text-align: right; padding-right: 10px; border-right: none;" colspan="2"><strong>State Tax (SGST) 9%</strong></td>
                             <td style="text-align: right; font-weight: 700; border-right: 1px solid var(--primary-black);">₹<?php echo number_format($sgst, 2); ?></td>
                             <?php if ($hasDescColumn): ?>
                             <td style="border-right: none;"></td>
@@ -645,7 +649,7 @@ if ($type === 'gst') {
                         <!-- CGST Row -->
                         <tr>
                             <td style="border-right: 1px solid var(--primary-black);"></td>
-                            <td style="text-align: right; padding-right: 10px; border-right: none;"><strong>Central Tax (CGST) 9%</strong></td>
+                            <td style="text-align: right; padding-right: 10px; border-right: none;" colspan="2"><strong>Central Tax (CGST) 9%</strong></td>
                             <td style="text-align: right; font-weight: 700; border-right: 1px solid var(--primary-black);">₹<?php echo number_format($cgst, 2); ?></td>
                             <?php if ($hasDescColumn): ?>
                             <td style="border-right: none;"></td>

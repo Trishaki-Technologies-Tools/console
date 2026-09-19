@@ -1,6 +1,11 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
+
+try {
+    syncSystemCategories($conn);
+} catch (Throwable $e) {}
 
 $query = "SELECT * FROM incomes_categories ORDER BY id ASC";
 $result = $conn->query($query);

@@ -21,8 +21,7 @@ require_once 'includes/topbar.php';
                                 <button id="txn-tab-expense" class="ledger-tab-btn"
                                     onclick="switchLedgerTab('expense')">Expenses</button>
                             </div>
-                            <button class="btn-primary" id="btn-add-income" onclick="openAddIncomeModal()">+ Add
-                                Income</button>
+                            <button class="btn-primary" id="btn-add-income" onclick="openAddIncomeModal()">+ Add Income</button>
                             <button class="btn-primary" id="btn-add-expense" onclick="openAddExpenseModal()"
                                 style="display: none; background: var(--danger);">+ Add Expense</button>
                         </div>
@@ -40,16 +39,12 @@ require_once 'includes/topbar.php';
                                     style="max-width: 250px; min-width: 200px;">
                                 <div class="ledger-period-filters"
                                     style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-left: 10px;">
-                                    <a href="#" class="period-filter-link active" data-period="this-month"
+                                    <a href="#" class="period-filter-link active" data-period="present-fy"
+                                        onclick="selectPeriod(event, 'present-fy')">Present FY</a>
+                                    <a href="#" class="period-filter-link" data-period="this-month"
                                         onclick="selectPeriod(event, 'this-month')">This Month</a>
                                     <a href="#" class="period-filter-link" data-period="last-month"
                                         onclick="selectPeriod(event, 'last-month')">Last Month</a>
-                                    <a href="#" class="period-filter-link" data-period="this-fy"
-                                        onclick="selectPeriod(event, 'this-fy')">This FY</a>
-                                    <a href="#" class="period-filter-link" data-period="last-fy"
-                                        onclick="selectPeriod(event, 'last-fy')">Last FY</a>
-                                    <a href="#" class="period-filter-link" data-period="total"
-                                        onclick="selectPeriod(event, 'total')">All time</a>
                                     <a href="#" class="period-filter-link" data-period="specific-date"
                                         onclick="selectPeriod(event, 'specific-date')">Specific Date</a>
                                     <a href="#" class="period-filter-link" data-period="date-range"
@@ -76,8 +71,7 @@ require_once 'includes/topbar.php';
                                 <button id="btn-manage-income-cats" class="btn-secondary"
                                     onclick="openCategoryModal()">📊 Manage Categories</button>
                                 <button id="btn-manage-expense-cats" class="btn-secondary"
-                                    onclick="openExpenseCategoryModal()" style="display: none;">📊 Manage
-                                    Categories</button>
+                                    onclick="openExpenseCategoryModal()" style="display: none;">📊 Manage Categories</button>
                             </div>
                         </div>
                     </div>
@@ -107,8 +101,6 @@ require_once 'includes/topbar.php';
                         </div>
                     </div>
                 </div>
-
-                <!-- Salary Logs Content -->
 
 <?php
 require_once 'includes/modals.php';

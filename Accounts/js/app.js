@@ -85,10 +85,10 @@ function switchPage(pageId, title = null) {
         if (titleEl) titleEl.textContent = title;
     }
 
-    // Hide Financial Year dropdown on Transactions page since it has its own FY filters
+    // Ensure Financial Year dropdown is visible on all pages
     const fyDropdown = document.getElementById('financialYear');
     if (fyDropdown) {
-        fyDropdown.style.display = (pageId === 'transactions') ? 'none' : 'block';
+        fyDropdown.style.display = 'block';
     }
 
     // Save active page to memory
@@ -110,6 +110,9 @@ function switchPage(pageId, title = null) {
     }
     if (pageId === 'invoices') {
         if (typeof loadInvoicesFromDB === 'function') loadInvoicesFromDB();
+    }
+    if (pageId === 'receipts') {
+        if (typeof loadReceipts === 'function') loadReceipts();
     }
     if (pageId === 'voucher') {
         if (typeof loadVouchers === 'function') loadVouchers();
@@ -351,8 +354,8 @@ function loadDashboardData() {
                 setSafeText('total-invoices-count', data.total_invoices_count);
                 setSafeText('total-vouchers-count', data.total_vouchers_count);
                 setSafeText('total-clients-count', data.total_clients_count);
+                setSafeText('total-students-count', data.total_students_count);
                 setSafeText('total-quotations-count', data.total_quotations_count);
-                setSafeText('total-employees-count', data.total_employees_count);
 
             } catch (e) {
                 console.error('Dashboard Error:', text);
@@ -380,8 +383,8 @@ function loadDashboardData() {
                 setSafeText('total-invoices-count', '0');
                 setSafeText('total-vouchers-count', '0');
                 setSafeText('total-clients-count', '0');
+                setSafeText('total-students-count', '0');
                 setSafeText('total-quotations-count', '0');
-                setSafeText('total-employees-count', '0');
             }
         })
         .catch(error => console.error('Network Error:', error));
@@ -437,6 +440,12 @@ function displayIncomes(incomes) {
         if (income.attachment) {
             attachmentHtml = ` <a href="${income.attachment}" target="_blank" title="View Attachment" style="display: inline-flex; align-items: center; justify-content: center; color: #6366f1; margin-left: 6px;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg></a>`;
         }
+        const isSettle = income.is_settlement || (typeof income.id === 'string' && income.id.startsWith('settle_'));
+        const actionHtml = isSettle ? 
+            `<span style="font-size:11px; font-weight:600; color:#4f46e5; background:#e0e7ff; padding:3px 8px; border-radius:12px; display:inline-block;">Auto T+1</span>` : 
+            `<button class="btn-action btn-edit" onclick="editIncome(${income.id})" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
+             <button class="btn-action btn-delete-small" onclick="deleteIncome(${income.id})" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>`;
+
         html += `<tr>
             <td>${index + 1}</td>
             <td>${formatTransactionDate(income.date, income.created_at)}</td>
@@ -444,10 +453,7 @@ function displayIncomes(incomes) {
             <td><span class="category-badge">${income.category || 'Other'}</span></td>
             <td>${income.payment_mode || 'Cash'}</td>
             <td style="font-weight: 600; color: #10b981;">₹${parseFloat(income.amount).toFixed(2)}</td>
-            <td>
-                <button class="btn-action btn-edit" onclick="editIncome(${income.id})" title="Edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg></button>
-                <button class="btn-action btn-delete-small" onclick="deleteIncome(${income.id})" title="Delete"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="display:inline-block; vertical-align:middle;"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg></button>
-            </td>
+            <td>${actionHtml}</td>
         </tr>`;
     });
 
@@ -1538,6 +1544,7 @@ function loadCategories() {
 // Display categories in modal
 function displayCategories(categories) {
     const container = document.getElementById('categoryList');
+    if (!container) return;
 
     if (categories.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">No categories found.</p>';
@@ -1546,10 +1553,16 @@ function displayCategories(categories) {
 
     let html = '';
     categories.forEach(category => {
+        const cNameLower = (category.category_name || '').toLowerCase().trim();
+        const isSystem = (cNameLower === 'sales' || cNameLower === 'settlement');
+        const actionHtml = isSystem 
+            ? '<span style="font-size: 11px; color: #64748b; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-weight: 600;">System</span>'
+            : `<button class="btn-delete-icon" onclick="deleteCategory(${category.id}, '${escapeHtml(category.category_name)}')" title="Delete">✖</button>`;
+
         html += `
-        <div class="category-item">
+        <div class="category-item" style="display: flex; justify-content: space-between; align-items: center;">
             <span class="category-name">${category.category_name}</span>
-            <button class="btn-delete-icon" onclick="deleteCategory(${category.id}, '${category.category_name}')" title="Delete">✖</button>
+            ${actionHtml}
         </div>`;
     });
 
@@ -1663,6 +1676,7 @@ function loadExpenseCategories() {
 // Display expense categories in modal
 function displayExpenseCategories(categories) {
     const container = document.getElementById('expenseCategoryList');
+    if (!container) return;
 
     if (categories.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">No categories found.</p>';
@@ -1671,10 +1685,16 @@ function displayExpenseCategories(categories) {
 
     let html = '';
     categories.forEach(category => {
+        const cNameLower = (category.category_name || '').toLowerCase().trim();
+        const isSystem = (cNameLower === 'settlement');
+        const actionHtml = isSystem 
+            ? '<span style="font-size: 11px; color: #64748b; background: #e2e8f0; padding: 2px 8px; border-radius: 4px; font-weight: 600;">System</span>'
+            : `<button class="btn-delete-icon" onclick="deleteExpenseCategory(${category.id}, '${escapeHtml(category.category_name)}')" title="Delete">✖</button>`;
+
         html += `
-        <div class="category-item">
+        <div class="category-item" style="display: flex; justify-content: space-between; align-items: center;">
             <span class="category-name">${category.category_name}</span>
-            <button class="btn-delete-icon" onclick="deleteExpenseCategory(${category.id}, '${category.category_name}')" title="Delete">✖</button>
+            ${actionHtml}
         </div>`;
     });
 
@@ -1844,21 +1864,31 @@ function loadPaymentModesForManagement() {
     fetch('api/get_payment_modes.php')
         .then(response => response.json())
         .then(modes => {
-            displayPaymentModes(modes);
+            if (Array.isArray(modes)) {
+                displayPaymentModes(modes);
+            } else {
+                console.error('Error response fetching payment modes:', modes);
+                displayPaymentModes([], modes && modes.error ? modes.error : 'Failed to load payment methods');
+            }
         })
         .catch(error => {
             console.error('Error fetching payment modes:', error);
-            displayPaymentModes([]);
+            displayPaymentModes([], 'Network error loading payment methods');
         });
 }
 
 // Display payment modes inside modal list
-function displayPaymentModes(modes) {
-    window.allPaymentModesList = modes || [];
+function displayPaymentModes(modes, errorMessage = null) {
+    window.allPaymentModesList = Array.isArray(modes) ? modes : [];
     const container = document.getElementById('paymentModeList');
     if (!container) return;
 
-    if (!modes || modes.length === 0) {
+    if (errorMessage) {
+        container.innerHTML = `<p style="text-align: center; color: #ef4444; padding: 20px; font-weight: 500;">⚠️ ${escapeHtml(errorMessage)}</p>`;
+        return;
+    }
+
+    if (!Array.isArray(modes) || modes.length === 0) {
         container.innerHTML = '<p style="text-align: center; color: #64748b; padding: 20px;">No payment methods found.</p>';
         return;
     }
@@ -1873,9 +1903,7 @@ function displayPaymentModes(modes) {
         let typeHtml = '';
         let settleBankHtml = '';
 
-        if (isCash) {
-            typeHtml = `<span style="font-size: 11px; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 3px 8px; border-radius: 4px; text-transform: uppercase;">No Type (Cash)</span>`;
-        } else {
+        if (!isCash) {
             typeHtml = `
                 <select id="type-select-${mode.id}" class="category-input" onchange="toggleItemSettlementBank(${mode.id}, this.value)" style="margin: 0; padding: 2px 6px; font-size: 11px; height: 28px; width: 90px;">
                     <option value="bank" ${currentType === 'bank' ? 'selected' : ''}>Bank</option>
@@ -1908,9 +1936,7 @@ function displayPaymentModes(modes) {
                     ${typeHtml}
                     ${settleBankHtml}
                 </div>
-                ${isCash ? '<span style="font-size: 11px; color: #94a3b8; font-style: italic;">System Cash Account</span>' : `
                 <button class="btn-delete-icon" onclick="deletePaymentMode(${mode.id}, '${escapeHtml(mode.mode_name)}')" title="Delete" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 14px; margin: 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; width: auto; height: auto;">✖</button>
-                `}
             </div>
             <div style="display: flex; gap: 8px; align-items: center; width: 100%;">
                 <label style="font-size: 11px; color: var(--text-muted); width: 85px; margin: 0; text-transform: uppercase; font-weight: 600;">Opening Bal:</label>
@@ -2790,6 +2816,7 @@ function loadEmployees() {
 
 function displayEmployees(employees) {
     const container = document.getElementById('employeeList');
+    if (!container) return;
     if (employees.length === 0) {
         container.innerHTML = '<p style="text-align:center; padding:20px; color:#64748b;">No employees found.</p>';
         return;
@@ -2811,6 +2838,7 @@ function displayEmployees(employees) {
 
 function updateSalaryEmployeeDropdown(employees) {
     const select = document.getElementById('salaryEmployeeSelect');
+    if (!select) return;
     // Save current selection if any
     const currentVal = select.value;
 
@@ -3074,7 +3102,7 @@ function loadLedgerData() {
         });
 }
 
-let currentPeriodFilter = 'this-month';
+let currentPeriodFilter = 'present-fy';
 
 function selectPeriod(event, period) {
     if (event) event.preventDefault();
@@ -3144,22 +3172,33 @@ function applyTxnFilters() {
             
         if (!matchesQuery) return false;
         
-        if (timeFilter === 'total') return true;
-        
         const itemDate = parseLocalDate(item.date);
         if (!itemDate) return false;
         
+        if (timeFilter === 'present-fy' || timeFilter === 'this-fy' || timeFilter === 'total') {
+            const fyCookie = document.cookie.split('; ').find(row => row.startsWith('financial_year='));
+            let startYear, endYear;
+            if (fyCookie) {
+                const fyVal = decodeURIComponent(fyCookie.split('=')[1]);
+                const match = fyVal.match(/^(\d{4})-(\d{4})$/);
+                if (match) {
+                    startYear = parseInt(match[1], 10);
+                    endYear = parseInt(match[2], 10);
+                }
+            }
+            if (!startYear) {
+                startYear = currentMonth >= 3 ? currentYear : currentYear - 1;
+                endYear = startYear + 1;
+            }
+            const fyStart = new Date(startYear, 3, 1);
+            const fyEnd = new Date(endYear, 2, 31, 23, 59, 59);
+            return itemDate >= fyStart && itemDate <= fyEnd;
+        }
         if (timeFilter === 'this-month') {
             return itemDate.getMonth() === currentMonth && itemDate.getFullYear() === currentYear;
         }
         if (timeFilter === 'last-month') {
             return itemDate.getMonth() === prevMonth && itemDate.getFullYear() === prevYear;
-        }
-        if (timeFilter === 'this-fy') {
-            const startYear = currentMonth >= 3 ? currentYear : currentYear - 1;
-            const fyStart = new Date(startYear, 3, 1);
-            const fyEnd = new Date(startYear + 1, 2, 31, 23, 59, 59);
-            return itemDate >= fyStart && itemDate <= fyEnd;
         }
         if (timeFilter === 'last-fy') {
             const startYear = (currentMonth >= 3 ? currentYear : currentYear - 1) - 1;
@@ -3232,8 +3271,19 @@ function displayFilteredTxns(list) {
     list.forEach((item, index) => {
         const isIncome = currentLedgerTab === 'income';
         const color = isIncome ? '#10b981' : '#ef4444';
-        const deleteFunc = isIncome ? `deleteIncome(${item.id})` : `deleteExpense(${item.id})`;
-        const editFunc = isIncome ? `editIncome(${item.id})` : `editExpense(${item.id})`;
+        let deleteFunc = '';
+        let editFunc = '';
+
+        if (item.is_receipt) {
+            editFunc = `editReceipt('${item.receipt_no}')`;
+            deleteFunc = `deleteReceipt('${item.receipt_no}')`;
+        } else if (item.is_settlement) {
+            editFunc = `alert('Merchant settlement entries are automated.')`;
+            deleteFunc = `alert('Merchant settlement entries cannot be manually deleted.')`;
+        } else {
+            deleteFunc = isIncome ? `deleteIncome(${item.id})` : `deleteExpense(${item.id})`;
+            editFunc = isIncome ? `editIncome(${item.id})` : `editExpense(${item.id})`;
+        }
         
         const attachmentHtml = item.attachment 
             ? `<a href="${item.attachment}" target="_blank" class="attachment-badge show-attachment-link" style="color: #6366f1; text-decoration: underline; font-weight: 500; display: inline-flex; align-items: center; gap: 4px;">
@@ -3428,7 +3478,9 @@ function renderClientsTable() {
                         <td>${lastDate}</td>
                         <td>
                             <div class="client-actions">
-                                <button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}')" title="Create Invoice for ${escapeHtml(client.name)}">
+                                <button class="btn-action" onclick="openEditClientModal(${client.id})" title="Edit Client" style="background: #3b82f6; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 4px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+</button><button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}', '${escapeHtml(client.gstNumber || client.gst_number || '')}')" title="Create Invoice for ${escapeHtml(client.name)}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -3459,7 +3511,9 @@ function renderClientsTable() {
                         <td>${lastDate}</td>
                         <td>
                             <div class="client-actions">
-                                <button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}')" title="Create Invoice for ${escapeHtml(client.name)}">
+                                <button class="btn-action" onclick="openEditClientModal(${client.id})" title="Edit Client" style="background: #3b82f6; color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; margin-right: 4px;">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+</button><button class="btn-create-invoice" onclick="openInvoiceForClient('${escapeHtml(client.name)}', '${escapeHtml(client.phone)}', '${escapeHtml(client.email)}', '${escapeHtml(client.gstNumber || client.gst_number || '')}')" title="Create Invoice for ${escapeHtml(client.name)}">
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                         <polyline points="14 2 14 8 20 8"></polyline>
@@ -3767,20 +3821,80 @@ function saveGlobalSettings(event) {
 
 
 function openAddClientModal() {
+    if (document.getElementById('editClientId')) document.getElementById('editClientId').value = '';
+    if (document.getElementById('addClientModalTitle')) document.getElementById('addClientModalTitle').innerText = 'Add New Client';
+    if (document.getElementById('addClientSubmitBtn')) document.getElementById('addClientSubmitBtn').innerText = 'Save Record';
     document.getElementById('addClientModal').classList.add('show');
 }
+
+function openEditClientModal(id) {
+    const client = (window.allClientsData || []).find(c => c.id == id);
+    if (!client) {
+        alert('Client record not found.');
+        return;
+    }
+
+    if (document.getElementById('editClientId')) document.getElementById('editClientId').value = client.id;
+    if (document.getElementById('addClientModalTitle')) {
+        document.getElementById('addClientModalTitle').innerText = `Edit ${client.client_type === 'Student' ? 'Student' : 'Client'} Details`;
+    }
+    if (document.getElementById('addClientSubmitBtn')) document.getElementById('addClientSubmitBtn').innerText = 'Update Record';
+
+    document.getElementById('newClientName').value = client.name || '';
+    document.getElementById('newClientPhone').value = client.phone || '';
+
+    let cleanEmail = (client.email || '').trim();
+    if (cleanEmail.toUpperCase() === 'N/A' || cleanEmail.toUpperCase() === 'NOT APPLICABLE') {
+        cleanEmail = '';
+    }
+    document.getElementById('newClientEmail').value = cleanEmail;
+
+    let cleanGst = (client.gstNumber || client.gst_number || '').trim();
+    if (cleanGst.toUpperCase() === 'N/A' || cleanGst.toUpperCase() === 'NOT APPLICABLE') {
+        cleanGst = '';
+    }
+    document.getElementById('newClientGst').value = cleanGst;
+    
+    if (typeof setClientType === 'function') {
+        setClientType(client.client_type || 'Client');
+    }
+
+    if (client.college_name) {
+        if (document.getElementById('newClientCollege')) document.getElementById('newClientCollege').value = client.college_name;
+        if (document.getElementById('collegeDisplay')) document.getElementById('collegeDisplay').textContent = client.college_name;
+    }
+    if (client.department) {
+        if (document.getElementById('newClientDepartment')) document.getElementById('newClientDepartment').value = client.department;
+        if (document.getElementById('deptDisplay')) document.getElementById('deptDisplay').textContent = client.department;
+    }
+
+    document.getElementById('addClientModal').classList.add('show');
+}
+
 function closeAddClientModal() {
     document.getElementById('addClientModal').classList.remove('show');
     document.getElementById('addClientForm').reset();
+    if(document.getElementById('editClientId')) document.getElementById('editClientId').value = '';
     if(typeof setClientType === 'function') setClientType('Client');
     if(document.getElementById('collegeDisplay')) document.getElementById('collegeDisplay').textContent = 'Select College';
     if(document.getElementById('deptDisplay')) document.getElementById('deptDisplay').textContent = 'Select Department';
 }
+
 function saveNewClient(e) {
     e.preventDefault();
+    const editId = document.getElementById('editClientId')?.value || '';
+    const phoneVal = (document.getElementById('newClientPhone').value || '').trim();
+    const phoneClean = phoneVal.replace(/[^0-9]/g, '');
+    if (phoneVal && phoneClean.length !== 10) {
+        alert('Please enter a valid 10-digit phone number.');
+        return;
+    }
     const data = new FormData();
+    if (editId) {
+        data.append('id', editId);
+    }
     data.append('name', document.getElementById('newClientName').value);
-    data.append('phone', document.getElementById('newClientPhone').value);
+    data.append('phone', phoneClean);
     data.append('email', document.getElementById('newClientEmail').value);
     data.append('client_type', document.getElementById('newClientType').value);
     
@@ -3803,9 +3917,9 @@ function saveNewClient(e) {
         if(res.success) {
             closeAddClientModal();
             loadClients();
-            alert('Client added successfully');
+            alert(editId ? 'Client updated successfully' : 'Client added successfully');
         } else {
-            alert(res.error || 'Failed to add client');
+            alert(res.error || 'Failed to save client');
         }
     });
 }
@@ -3858,7 +3972,7 @@ function loadAcademicDropdowns() {
                 const optionsContainer = document.getElementById(optionsId);
                 if (optionsContainer) {
                     optionsContainer.innerHTML = `<div class="custom-select-option" onclick="selectCustomOption('${optionsId}', '${hiddenId}', '${displayId}', '', '${defaultText}')">${defaultText}</div>`;
-                    data.forEach(item => {
+                    if (Array.isArray(data)) data.forEach(item => {
                         // Escape single quotes for inline onclick
                         const safeName = item.name.replace(/'/g, "\\'");
                         optionsContainer.innerHTML += `<div class="custom-select-option" onclick="selectCustomOption('${optionsId}', '${hiddenId}', '${displayId}', '${safeName}', '${safeName}')">${item.name}</div>`;
@@ -3979,61 +4093,75 @@ document.addEventListener('click', function(e) {
 });
 
 
-function openInvoiceForClient(clientName) {
-    // Open the modal (defaulting to GST or Non-GST, assuming openUnifiedInvoiceModal exists)
-    if (typeof openUnifiedInvoiceModal === 'function') {
-        openUnifiedInvoiceModal();
-    } else {
-        document.getElementById('unifiedInvoiceModal').classList.add('show');
+function openInvoiceForClient(name, phone, email, gstNumber) {
+    const safeEmail = email && email !== 'N/A' && email !== 'null' ? email : '';
+    const safeGst = gstNumber && gstNumber !== 'N/A' && gstNumber !== 'null' ? gstNumber : '';
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Check if client has GST number -> open GST Modal, else Non-GST Modal
+    const hasGst = safeGst && safeGst.trim().length > 0;
+    
+    if (hasGst && document.getElementById('gstInvoiceModal')) {
+        document.getElementById('gstInvoiceModal').classList.add('show');
+        if (document.getElementById('nonGstInvoiceModal')) document.getElementById('nonGstInvoiceModal').classList.remove('show');
+    } else if (document.getElementById('nonGstInvoiceModal')) {
+        document.getElementById('nonGstInvoiceModal').classList.add('show');
+        if (document.getElementById('gstInvoiceModal')) document.getElementById('gstInvoiceModal').classList.remove('show');
     }
     
-    // Switch to Non-GST by default as it's safer, or just use the current active one
-    setTimeout(() => {
-        // Find which modal is active
-        let type = 'nonGst';
-        if (document.getElementById('gstInvoiceForm') && document.getElementById('gstInvoiceForm').offsetParent !== null) {
-            type = 'gst';
-        }
-        
-        const nameInput = document.getElementById(type + 'BillToName');
-        if (nameInput) {
-            nameInput.value = clientName;
-            // Trigger input event to autofill details
-            const event = new Event('input', { bubbles: true });
-            nameInput.dispatchEvent(event);
-        }
-    }, 100);
+    if (typeof populatePaymentModeSelects === 'function') populatePaymentModeSelects();
+    
+    // Set field values
+    if (document.getElementById('nonGstBillToName')) document.getElementById('nonGstBillToName').value = name || '';
+    if (document.getElementById('nonGstPhone')) document.getElementById('nonGstPhone').value = phone || '';
+    if (document.getElementById('nonGstEmail')) document.getElementById('nonGstEmail').value = safeEmail;
+    if (document.getElementById('nonGstPaymentDate')) document.getElementById('nonGstPaymentDate').value = today;
+    
+    if (document.getElementById('gstBillToName')) document.getElementById('gstBillToName').value = name || '';
+    if (document.getElementById('gstPhone')) document.getElementById('gstPhone').value = phone || '';
+    if (document.getElementById('gstEmail')) document.getElementById('gstEmail').value = safeEmail;
+    if (document.getElementById('gstModalNumber')) document.getElementById('gstModalNumber').value = safeGst;
+    if (document.getElementById('gstPaymentDate')) document.getElementById('gstPaymentDate').value = today;
+
+    // Lock client details to Read-Only
+    if (typeof setInvoiceClientFieldsReadOnly === 'function') {
+        setInvoiceClientFieldsReadOnly(true);
+    } else {
+        ['nonGstBillToName', 'nonGstPhone', 'nonGstEmail', 'gstBillToName', 'gstPhone', 'gstEmail', 'gstModalNumber'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.readOnly = true;
+                el.style.backgroundColor = '#f8fafc';
+                el.style.cursor = 'not-allowed';
+                el.style.color = '#475569';
+            }
+        });
+    }
 }
 
-window.openInvoiceForClient = function(name, phone, email) {
-    if(typeof switchToNonGstModal === 'function') {
-        switchToNonGstModal();
-        setTimeout(() => {
-            const safeEmail = email && email !== 'N/A' && email !== 'null' ? email : '';
-            if(document.getElementById('nonGstBillToName')) document.getElementById('nonGstBillToName').value = name;
-            if(document.getElementById('nonGstPhone')) document.getElementById('nonGstPhone').value = phone;
-            if(document.getElementById('nonGstEmail')) document.getElementById('nonGstEmail').value = safeEmail;
-            
-            if(document.getElementById('gstBillToName')) document.getElementById('gstBillToName').value = name;
-            if(document.getElementById('gstPhone')) document.getElementById('gstPhone').value = phone;
-            if(document.getElementById('gstEmail')) document.getElementById('gstEmail').value = safeEmail;
-        }, 50);
-    } else {
-        alert('Invoice functions are not loaded yet.');
-    }
-};
+window.openInvoiceForClient = openInvoiceForClient;
 
 
 // Change Financial Year Dynamically
 window.changeFinancialYear = function(value) {
-    document.cookie = 'financial_year=' + value + '; path=/';
+    document.cookie = 'financial_year=' + encodeURIComponent(value) + '; path=/; max-age=2592000';
+    if(typeof loadDashboardData === 'function') loadDashboardData();
     if(typeof loadDashboardStats === 'function') loadDashboardStats();
     if(typeof loadInvoices === 'function') loadInvoices();
+    if(typeof loadReceipts === 'function') loadReceipts();
+    if(typeof loadVouchers === 'function') loadVouchers();
+    if(typeof loadLedgerData === 'function') loadLedgerData();
     if(typeof loadTransactions === 'function') loadTransactions();
+    if(typeof loadIncomes === 'function') loadIncomes();
+    if(typeof loadExpenses === 'function') loadExpenses();
     if(typeof loadClients === 'function') loadClients();
     if(typeof loadSalaryLogs === 'function') loadSalaryLogs();
-    if(typeof loadLoans === 'function') loadLoans();
     if(typeof fetchQuotations === 'function') fetchQuotations();
+    if(typeof loadQuotations === 'function') loadQuotations();
     if(typeof loadReports === 'function') loadReports();
-    if(typeof showAlertPopup === 'function') showAlertPopup('Success', 'Financial Year changed to ' + value, 'success');
+    
+    // Smooth reload to refresh all PHP-rendered context and charts
+    setTimeout(function() {
+        window.location.reload();
+    }, 150);
 };

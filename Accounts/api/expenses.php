@@ -1,13 +1,22 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
+
+try {
+    reconcileMerchantSettlements($conn);
+} catch (Throwable $e) {}
+
+$fy = getFinancialYearDates();
 
 $query = "SELECT e.id, e.description, e.amount, e.date, e.created_at, e.attachment, 
                  COALESCE(c.category_name, 'Other') as category, 
-                 COALESCE(p.mode_name, 'Cash') as payment_mode 
+                 COALESCE(p.mode_name, 'Cash') as payment_mode,
+                 0 as is_settlement
           FROM expenses e
           LEFT JOIN expenses_categories c ON e.category_id = c.id
           LEFT JOIN payment_modes p ON e.payment_mode_id = p.id
+          WHERE e.date >= '{$fy['start_date']}' AND e.date <= '{$fy['end_date']}'
           ORDER BY e.date DESC";
 $result = $conn->query($query);
 
@@ -18,6 +27,36 @@ if ($result && $result->num_rows > 0) {
     }
 }
 
+// Append T+1 settlement debit entries from Merchant account
+$sQuery = "
+    SELECT 
+        CONCAT('settle_', s.id) AS id,
+        CONCAT('Auto Settlement to ', b.mode_name) AS description,
+        s.amount,
+        s.settlement_date AS date,
+        COALESCE(s.settlement_datetime, CONCAT(s.settlement_date, ' 05:30:00')) AS created_at,
+        'Not Added' AS attachment,
+        'Settlement' AS category,
+        m.mode_name AS payment_mode,
+        1 as is_settlement
+    FROM merchant_settlements s
+    JOIN payment_modes m ON s.merchant_mode_id = m.id
+    JOIN payment_modes b ON s.bank_mode_id = b.id
+    WHERE COALESCE(s.settlement_datetime, CONCAT(s.settlement_date, ' 05:30:00')) <= NOW()
+      AND s.amount > 0
+      AND s.settlement_date >= '{$fy['start_date']}' AND s.settlement_date <= '{$fy['end_date']}'
+";
+$sRes = $conn->query($sQuery);
+if ($sRes && $sRes->num_rows > 0) {
+    while($sRow = $sRes->fetch_assoc()) {
+        $expenses[] = $sRow;
+    }
+}
+
+usort($expenses, function($a, $b) {
+    return strcmp($b['date'], $a['date']);
+});
+
 echo json_encode($expenses);
-$conn->close();
+if (isset($conn)) $conn->close();
 ?>

@@ -1018,10 +1018,16 @@ function saveQuotationNew(statusType = 'draft') {
     // Save/Update quotation
     const quotationNo = document.getElementById('quotationId').value || null;
     
+    const phoneClean = (document.getElementById('qClientPhone').value || '').trim().replace(/[^0-9]/g, '');
+    if (phoneClean.length !== 10) {
+        alert('Please enter a valid 10-digit phone number.');
+        return;
+    }
+
     const payload = {
         quotationNo: quotationNo,
         clientName: document.getElementById('qClientName').value,
-        phone: document.getElementById('qClientPhone').value,
+        phone: phoneClean,
         email: document.getElementById('qClientEmail').value,
         gstNumber: document.getElementById('qClientGst').value,
         address: document.getElementById('qClientAddress').value,

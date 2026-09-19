@@ -4,7 +4,13 @@ require_once 'config.php';
 require_once 'settlement_helper.php';
 
 try {
-    reconcileMerchantSettlements($conn);
+    ensurePaymentModesTablesExist($conn);
+
+    try {
+        reconcileMerchantSettlements($conn);
+    } catch (Throwable $tR) {
+        // Log or ignore reconciliation error
+    }
 
     $sql = "
         SELECT 
@@ -18,7 +24,11 @@ try {
     $modes = [];
     if ($res) {
         while ($row = $res->fetch_assoc()) {
-            $row['current_balance'] = calculatePaymentModeBalance($conn, $row['id']);
+            try {
+                $row['current_balance'] = calculatePaymentModeBalance($conn, $row['id']);
+            } catch (Throwable $tB) {
+                $row['current_balance'] = floatval($row['opening_balance'] ?? 0);
+            }
             $modes[] = $row;
         }
     }

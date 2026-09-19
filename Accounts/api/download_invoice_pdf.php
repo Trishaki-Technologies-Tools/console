@@ -14,15 +14,27 @@ use Dompdf\Dompdf;
 use Dompdf\Options;
 
 $invoiceNo = $_GET['invoiceNo'] ?? '';
+$typeParam = $_GET['type'] ?? '';
 if (!$invoiceNo) die("Invoice number required.");
 
 // 1. Fetch Data
-$stmt = $conn->prepare("
-    SELECT i.*, c.name as billToName, c.phone, c.email, c.gst_number as gstNumber 
-    FROM invoices i JOIN clients c ON i.client_id = c.id 
-    WHERE i.invoice_no = ?
-");
-$stmt->bind_param("s", $invoiceNo);
+if ($typeParam) {
+    $stmt = $conn->prepare("
+        SELECT i.*, c.name as billToName, c.phone, c.email, c.gst_number as gstNumber 
+        FROM invoices i JOIN clients c ON i.client_id = c.id 
+        WHERE i.invoice_no = ? AND LOWER(i.type) = LOWER(?)
+        ORDER BY i.id DESC LIMIT 1
+    ");
+    $stmt->bind_param("ss", $invoiceNo, $typeParam);
+} else {
+    $stmt = $conn->prepare("
+        SELECT i.*, c.name as billToName, c.phone, c.email, c.gst_number as gstNumber 
+        FROM invoices i JOIN clients c ON i.client_id = c.id 
+        WHERE i.invoice_no = ?
+        ORDER BY i.id DESC LIMIT 1
+    ");
+    $stmt->bind_param("s", $invoiceNo);
+}
 $stmt->execute();
 $inv = $stmt->get_result()->fetch_assoc();
 if (!$inv) die("Invoice not found.");
@@ -38,12 +50,23 @@ if (is_array($items)) {
     foreach ($items as $i => $item) {
         $itemAmt = floatval($item['amount'] ?? $item['totalInclTax'] ?? 0);
         $calcOriginalTotal += $itemAmt;
-        $itemsHtml .= "
-        <tr>
-            <td class='text-center' style='white-space: nowrap;'>".($i+1)."</td>
-            <td class='bold'>".htmlspecialchars($item['description'])."</td>
-            <td class='text-right bold'>₹".number_format($itemAmt, 2)."</td>
-        </tr>";
+        $sacVal = htmlspecialchars($item['sacCode'] ?? $item['sac'] ?? '-');
+        if ($type === 'gst') {
+            $itemsHtml .= "
+            <tr>
+                <td class='text-center' style='white-space: nowrap;'>".($i+1)."</td>
+                <td class='bold'>".htmlspecialchars($item['description'])."</td>
+                <td class='text-center bold'>{$sacVal}</td>
+                <td class='text-right bold'>₹".number_format($itemAmt, 2)."</td>
+            </tr>";
+        } else {
+            $itemsHtml .= "
+            <tr>
+                <td class='text-center' style='white-space: nowrap;'>".($i+1)."</td>
+                <td class='bold'>".htmlspecialchars($item['description'])."</td>
+                <td class='text-right bold'>₹".number_format($itemAmt, 2)."</td>
+            </tr>";
+        }
     }
 }
 $originalTotal = ($calcOriginalTotal > 0) ? $calcOriginalTotal : floatval($inv['original_total_payable']);
@@ -145,7 +168,7 @@ $html = "
                     <table style='width:100%; font-size: 11px; border-collapse: collapse;'>
                         <tr><td class='bold'>Invoice No:</td><td class='text-right'>{$inv['invoice_no']}</td></tr>
                         <tr><td class='bold'>Invoice Date:</td><td class='text-right'>".date('d-M-Y', strtotime($inv['invoice_date']))."</td></tr>
-                        <tr><td class='bold'>Payment Mode:</td><td class='text-right'>".($items[0]['paymentMode'] ?? 'Online')."</td></tr>
+                        <tr><td class='bold'>Payment Mode:</td><td class='text-right'>".(strcasecmp(trim($items[0]['paymentMode'] ?? ''), 'cash') === 0 ? 'Cash' : 'Online')."</td></tr>
                     </table>
                 </td>
             </tr>
@@ -155,11 +178,20 @@ $html = "
                 <td colspan='2' style='padding: 0;'>
                     <table class='items-table'>
                         <thead>
+                            ".($type === 'gst' ? "
+                            <tr>
+                                <th style='width: 10%; text-align: center; white-space: nowrap;'>Sl No</th>
+                                <th style='width: 55%;'>DESCRIPTION</th>
+                                <th style='width: 15%; text-align: center;'>SAC</th>
+                                <th style='width: 20%; text-align: right;'>CHARGES</th>
+                            </tr>
+                            " : "
                             <tr>
                                 <th style='width: 10%; text-align: center; white-space: nowrap;'>Sl No</th>
                                 <th style='width: 70%;'>DESCRIPTION</th>
                                 <th style='width: 20%; text-align: right;'>CHARGES</th>
                             </tr>
+                            ")."
                         </thead>
                         <tbody>
                             {$itemsHtml}

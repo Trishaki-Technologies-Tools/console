@@ -11,7 +11,7 @@ if (!$data) {
 }
 
 $payee = $data['payee'] ?? '';
-$amount = $data['amount'] ?? 0;
+$amount = floatval($data['amount'] ?? 0);
 $mode = $data['mode'] ?? 'Cash';
 $date = $data['date'] ?? date('Y-m-d');
 $description = $data['description'] ?? '';
@@ -19,7 +19,7 @@ $description = $data['description'] ?? '';
 try {
     // Generate voucher number
     $year = date('Y');
-    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM vouchers WHERE voucher_no LIKE ?");
+    $stmt = $conn->prepare("SELECT COUNT(*) as count FROM vouchers WHERE ref_no LIKE ?");
     $pattern = "PV-$year-%";
     $stmt->bind_param("s", $pattern);
     $stmt->execute();
@@ -28,13 +28,24 @@ try {
     $nextNumber = $row['count'] + 1;
     $refNo = 'PV-' . $year . '-' . str_pad($nextNumber, 3, '0', STR_PAD_LEFT);
 
-    // Insert voucher matching 20-table schema
-    $stmt = $conn->prepare("INSERT INTO vouchers (voucher_no, payee_name, amount, payment_mode, date, description) VALUES (?, ?, ?, ?, ?, ?)");
-    $stmt->bind_param("ssdsss", $refNo, $payee, $amount, $mode, $date, $description);
+    // Find payment mode ID if possible
+    $pmId = null;
+    $pmStmt = $conn->prepare("SELECT id FROM payment_modes WHERE mode_name = ? LIMIT 1");
+    $pmStmt->bind_param("s", $mode);
+    $pmStmt->execute();
+    $pmRes = $pmStmt->get_result();
+    if ($pmRes && $pmRes->num_rows > 0) {
+        $pmId = $pmRes->fetch_assoc()['id'];
+    }
+
+    // Insert voucher matching table schema
+    $stmt = $conn->prepare("INSERT INTO vouchers (ref_no, payee, amount, payment_mode_id, date, description) VALUES (?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param("ssdiss", $refNo, $payee, $amount, $pmId, $date, $description);
     $stmt->execute();
     
-    // Log transaction
     $vId = $conn->insert_id;
+
+    // Log transaction
     $tStmt = $conn->prepare("INSERT INTO transactions (type, amount, date, reference_id, reference_table, description) VALUES ('expense', ?, ?, ?, 'vouchers', ?)");
     $tDesc = "Voucher " . $refNo . " to " . $payee;
     $tStmt->bind_param("dsis", $amount, $date, $vId, $tDesc);

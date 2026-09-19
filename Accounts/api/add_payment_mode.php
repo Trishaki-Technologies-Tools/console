@@ -5,15 +5,18 @@ require_once 'settlement_helper.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['mode_name']) && trim($_POST['mode_name']) !== '') {
-        $modeName = $conn->real_escape_string(trim($_POST['mode_name']));
+        $modeName = trim($_POST['mode_name']);
+        $modeNameEscaped = $conn->real_escape_string($modeName);
         $openingBalance = isset($_POST['opening_balance']) ? floatval($_POST['opening_balance']) : 0.00;
         
-        // Check if payment mode already exists
-        $checkQuery = "SELECT id FROM payment_modes WHERE mode_name = '$modeName'";
+        ensurePaymentModesTablesExist($conn);
+        
+        // Check if payment mode already exists (case-insensitive check)
+        $checkQuery = "SELECT id FROM payment_modes WHERE LOWER(TRIM(mode_name)) = LOWER(TRIM('$modeNameEscaped'))";
         $checkResult = $conn->query($checkQuery);
         
         if ($checkResult && $checkResult->num_rows > 0) {
-            echo json_encode(['success' => false, 'error' => 'Payment mode already exists']);
+            echo json_encode(['success' => false, 'error' => "Payment mode '$modeName' already exists"]);
         } else {
             $type = isset($_POST['type']) ? trim($_POST['type']) : 'bank';
             $settlementBankIdSql = "NULL";
@@ -34,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $query = "INSERT INTO payment_modes (mode_name, opening_balance, type, settlement_bank_id) VALUES ('$modeName', $openingBalance, $typeSql, $settlementBankIdSql)";
+            $query = "INSERT INTO payment_modes (mode_name, opening_balance, type, settlement_bank_id) VALUES ('$modeNameEscaped', $openingBalance, $typeSql, $settlementBankIdSql)";
             
             if ($conn->query($query)) {
                 $newId = $conn->insert_id;

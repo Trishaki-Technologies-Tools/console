@@ -6,6 +6,16 @@ try {
     if (isset($_GET['id'])) {
         $id = intval($_GET['id']);
         
+        // Check if category is a protected system category
+        $catCheck = $conn->query("SELECT category_name FROM incomes_categories WHERE id = $id");
+        if ($catCheck && $cRow = $catCheck->fetch_assoc()) {
+            $catName = strtolower(trim($cRow['category_name']));
+            if ($catName === 'sales' || $catName === 'settlement') {
+                echo json_encode(['success' => false, 'error' => 'System categories (Sales, Settlement) cannot be deleted manually']);
+                exit;
+            }
+        }
+        
         // Check if any incomes use this category_id
         $usageQuery = "SELECT COUNT(*) as count FROM incomes WHERE category_id = $id";
         $usageResult = $conn->query($usageQuery);

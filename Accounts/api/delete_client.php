@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once 'config.php';
+require_once 'settlement_helper.php';
 
 if (isset($_GET['id'])) {
     $id = intval($_GET['id']);
@@ -9,12 +10,12 @@ if (isset($_GET['id'])) {
         $conn->begin_transaction();
         
         // Fetch client name first
-        $nameStmt = $conn->prepare("SELECT company_name FROM clients WHERE id = ?");
+        $nameStmt = $conn->prepare("SELECT name FROM clients WHERE id = ?");
         $nameStmt->bind_param("i", $id);
         $nameStmt->execute();
         $clientRes = $nameStmt->get_result()->fetch_assoc();
         $nameStmt->close();
-        $clientName = $clientRes ? $clientRes['company_name'] : 'Unknown';
+        $clientName = $clientRes ? $clientRes['name'] : 'Unknown';
 
         // 1. Delete associated invoices
         $stmt1 = $conn->prepare("DELETE FROM invoices WHERE client_id = ?");
@@ -35,6 +36,11 @@ if (isset($_GET['id'])) {
         if ($stmt3->execute()) {
             log_action($conn, 'DELETE', 'clients', $id, "Deleted client: $clientName (ID: $id)");
             $conn->commit();
+            
+            try {
+                reconcileMerchantSettlements($conn);
+            } catch (Throwable $tR) {}
+
             echo json_encode(['success' => true]);
         } else {
             $conn->rollback();
